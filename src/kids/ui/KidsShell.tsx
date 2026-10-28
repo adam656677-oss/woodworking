@@ -4,6 +4,7 @@ import { BadgesView } from './BadgesView'
 import { KidsHome } from './KidsHome'
 import { LearnView } from './LearnView'
 import { LessonView } from './LessonView'
+import { ParentArea } from './ParentArea'
 import { PathView } from './PathView'
 import { ProjectPage } from './ProjectPage'
 import { ProjectsView } from './ProjectsView'
@@ -32,6 +33,8 @@ export function KidsShell() {
       return <LearnView />
     case 'badges':
       return <BadgesView />
+    case 'parent':
+      return <ParentArea />
     default:
       return <KidsHome />
   }
