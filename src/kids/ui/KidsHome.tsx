@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { plans } from '../../plans/plansStore'
 import { studio } from '../../ui/store'
 import { Art } from '../art'
 import { kids, useKids } from '../kidsStore'
@@ -41,6 +42,16 @@ export function KidsHome() {
         <button onClick={() => setBlocked(!studio.getState().enterKidsDesigner())} className="flex h-48 w-60 flex-col items-center justify-center gap-3 rounded-3xl border-4 border-violet-400 bg-violet-100 shadow-lg hover:scale-105">
           <Art name="pencil" className="block h-20 w-20" />
           <span className="text-2xl font-bold">Simple Designer</span>
+        </button>
+        <button
+          onClick={() => {
+            k.go({ name: 'plans' })
+            void plans.getState().openLibrary(true, () => kids.getState().go({ name: 'home' }))
+          }}
+          className="flex h-48 w-60 flex-col items-center justify-center gap-3 rounded-3xl border-4 border-teal-400 bg-teal-100 shadow-lg hover:scale-105"
+        >
+          <Art name="toolbox" className="block h-20 w-20" />
+          <span className="text-2xl font-bold">My Plans</span>
         </button>
       </div>
     </main>

@@ -1,4 +1,5 @@
 import { usePlans } from '../plansStore'
+import { BuildGuide } from './BuildGuide'
 import { ImportReview } from './ImportReview'
 import { PlanEditor } from './PlanEditor'
 import { PlansLibrary } from './PlansLibrary'
@@ -11,6 +12,8 @@ export function PlansShell() {
       return <PlanEditor />
     case 'import':
       return <ImportReview />
+    case 'guide':
+      return <BuildGuide />
     default:
       return <PlansLibrary />
   }

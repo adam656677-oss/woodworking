@@ -16,6 +16,7 @@ export type KidsPage =
   | { name: 'parent' }
   | { name: 'sheet'; id: string }
   | { name: 'certificate'; badgeId: string }
+  | { name: 'plans' }
 
 export type KidsState = {
   loaded: boolean

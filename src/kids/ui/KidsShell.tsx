@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { kids, useKids } from '../kidsStore'
+import { PlansShell } from '../../plans/ui/PlansShell'
 import { BadgesView } from './BadgesView'
 import { Certificate } from './Certificate'
 import { ProjectSheet } from './ProjectSheet'
@@ -37,6 +38,8 @@ export function KidsShell() {
       return <BadgesView />
     case 'parent':
       return <ParentArea />
+    case 'plans':
+      return <PlansShell />
     case 'sheet':
       return <ProjectSheet key={page.id} projectId={page.id} />
     case 'certificate':
