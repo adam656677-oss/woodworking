@@ -26,6 +26,7 @@ export function Designer() {
   const recovery = useStudio(s => s.recovery)
   const cutListOpen = useStudio(s => s.cutListOpen)
   const woodsOpen = useStudio(s => s.woodsOpen)
+  const kidsMode = useStudio(s => s.kidsMode)
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -98,7 +99,7 @@ export function Designer() {
           )}
         </section>
         <aside className="w-72 overflow-y-auto border-l border-stone-300 bg-white p-3">
-          <TemplatePanel />
+          {!kidsMode && <TemplatePanel />}
           {selection.length === 2 ? <JointPanel /> : <PropertiesPanel />}
         </aside>
       </div>

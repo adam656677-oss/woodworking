@@ -66,6 +66,7 @@ function JointSettings({ joint }: { joint: Joint }) {
 export function JointPanel() {
   const project = useStudio(s => s.project)
   const [a, b] = useStudio(s => s.selection)
+  const kidsMode = useStudio(s => s.kidsMode)
   const nameOf = (id: string) => project.boards.find(x => x.id === id)?.name ?? '?'
   const existing = project.joints.find(j => (j.hostBoardId === a && j.partnerBoardId === b) || (j.hostBoardId === b && j.partnerBoardId === a))
   const apply = studio.getState().apply
@@ -87,7 +88,7 @@ export function JointPanel() {
         return (
           <div className="flex flex-col gap-2">
             <p className="text-sm text-stone-600">Choose a joint:</p>
-            {jointOffers(c).map(t => (
+            {jointOffers(c).filter(t => !kidsMode || t === 'butt').map(t => (
               <button key={t} className="rounded bg-amber-100 py-1.5 text-sm font-semibold hover:bg-amber-200" onClick={() => apply(p => { const r = addJoint(p, t, c.host, c.partner); return 'error' in r ? r : r.project })}>
                 {NAMES[t]}
               </button>

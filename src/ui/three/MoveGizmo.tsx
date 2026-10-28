@@ -6,6 +6,7 @@ import { snapPosition } from '../../model/snap'
 import { studio } from '../store'
 
 const SNAP = { tolerance: 0.25, grid: 1 / 16 }
+const KIDS_SNAP = { tolerance: 0.25, grid: 1 / 8 }
 
 /** Drag handle on the selected board: snaps to faces/edges/corners or the 1/16" grid; one undo step per drag. */
 export function MoveGizmo({ object, boardId }: { object: THREE.Object3D; boardId: string }) {
@@ -14,9 +15,9 @@ export function MoveGizmo({ object, boardId }: { object: THREE.Object3D; boardId
 
   const onChange = () => {
     if (!dragging.current) return
-    const r = snapPosition(studio.getState().project, boardId, { x: object.position.x, y: object.position.y, z: object.position.z }, SNAP)
+    const r = snapPosition(studio.getState().project, boardId, { x: object.position.x, y: object.position.y, z: object.position.z }, studio.getState().kidsMode ? KIDS_SNAP : SNAP)
     object.position.set(r.position.x, r.position.y, r.position.z)
-    setLabel(r.snaps.includes('face') ? 'Snapped to face' : 'Grid 1/16"')
+    setLabel(r.snaps.includes('face') ? 'Snapped to face' : studio.getState().kidsMode ? 'Grid 1/8"' : 'Grid 1/16"')
   }
 
   return (

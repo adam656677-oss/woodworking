@@ -1,9 +1,18 @@
 import { TEMPLATES } from '../../templates'
-import { studio } from '../store'
+import { studio, useStudio } from '../store'
 
 /** Shown in an empty project: start from a template, an empty board, or open a file. */
 export function StartPanel() {
   const s = studio.getState()
+  const kidsMode = useStudio(x => x.kidsMode)
+  if (kidsMode) {
+    return (
+      <div className="flex h-full flex-col items-center justify-center gap-4 text-center">
+        <h2 className="text-3xl font-bold text-violet-800">Design your own project!</h2>
+        <p className="max-w-md text-lg text-stone-600">Press <strong>Add board</strong> to start. Pick a board, type how long it is, and drag it into place.</p>
+      </div>
+    )
+  }
   return (
     <div className="flex h-full flex-col items-center justify-center gap-6">
       <h2 className="text-2xl font-semibold text-stone-700">Start a project</h2>
