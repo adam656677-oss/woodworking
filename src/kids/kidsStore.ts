@@ -38,10 +38,17 @@ const api = () => window.aa
 export function createKidsStore() {
   return createStore<KidsState>()((set, get) => {
     /** Change progress and save it; the change shows right away even if the save is slow. */
+    /** Set when saved progress could not be read: saving now would overwrite it with a blank record. */
+    let loadFailed = false
     const update = async (fn: (p: Progress) => Progress) => {
       const next = fn(get().progress)
       set({ progress: next })
-      await api().kidsSave(next)
+      if (loadFailed) return
+      try {
+        await api().kidsSave(next)
+      } catch {
+        set({ notice: "That change couldn't be saved. It will show until the app closes; ask your grown-up to check the computer." })
+      }
     }
     const pinOk = (pin: string) => api().kidsCheckPin(pin)
 
@@ -53,8 +60,13 @@ export function createKidsStore() {
 
       load: async () => {
         if (get().loaded) return
-        const { progress, notice } = await api().kidsLoad()
-        set({ progress, notice, loaded: true })
+        try {
+          const { progress, notice } = await api().kidsLoad()
+          set({ progress, notice, loaded: true })
+        } catch {
+          loadFailed = true
+          set({ progress: newProgress(), notice: "Saved progress couldn't be opened, so the workshop started fresh. Nothing new will be saved until the app is restarted.", loaded: true })
+        }
       },
       go: page => set({ page }),
 

@@ -222,3 +222,29 @@ test('the Simple Designer opens a blank project in kids mode; the Master Shop tu
   expect(s.getState().kidsMode).toBe(false)
   expect(s.getState().screen).toBe('master')
 })
+
+test("the Simple Designer won't open over a grown-up's unsaved Master Shop work (no way for a kid to discard it)", () => {
+  fakeApi()
+  const s = createStudioStore()
+  s.getState().newFromTemplate('box')
+  s.getState().apply(unlock)
+  const work = s.getState().project
+  expect(s.getState().enterKidsDesigner()).toBe(false)
+  expect(s.getState().pendingReplace).toBe(false)
+  expect(s.getState().kidsMode).toBe(false)
+  expect(s.getState().project).toBe(work)
+})
+
+test('opening a live-template project in the Simple Designer unlocks it so it can be edited', async () => {
+  const { serialize } = await import('../../src/model/fileFormat')
+  const { applyTemplate } = await import('../../src/templates')
+  const { emptyProject } = await import('../../src/model/woods')
+  const text = serialize(applyTemplate(emptyProject('Box'), 'box'))
+  fakeApi({ openProject: async () => ({ path: '/docs/Box.aaw', text, autosaveNewer: false, backupPath: '/docs/Box.aaw.bak' }) })
+  const s = createStudioStore()
+  expect(s.getState().enterKidsDesigner()).toBe(true)
+  await s.getState().open()
+  expect(s.getState().kidsMode).toBe(true)
+  expect(s.getState().project.template).toBeUndefined()
+  expect(s.getState().project.boards.length).toBeGreaterThan(0)
+})

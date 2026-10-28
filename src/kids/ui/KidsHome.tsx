@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { studio } from '../../ui/store'
 import { Art } from '../art'
 import { kids, useKids } from '../kidsStore'
@@ -12,6 +13,8 @@ const TILES = [
 /** The Kids' Workshop front door: five big tiles and the parent gear. */
 export function KidsHome() {
   const name = useKids(s => s.progress.childName)
+  const notice = useKids(s => s.notice)
+  const [blocked, setBlocked] = useState(false)
   const k = kids.getState()
   return (
     <main className="flex h-full flex-col items-center bg-gradient-to-b from-sky-100 to-sky-50 p-8 text-sky-950">
@@ -21,6 +24,13 @@ export function KidsHome() {
       </div>
       <h1 className="mt-4 text-5xl font-bold">Kids&apos; Workshop</h1>
       <p className="mt-2 text-2xl">{name ? `Hi, ${name}! What are we making today?` : 'What are we making today?'}</p>
+      {notice && (
+        <p role="status" className="mt-4 flex items-center gap-3 rounded-xl bg-amber-100 px-4 py-2 text-lg text-amber-900">
+          {notice}
+          <button aria-label="Dismiss" onClick={() => kids.setState({ notice: null })} className="font-bold">✕</button>
+        </p>
+      )}
+      {blocked && <p role="alert" className="mt-4 rounded-xl bg-amber-100 px-4 py-2 text-lg text-amber-900">Ask your grown-up to save their Master Shop project first.</p>}
       <div className="mt-10 grid grid-cols-3 gap-6">
         {TILES.map(t => (
           <button key={t.page} onClick={() => k.go({ name: t.page })} className={`flex h-48 w-60 flex-col items-center justify-center gap-3 rounded-3xl border-4 shadow-lg hover:scale-105 ${t.color}`}>
@@ -28,7 +38,7 @@ export function KidsHome() {
             <span className="text-2xl font-bold">{t.label}</span>
           </button>
         ))}
-        <button onClick={() => studio.getState().enterKidsDesigner()} className="flex h-48 w-60 flex-col items-center justify-center gap-3 rounded-3xl border-4 border-violet-400 bg-violet-100 shadow-lg hover:scale-105">
+        <button onClick={() => setBlocked(!studio.getState().enterKidsDesigner())} className="flex h-48 w-60 flex-col items-center justify-center gap-3 rounded-3xl border-4 border-violet-400 bg-violet-100 shadow-lg hover:scale-105">
           <Art name="pencil" className="block h-20 w-20" />
           <span className="text-2xl font-bold">Simple Designer</span>
         </button>

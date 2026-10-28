@@ -82,12 +82,12 @@ test('Project page: locked until its level quiz is passed', () => {
 test('Project page: "Adult does this" follows the child tier', () => {
   setProgress({ tier: 'beginner' })
   const { unmount } = render(<ProjectPage id="toolbox" />)
-  const drillStep = screen.getByText('Drill pilot holes in the sides.').closest('li')!
+  const drillStep = screen.getByText('Drill pilot holes through the ends.').closest('li')!
   expect(within(drillStep).getByText('Adult does this')).toBeTruthy()
   unmount()
   setProgress({ tier: 'intermediate' })
   render(<ProjectPage id="toolbox" />)
-  expect(within(screen.getByText('Drill pilot holes in the sides.').closest('li')!).queryByText('Adult does this')).toBeNull()
+  expect(within(screen.getByText('Drill pilot holes through the ends.').closest('li')!).queryByText('Adult does this')).toBeNull()
 })
 
 test('Project page shows the cut sheet from the real design', () => {
@@ -104,4 +104,21 @@ test('Lesson: reaching the last card remembers the lesson', async () => {
   render(<LessonView id="shop-rules" back="path" />)
   for (let i = 1; i < lesson.cards.length; i++) fireEvent.click(screen.getByRole('button', { name: 'Next →' }))
   await vi.waitFor(() => expect(kids.getState().progress.openedLessons).toEqual(['shop-rules']))
+})
+
+import { LearnView } from '../../src/kids/ui/LearnView'
+import { PinPrompt } from '../../src/kids/ui/PinPrompt'
+
+test('Learn includes the safety and first aid pages', () => {
+  setProgress()
+  render(<LearnView />)
+  expect(screen.getByRole('button', { name: /First aid basics/ })).toBeTruthy()
+  expect(screen.getByRole('button', { name: /Safety gear/ })).toBeTruthy()
+})
+
+test('with no parent PIN set yet, the PIN prompt says to set one instead of "wrong PIN"', async () => {
+  ;(window as any).aa = { kidsPinIsSet: async () => false }
+  render(<PinPrompt title="Did you build it?" onSubmit={async () => false} onDone={() => {}} />)
+  expect(await screen.findByText(/Set a parent PIN first/)).toBeTruthy()
+  expect(screen.queryByLabelText('PIN')).toBeNull()
 })

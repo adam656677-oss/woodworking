@@ -13,6 +13,7 @@
     "pencil",
     "hand-saw",
     "drill",
+    "screwdriver",
     "glue",
     "clamps",
     "hammer",
@@ -20,11 +21,15 @@
   ],
   "steps": [
     {
-      "text": "Measure, mark and cut all the parts from the 1x6.",
+      "text": "Cut the front, back, sides and floor from the 1x6, and the roof from the 1x8.",
       "tool": "hand-saw"
     },
     {
       "text": "Drill the 1-1/4 inch entry hole in the front.",
+      "tool": "drill"
+    },
+    {
+      "text": "Drill four small drain holes in the floor.",
       "tool": "drill"
     },
     {
@@ -36,8 +41,8 @@
       "tool": "hammer"
     },
     {
-      "text": "Nail on the roof.",
-      "tool": "hammer"
+      "text": "Screw the roof on, so it can come off to clean the house each year.",
+      "tool": "screwdriver"
     },
     {
       "text": "Sand the edges. Leave the inside unfinished for the birds.",

@@ -34,11 +34,12 @@ async function exists(path: string): Promise<boolean> {
 /** Load progress; a damaged file falls back to its backup, then to a fresh start. Never throws. */
 export async function loadProgress(dir: string): Promise<{ progress: Progress; notice: string | null }> {
   const main = progressPath(dir)
-  if (!(await exists(main))) return { progress: newProgress(), notice: null }
   const p = await readProgress(main)
   if (p) return { progress: p, notice: null }
+  // Missing or unreadable (damaged, or briefly locked by OneDrive): the backup copy is next best.
   const bak = await readProgress(`${main}.bak`)
   if (bak) return { progress: bak, notice: 'Progress was restored from the backup copy.' }
+  if (!(await exists(main))) return { progress: newProgress(), notice: null }
   return { progress: newProgress(), notice: "Progress couldn't be read and was started fresh." }
 }
 

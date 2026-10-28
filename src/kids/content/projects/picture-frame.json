@@ -15,25 +15,20 @@
     "miter-box",
     "glue",
     "clamps",
-    "drill",
     "screwdriver",
     "sandpaper"
   ],
   "steps": [
     {
-      "text": "Cut two rails and two stiles from the 1x3.",
+      "text": "Cut two rails 11-1/2 inches long and two stiles 4-1/2 inches long from the 1x3.",
       "tool": "hand-saw"
     },
     {
-      "text": "Glue the stiles between the rails and clamp them square.",
+      "text": "Glue the stiles between the rails and clamp the frame flat and square.",
       "tool": "clamps"
     },
     {
-      "text": "Drill pilot holes through the rails into the stiles.",
-      "tool": "drill"
-    },
-    {
-      "text": "Drive a screw into each corner.",
+      "text": "When the glue is dry, screw a flat mending plate across each corner on the back.",
       "tool": "screwdriver"
     },
     {

@@ -33,7 +33,7 @@ function ticTacToe(p: Project): Built {
   const w2 = woodOf(p.woods, '1x2')
   const S = 9.25
   const base = makeBoard('Base', w10, S, S, ORIENT.flatX, { x: 0, y: 0, z: 0 })
-  const lines = [2.0625, 5.625] // where each 1-1/2" strip starts, across and up
+  const lines = [2.125, 5.625] // where each 1-1/2" strip starts: squares of 2-1/8", 2" and 2-1/8"
   const z = 0.75
   const boards: Board[] = [base]
   const joints: Joint[] = []
@@ -43,7 +43,7 @@ function ticTacToe(p: Project): Built {
     boards.push(s)
     joints.push(butt(base, s, GLUE))
   }
-  const gaps: [number, number][] = [[0, 2.0625], [3.5625, 5.625], [7.125, S]]
+  const gaps: [number, number][] = [[0, 2.125], [3.625, 5.625], [7.125, S]]
   for (const x of lines) {
     for (const [y0, y1] of gaps) {
       const s = makeBoard('Short strip', w2, 1.5, y1 - y0, ORIENT.flatY, { x, y: y0, z })
@@ -62,14 +62,17 @@ function birdhouse(p: Project): Built {
   const back = makeBoard('Back', w6, 5.5, H, ORIENT.uprightX, { x: 0, y: 6.25, z: 0 })
   const left = makeBoard('Side', w6, 5.5, H, ORIENT.uprightY, { x: 0, y: 0.75, z: 0 })
   const right = makeBoard('Side', w6, 5.5, H, ORIENT.uprightY, { x: 4.75, y: 0.75, z: 0 })
-  const floor = makeBoard('Floor', w6, 5.5, 4, ORIENT.flatX, { x: 0.75, y: 0.75, z: 0 })
+  // Four 1/4" drain holes in the floor keep rain from pooling.
+  const drains = [1, 4.5].flatMap(u => [1, 3].map(v => ({ diameter: 0.25, u, v })))
+  const floor = makeBoard('Floor', w6, 5.5, 4, ORIENT.flatX, { x: 0.75, y: 0.75, z: 0 }, { holes: drains })
   const roof = makeBoard('Roof', w8, 7.25, 7.5, ORIENT.flatX, { x: -1, y: -0.125, z: H })
   return {
     boards: [front, back, left, right, floor, roof],
     joints: [
       butt(front, left, nails(3)), butt(front, right, nails(3)), butt(back, left, nails(3)), butt(back, right, nails(3)),
       butt(left, floor, nails(2)), butt(right, floor, nails(2)),
-      butt(roof, front, nails(2)), butt(roof, back, nails(2)), butt(roof, left, nails(2)), butt(roof, right, nails(2))
+      // The roof is screwed on so it can come off to clean the house out each year.
+      butt(roof, front, screws(2)), butt(roof, back, screws(2))
     ]
   }
 }
@@ -83,7 +86,8 @@ function pictureFrame(p: Project): Built {
   const right = makeBoard('Stile', w, 2.5, 4.5, ORIENT.flatY, { x: 9, y: 2.5, z: 0 })
   return {
     boards: [top, bottom, left, right],
-    joints: [butt(top, left, screws(1)), butt(top, right, screws(1)), butt(bottom, left, screws(1)), butt(bottom, right, screws(1))]
+    // Glued corners, held by a flat mending plate screwed across each corner on the back.
+    joints: [butt(top, left, GLUE), butt(top, right, GLUE), butt(bottom, left, GLUE), butt(bottom, right, GLUE)]
   }
 }
 

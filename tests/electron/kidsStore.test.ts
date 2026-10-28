@@ -65,3 +65,9 @@ test('deleting the PIN file (forgot PIN) keeps the progress', async () => {
   expect(await pinIsSet(dir)).toBe(false)
   expect((await loadProgress(dir)).progress).toEqual(p)
 })
+
+test('only the backup copy is there: progress comes back from it', async () => {
+  const good = { ...newProgress(), childName: 'Sam', passedQuizzes: { 'quiz-1': '2026-10-28' } }
+  await writeFile(join(dir, 'kids-progress.json.bak'), JSON.stringify(good))
+  expect(await loadProgress(dir)).toEqual({ progress: good, notice: 'Progress was restored from the backup copy.' })
+})

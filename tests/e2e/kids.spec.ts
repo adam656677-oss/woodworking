@@ -138,3 +138,23 @@ test('kids 4. Simple Designer: sizes go to 1/8", the cut list matches, and Home 
     kill(app)
   }
 })
+
+test('kids 5. a certificate prints on exactly one landscape page', async () => {
+  const { app, win } = await launch(newDirs())
+  try {
+    await openKids(win)
+    await passLevel1(win)
+    await win.getByRole('button', { name: '← Back' }).first().click()
+    await win.getByRole('button', { name: '← Back' }).first().click()
+    await win.getByRole('button', { name: 'My Badges' }).click()
+    await win.getByRole('button', { name: 'Print certificate' }).click()
+    await expect(win.getByRole('article', { name: 'Certificate' })).toBeVisible()
+    const pages = await app.evaluate(async ({ BrowserWindow }) => {
+      const pdf = await BrowserWindow.getAllWindows()[0].webContents.printToPDF({ landscape: true, pageSize: 'Letter', preferCSSPageSize: true })
+      return (pdf.toString('latin1').match(/\/Type\s*\/Page[^s]/g) ?? []).length
+    })
+    expect(pages).toBe(1)
+  } finally {
+    kill(app)
+  }
+})

@@ -84,3 +84,31 @@ test('finishing a lesson is remembered once', async () => {
   expect(k.getState().progress.openedLessons).toEqual(['shop-rules'])
   expect(saved).toHaveLength(1)
 })
+
+test('if progress cannot be loaded, the workshop still opens fresh with a message', async () => {
+  ;(window as any).aa = { kidsLoad: async () => { throw new Error('disk gone') } }
+  const k = createKidsStore()
+  await k.getState().load()
+  expect(k.getState().loaded).toBe(true)
+  expect(k.getState().progress).toEqual(newProgress())
+  expect(k.getState().notice).toMatch(/couldn't be opened/)
+})
+
+test('if saving fails, the change still shows and a message says it was not saved', async () => {
+  fakeAa()
+  ;(window as any).aa.kidsSave = async () => { throw new Error('locked') }
+  const k = createKidsStore()
+  await k.getState().load()
+  await k.getState().passQuiz('quiz-1')
+  expect(k.getState().progress.passedQuizzes['quiz-1']).toBeDefined()
+  expect(k.getState().notice).toMatch(/couldn't be saved/)
+})
+
+test('after a failed load, nothing is saved over the real progress file', async () => {
+  const saved: unknown[] = []
+  ;(window as any).aa = { kidsLoad: async () => { throw new Error('disk gone') }, kidsSave: async (p: unknown) => { saved.push(p) } }
+  const k = createKidsStore()
+  await k.getState().load()
+  await k.getState().passQuiz('quiz-1')
+  expect(saved).toEqual([])
+})

@@ -7,7 +7,7 @@ import type { OpError } from '../model/ops'
 import type { Project, Wood } from '../model/types'
 import { validate, type Warning } from '../model/validate'
 import { cloneWoods, emptyProject } from '../model/woods'
-import { applyTemplate, findTemplate } from '../templates'
+import { applyTemplate, findTemplate, unlock } from '../templates'
 
 export type Screen = 'home' | 'kids' | 'master'
 export type View = '3d' | 'front' | 'side' | 'top'
@@ -40,7 +40,7 @@ export type StudioState = {
 
   goto(screen: Screen): void
   /** Open the kids' Simple Designer: back to the kid's design if there is one, else a blank one. */
-  enterKidsDesigner(): void
+  enterKidsDesigner(): boolean
   /** Open the full Master Shop designer (kids' limits off; the current project stays). */
   enterMasterShop(): void
   apply(fn: (p: Project) => Project | OpError): void
@@ -98,7 +98,9 @@ export function createStudioStore() {
       try {
         const project = deserialize(text)
         // The file name is the project's name (a file renamed in Explorer shows its new name).
-        start(path ? { ...project, name: nameFromPath(path) } : project, path, dirty)
+        // The Simple Designer has no template panel, so a template project opens unlocked there.
+        const opened = get().kidsMode ? unlock(project) : project
+        start(path ? { ...opened, name: nameFromPath(path) } : opened, path, dirty)
       } catch (e) {
         const msg = e instanceof ProjectFileError ? e.message : 'This project file could not be opened.'
         set({ error: backupPath ? `${msg} Your backup is at ${backupPath}` : msg, recovery: null })
@@ -148,12 +150,15 @@ export function createStudioStore() {
       enterKidsDesigner: () => {
         if (get().kidsMode) {
           set({ screen: 'master' })
-          return
+          return true
         }
+        // A grown-up's unsaved Master Shop work is never put in front of a kid to save or throw away.
+        if (get().dirty) return false
         void guard(() => {
           start(newProject('My design'), null, false)
           set({ kidsMode: true })
         })
+        return true
       },
       enterMasterShop: () => set({ kidsMode: false, screen: 'master' }),
 

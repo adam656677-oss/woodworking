@@ -23,7 +23,7 @@ export function Certificate({ badgeId }: { badgeId: string }) {
         <button onClick={() => kids.getState().go({ name: 'badges' })} className="rounded-xl bg-sky-600 px-5 py-2 text-lg font-semibold text-white">← Back</button>
         <button onClick={() => void window.aa.print({ landscape: true })} className="rounded-xl bg-amber-600 px-5 py-2 text-lg font-semibold text-white">🖨 Print</button>
       </div>
-      <article aria-label="Certificate" className="print-area mx-auto flex aspect-[11/8.5] max-w-[11in] flex-col items-center justify-center border-[16px] border-double border-amber-600 bg-amber-50 p-10 text-center text-stone-900 print:max-w-none">
+      <article aria-label="Certificate" className="print-area mx-auto flex aspect-[11/8.5] max-w-[11in] flex-col items-center justify-center border-[16px] border-double border-amber-600 bg-amber-50 p-10 text-center text-stone-900 print:aspect-auto print:h-[7.3in] print:w-full print:max-w-none print:p-6">
         <p className="text-2xl uppercase tracking-[0.3em] text-amber-800">A&amp;A Woodworking · Kids&apos; Workshop</p>
         <h1 className="mt-4 font-serif text-6xl font-bold">Certificate of Achievement</h1>
         <p className="mt-6 text-2xl">This certifies that</p>
