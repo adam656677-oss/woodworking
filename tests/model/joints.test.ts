@@ -71,6 +71,21 @@ describe('fastener notes', () => {
   })
 })
 
+test('the same rabbet at both ends reads "both ends"', () => {
+  const front = board({ id: 'front', width: 6, length: 12 })
+  const r = (offset: number): Joint => ({ id: `r${offset}`, type: 'rabbet', hostBoardId: 'front', partnerBoardId: 'shelf', params: { width: 0.75, depth: 0.375, offset, face: 'top' } })
+  expect(jointNotes(project([front, shelf], [r(0), r(11.25)]), 'front')).toEqual(['3/4" rabbet × 3/8" deep, both ends'])
+  const e = (offset: number): Joint => ({ ...r(offset), params: { width: 0.25, depth: 0.25, offset, face: 'top', along: 'length' } })
+  expect(jointNotes(project([front, shelf], [e(0), e(5.75)]), 'front')).toEqual(['1/4" rabbet × 1/4" deep, both edges'])
+})
+
+test('identical notes from several joints appear once', () => {
+  const other = board({ id: 'other' })
+  const j1: Joint = { id: 'a', type: 'butt', hostBoardId: 'side', partnerBoardId: 'shelf', params: { fastener: 'glue', count: 0 } }
+  const j2: Joint = { id: 'b', type: 'butt', hostBoardId: 'other', partnerBoardId: 'shelf', params: { fastener: 'glue', count: 0 } }
+  expect(jointNotes(project([host, shelf, other], [j1, j2]), 'shelf')).toEqual(['Butt joint: glue'])
+})
+
 describe('miters and bevels', () => {
   test('angle notes', () => {
     const both = board({ id: 'r', endCuts: { start: { miter: 45, bevel: 0 }, end: { miter: -45, bevel: 0 } } })

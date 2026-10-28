@@ -171,12 +171,20 @@ export function jointNotes(project: Project, boardId: string): string[] {
   const b = boardById(project, boardId)
   if (!b) return []
   const notes: string[] = []
+  const rabbetCounts = new Map<string, { count: number; along: 'width' | 'length' }>()
   for (const j of project.joints) {
     if (isGroove(j) && j.hostBoardId === boardId) {
       const p = j.params
       const base = `${formatInches(p.width)} ${j.type} × ${formatInches(p.depth)} deep`
       const along = p.along ?? 'width'
-      if (j.type === 'rabbet' || p.offset === 0) notes.push(base)
+      if (j.type === 'rabbet') {
+        const seen = rabbetCounts.get(base)
+        if (seen) seen.count += 1
+        else {
+          rabbetCounts.set(base, { count: 1, along })
+          notes.push(base)
+        }
+      } else if (p.offset === 0) notes.push(base)
       else notes.push(`${base}, ${formatInches(p.offset)} from ${along === 'width' ? 'end' : 'edge'}`)
     }
     if (j.partnerBoardId !== boardId) continue
@@ -194,5 +202,9 @@ export function jointNotes(project: Project, boardId: string): string[] {
     notes.push(`${formatInches(h.diameter)} hole, ${formatInches(h.v)} from end, ${where}`)
   }
   notes.push(...angleNotes(b))
-  return notes
+  const withBoth = notes.map(n => {
+    const r = rabbetCounts.get(n)
+    return r && r.count > 1 ? `${n}, both ${r.along === 'width' ? 'ends' : 'edges'}` : n
+  })
+  return [...new Set(withBoth)]
 }

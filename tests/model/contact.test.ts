@@ -36,6 +36,13 @@ test('back panel edge against the side face → edgeToFace', () => {
   expect(jointOffers(c!)).toEqual(['butt', 'dado', 'rabbet'])
 })
 
+test('a shelf seated in its dado still counts as touching', () => {
+  const seated = shelfAt(10, 0.5)
+  const j = { id: 'j', type: 'dado' as const, hostBoardId: 'side', partnerBoardId: 'shelf', params: { width: 0.75, depth: 0.25, offset: 10, face: 'top' as const } }
+  expect(contactBetween(project([side, seated], [j]), 'side', 'shelf')).toMatchObject({ kind: 'endToFace', host: 'side' })
+  expect(contactBetween(project([side, seated]), 'side', 'shelf')).toBeNull()
+})
+
 test('boards stacked face to face → faceToFace', () => {
   const a = board({ id: 'a', width: 4, length: 10 })
   const b = board({ id: 'b', width: 4, length: 10, position: { x: 0, y: 0, z: 0.75 } })

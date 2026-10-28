@@ -1,6 +1,6 @@
 // How two boards meet, and which joints make sense for that meeting.
 import { AXES, type Axis, type Box, isAxisAligned, localAxes, overlap1, worldBox } from './geometry'
-import type { Board, JointType, Project } from './types'
+import type { Board, GrooveParams, JointType, Project } from './types'
 
 export type Contact = {
   kind: 'endToFace' | 'edgeToFace' | 'faceToFace' | 'cornerEnds'
@@ -59,8 +59,19 @@ export function contactBetween(project: Project, aId: string, bId: string): Cont
     if (la !== lb) return { kind: 'cornerEnds', host: a.id, partner: b.id, nearHostEnd: true, cornerAngle: 90, hostSurface: 'edge' }
   }
 
-  // Touching: coplanar on exactly one axis, positive area on the other two.
-  const touchAxes = AXES.filter((ax, i) => Math.abs(ov[i]) <= TOUCH_TOL)
+  // A board seated in a dado/rabbet overlaps its host by up to the groove depth; that still counts as touching.
+  const groove = project.joints.find(
+    j => (j.type === 'dado' || j.type === 'rabbet') &&
+      ((j.hostBoardId === a.id && j.partnerBoardId === b.id) || (j.hostBoardId === b.id && j.partnerBoardId === a.id))
+  )
+  const seat = groove ? (groove.params as GrooveParams).depth : 0
+
+  // Touching: coplanar on exactly one axis (or seated in a groove), positive area on the other two.
+  let touchAxes = AXES.filter((ax, i) => Math.abs(ov[i]) <= TOUCH_TOL)
+  if (touchAxes.length === 0 && seat > 0) {
+    const seated = AXES.filter((ax, i) => Math.abs(ov[i] - seat) <= TOUCH_TOL)
+    if (seated.length === 1) touchAxes = seated
+  }
   if (touchAxes.length !== 1) return null
   const t = touchAxes[0]
   if (AXES.some((ax, i) => ax !== t && ov[i] <= AREA_MIN)) return null
