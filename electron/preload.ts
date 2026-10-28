@@ -17,5 +17,13 @@ contextBridge.exposeInMainWorld('aa', {
     ipcRenderer.removeAllListeners('aa:save-request')
     ipcRenderer.on('aa:save-request', () => cb())
   },
-  closeAfterSave: (saved: boolean) => ipcRenderer.send('aa:closeAfterSave', saved)
+  closeAfterSave: (saved: boolean) => ipcRenderer.send('aa:closeAfterSave', saved),
+  kidsLoad: () => ipcRenderer.invoke('kids:load'),
+  kidsSave: (p: unknown) => ipcRenderer.invoke('kids:save', p),
+  kidsPinIsSet: () => ipcRenderer.invoke('kids:pinIsSet'),
+  kidsSetPin: (pin: string) => ipcRenderer.invoke('kids:setPin', pin),
+  kidsCheckPin: (pin: string) => ipcRenderer.invoke('kids:checkPin', pin),
+  kidsPinPath: () => ipcRenderer.invoke('kids:pinPath'),
+  kidsAddPhoto: (projectId: string) => ipcRenderer.invoke('kids:addPhoto', projectId),
+  kidsPhotoUrl: (name: string) => ipcRenderer.invoke('kids:photoUrl', name)
 })

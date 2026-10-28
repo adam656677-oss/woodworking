@@ -1,7 +1,9 @@
-import { app, BrowserWindow, dialog, ipcMain } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, nativeImage } from 'electron'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { autosavePath, defaultFolder, deleteAutosave, load, safeSave, writeAutosave } from './fileStore'
+import { checkPin, loadProgress, pinFilePath, pinIsSet, saveProgress, setPin } from './kidsStore'
+import type { Progress } from '../src/kids/progress'
 
 // Test hooks: e2e runs point these at temp folders so they never touch real documents or settings.
 if (process.env.AA_USER_DATA) app.setPath('userData', process.env.AA_USER_DATA)
@@ -109,6 +111,43 @@ function register(): void {
   ipcMain.handle('aa:saveUserWoods', async (_e, woods: unknown) => {
     await mkdir(app.getPath('userData'), { recursive: true })
     await safeSave(join(app.getPath('userData'), 'woods.json'), JSON.stringify(woods, null, 2))
+  })
+  // ---- Kids' Workshop ----
+  const kidsDir = async () => {
+    const d = app.getPath('userData')
+    await mkdir(d, { recursive: true })
+    return d
+  }
+  const PHOTO_MAX = 1600
+  ipcMain.handle('kids:load', async () => loadProgress(await kidsDir()))
+  ipcMain.handle('kids:save', async (_e, p: Progress) => saveProgress(await kidsDir(), p))
+  ipcMain.handle('kids:pinIsSet', async () => pinIsSet(await kidsDir()))
+  ipcMain.handle('kids:setPin', async (_e, pin: string) => setPin(await kidsDir(), pin))
+  ipcMain.handle('kids:checkPin', async (_e, pin: string) => checkPin(await kidsDir(), pin))
+  ipcMain.handle('kids:pinPath', async () => pinFilePath(await kidsDir()))
+  ipcMain.handle('kids:addPhoto', async (_e, projectId: string) => {
+    if (!/^[a-z0-9-]+$/.test(projectId)) return null
+    const r = await dialog.showOpenDialog(win!, { properties: ['openFile'], filters: [{ name: 'Photos', extensions: ['jpg', 'jpeg', 'png'] }] })
+    if (r.canceled || !r.filePaths[0]) return null
+    let img = nativeImage.createFromPath(r.filePaths[0])
+    if (img.isEmpty()) throw new Error("That photo couldn't be read. Try a JPG or PNG.")
+    const { width, height } = img.getSize()
+    const scale = Math.min(1, PHOTO_MAX / Math.max(width, height))
+    if (scale < 1) img = img.resize({ width: Math.round(width * scale), height: Math.round(height * scale), quality: 'best' })
+    const folder = join(await kidsDir(), 'kids-photos')
+    await mkdir(folder, { recursive: true })
+    const name = `${projectId}.jpg`
+    await writeFile(join(folder, name), img.toJPEG(85))
+    return name
+  })
+  ipcMain.handle('kids:photoUrl', async (_e, name: string) => {
+    if (!/^[a-z0-9-]+\.jpg$/.test(name)) return null
+    try {
+      const data = await readFile(join(app.getPath('userData'), 'kids-photos', name))
+      return `data:image/jpeg;base64,${data.toString('base64')}`
+    } catch {
+      return null
+    }
   })
   ipcMain.on('aa:setDirty', (_e, value: boolean) => {
     dirty = value

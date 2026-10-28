@@ -1,3 +1,4 @@
+import type { Progress } from '../kids/progress'
 import type { Wood } from '../model/types'
 
 export type OpenedProject = {
@@ -24,6 +25,16 @@ export type AaApi = {
   setTitle(title: string): void
   onSaveRequest(cb: () => void): void
   closeAfterSave(saved: boolean): void
+  kidsLoad(): Promise<{ progress: Progress; notice: string | null }>
+  kidsSave(p: Progress): Promise<void>
+  kidsPinIsSet(): Promise<boolean>
+  /** Rejects with 'PIN must be 4 digits' for anything else. */
+  kidsSetPin(pin: string): Promise<void>
+  kidsCheckPin(pin: string): Promise<boolean>
+  kidsPinPath(): Promise<string>
+  /** Opens a file picker; returns the saved photo's file name, or null if cancelled. */
+  kidsAddPhoto(projectId: string): Promise<string | null>
+  kidsPhotoUrl(name: string): Promise<string | null>
 }
 
 declare global {
