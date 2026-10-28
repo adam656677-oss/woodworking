@@ -92,7 +92,8 @@ export function pointRemovedBy(cut: Cut, p: Vec3): boolean {
     const { point, normal } = cut.plane
     return (p.x - point.x) * normal.x + (p.y - point.y) * normal.y + (p.z - point.z) * normal.z > EPS
   }
-  return p.x >= cut.min.x && p.x <= cut.max.x && p.y >= cut.min.y && p.y <= cut.max.y && p.z >= cut.min.z && p.z <= cut.max.z
+  const box = cut as BoxCut
+  return p.x >= box.min.x && p.x <= box.max.x && p.y >= box.min.y && p.y <= box.max.y && p.z >= box.min.z && p.z <= box.max.z
 }
 
 /** A reason the board's angled cuts can't be made, or null. */

@@ -1,5 +1,5 @@
 // Helpers for templates: make boards in standard orientations, placed by their world-space corner.
-import { localAxes, worldBox } from '../model/geometry'
+import { faceToward, worldBox } from '../model/geometry'
 import { newId } from '../model/ids'
 import type { Board, ButtParams, GrooveParams, Joint, Vec3, Wood } from '../model/types'
 import { snap64 } from '../model/units'
@@ -50,16 +50,6 @@ export function makeBoard(
   const at0 = worldBox(b)
   b.position = { x: min.x - at0.min.x, y: min.y - at0.min.y, z: min.z - at0.min.z }
   return b
-}
-
-/** Which face of the host ('top' = local +z) looks toward the partner. */
-export function faceToward(host: Board, partner: Board): 'top' | 'bottom' {
-  const t = localAxes(host).thickness
-  const hb = worldBox(host)
-  const pb = worldBox(partner)
-  const hostMid = (hb.min[t.axis] + hb.max[t.axis]) / 2
-  const partnerMid = (pb.min[t.axis] + pb.max[t.axis]) / 2
-  return (partnerMid - hostMid) * t.sign >= 0 ? 'top' : 'bottom'
 }
 
 export function butt(host: Board, partner: Board, params: ButtParams = { fastener: 'glue', count: 0 }): Joint {

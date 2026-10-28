@@ -82,7 +82,7 @@ test('all three defaults have no warnings', () => {
 
 test('every template joint matches a contact that offers it', () => {
   for (const t of TEMPLATES) {
-    for (const opts of [{}, { corners: 'rabbet', lid: true }]) {
+    for (const opts of [{}, { corners: 'rabbet', lid: true }] as Record<string, string | boolean>[]) {
       const p = applyTemplate(emptyProject(t.name), t.id, opts)
       for (const j of p.joints) {
         const c = contactBetween(p, j.hostBoardId, j.partnerBoardId)

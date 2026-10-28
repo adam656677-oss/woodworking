@@ -56,3 +56,35 @@ export function overlap1(aMin: number, aMax: number, bMin: number, bMax: number)
 }
 
 export { AXES }
+
+/** World point → board-local point (inverse of toWorld). */
+export function toLocal(b: Board, p: Vec3): Vec3 {
+  const v = { x: p.x - b.position.x, y: p.y - b.position.y, z: p.z - b.position.z }
+  const [ax, ay, az] = [b.rotation.x, b.rotation.y, b.rotation.z].map(d => (-d * Math.PI) / 180)
+  let { x, y, z } = v
+  // Inverse of Rx*Ry*Rz is Rz^-1 * Ry^-1 * Rx^-1, so apply Rx^-1 first.
+  ;[y, z] = [y * Math.cos(ax) - z * Math.sin(ax), y * Math.sin(ax) + z * Math.cos(ax)]
+  ;[x, z] = [x * Math.cos(ay) + z * Math.sin(ay), -x * Math.sin(ay) + z * Math.cos(ay)]
+  ;[x, y] = [x * Math.cos(az) - y * Math.sin(az), x * Math.sin(az) + y * Math.cos(az)]
+  return { x: clean(x), y: clean(y), z: clean(z) }
+}
+
+/** Axis-aligned box of `other` expressed in `b`'s local coordinates. */
+export function boxInLocal(b: Board, other: Box): Box {
+  const pts: Vec3[] = []
+  for (const x of [other.min.x, other.max.x]) for (const y of [other.min.y, other.max.y]) for (const z of [other.min.z, other.max.z]) pts.push(toLocal(b, { x, y, z }))
+  return {
+    min: { x: Math.min(...pts.map(p => p.x)), y: Math.min(...pts.map(p => p.y)), z: Math.min(...pts.map(p => p.z)) },
+    max: { x: Math.max(...pts.map(p => p.x)), y: Math.max(...pts.map(p => p.y)), z: Math.max(...pts.map(p => p.z)) }
+  }
+}
+
+/** Which face of the host ('top' = local +z) looks toward the partner. */
+export function faceToward(host: Board, partner: Board): 'top' | 'bottom' {
+  const t = localAxes(host).thickness
+  const hb = worldBox(host)
+  const pb = worldBox(partner)
+  const hostMid = (hb.min[t.axis] + hb.max[t.axis]) / 2
+  const partnerMid = (pb.min[t.axis] + pb.max[t.axis]) / 2
+  return (partnerMid - hostMid) * t.sign >= 0 ? 'top' : 'bottom'
+}

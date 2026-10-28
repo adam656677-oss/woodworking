@@ -59,12 +59,24 @@ export type GrooveParams = { width: number; depth: number; offset: number; face:
 export type PocketParams = { count: number; spacing: number; screwLength: number }
 export type MiterParams = { angle: number; fastener: 'glue' | 'nails' | 'splines' }
 
+/** What adding a joint changed on one board, so removing it can undo exactly that (in any order). */
+export type JointRestore = {
+  boardId: string
+  side: 'start' | 'end' | 'left' | 'right'
+  /** Inches added at that end/edge. */
+  extend: number
+  /** For miters: which angle on that end was set, and its value before. */
+  field?: 'miter' | 'bevel'
+  previous?: number
+}
+
 export type Joint = {
   id: string
   type: JointType
   hostBoardId: string
   partnerBoardId: string
   params: ButtParams | GrooveParams | PocketParams | MiterParams
+  restore?: JointRestore[]
 }
 
 export type TemplateState = { templateId: string; params: Record<string, number | boolean | string> }
