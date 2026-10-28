@@ -51,11 +51,11 @@ material only; no code is reused.
 |---|---|---|---|
 | **1** | **Design Core** (this spec) | Shared project model, wood library, templates, 3D view, board tools, joints (butt, dado, rabbet, pocket screw, **miter**), **bevel and angled cuts**, cut list, save/load, home screen with both sides, installer | Shared |
 | 2 | Kids' Workshop v1 | Skill path modeled on 4-H Woodworking Wonders (4 levels) with badges and printable certificates; parent-controlled tool permissions by age/experience tier (beginner / intermediate / advanced, "adult does this" marks); safety lessons with quiz gates; safety-gear checklist; first aid basics; tools explained; wood types and "tree to board"; very simple designer; 3–5 projects with kid project sheets (difficulty stars, time estimate, tools, check-off boxes, finished-photo spot, time and cost tracking); read-aloud of all text | Kids |
-| 3 | Master Shop CAD Pro | Linked copies and assemblies; groups; rules that survive Unlock (equal spacing, centered, fixed gap); on-model dimensions and annotations; section views; hide/isolate; reference image import and trace; Shop Mode (large-text step-by-step view for the bench) | Adult |
+| 3 | Master Shop CAD Pro | Linked copies and assemblies (sub-assemblies such as a drawer or door); groups; **named parameters with formulas** (e.g. `Height = 30`, `ShelfGap = (Height - 2*T) / 4`) that resize the whole design; rules that survive Unlock (equal spacing, centered, fixed gap); **exploded views**; **interference check** between any parts (not just touching boxes); **weight and center of mass** from species density; on-model dimensions and annotations; section views; hide/isolate; reference image import and trace; Shop Mode (large-text step-by-step view for the bench) | Adult |
 | 4 | Cut Optimizer & Buying | Sheet and board layouts; kerf and trim per material; grain lock and grain matching; rough lumber with defects marked; fewer fence changes; scrap/offcut reuse from inventory; shopping list (what to buy); printable part labels with part numbers and QR codes; full cost (wood, hardware, finish, edge banding) | Both |
 | 5 | Shop Drawings & Printing | Dimensioned front/side/top, exploded views, sections, auto-dimensions, part numbers; full-size 1:1 templates tiled across letter pages; complete printable plan packets (kid and adult) | Both |
-| 6 | Doors, Drawers & Hardware | Door generators (slab, Shaker, raised panel, glass), drawer boxes, face frames; hardware library (hinges, slides, pulls, screws, shelf pins) with hardware list; shelf-pin layout | Adult |
-| 7 | Shapes & Edges | Curves, arches, tapers and non-rectangular parts; edge profiles (roundover, chamfer, cove, ogee); edge banding | Adult |
+| 6 | Doors, Drawers & Hardware | Door generators (slab, Shaker, raised panel, glass), drawer boxes, face frames; hardware library (hinges, slides, pulls, screws, shelf pins) with hardware list; shelf-pin layout; **motion: doors swing on their hinges and drawers slide on their slides in the 3D view, with a clearance check** | Adult |
+| 7 | Drawing & Shapes | **2D drawing board**: lines, arcs, circles, curves (splines) and text with dimensions and constraints (parallel, square, equal, tangent, fixed) in inches; **draw a shape and turn it into a part** (cut a board to any outline: arches, curved legs, cutouts, scroll-saw patterns); **3D modeling** of non-board parts (turned legs by revolve, carved or shaped pieces); tapers; edge profiles (roundover, chamfer, cove, ogee) and fillets; edge banding. Kid level: draw a shape and print it full size as a pattern | Both |
 | 8 | Realistic Rendering | Species grain textures, finish color and sheen, lighting, image export | Both |
 | 9 | Kids' Games | Lathe turning; tape-measure reading; spot-the-shop-hazard; match-the-wood; joint puzzle | Kids |
 | 10 | Joinery Library & Joint Designer | Western joints (lap, dowel, biscuit, box, mortise and tenon, dovetail, more) and Japanese joinery; Tsugite-style joint designer with fit and weak-point feedback; Japanese tools and water-stone sharpening; kid and adult levels | Both |
@@ -63,12 +63,13 @@ material only; no code is reused.
 | 12 | Finishing School | A dedicated place to learn and plan wood finishing on both sides, including a Mohawk Finishing Products section — see §2.2 | Both |
 | 13 | Shop Tools | Calculators (board feet, fractions, even spacing, compound miter angles, drawer sizing, golden ratio, shellac, epoxy); shop journal (photos, notes, time, cost per project); inventory (lumber, tools, hardware, finishes, low-stock alerts; feeds the optimizer) | Both |
 | 14 | Family & Sharing | Parent dashboard; multiple kid profiles; project packages to share between users; full backup and restore (projects, photos, journal) | Both |
-| 15 | Smart Helpers (internet) | Photo wood identification; "describe a project" starter designs; hands-free voice "next step" in Shop Mode. These need online AI services; costs and privacy are decided in this piece's spec | Both |
+| 15 | Smart Helpers (internet) | **Photo → plan: take a picture of a piece of furniture; the app breaks it into parts, estimates sizes (confirmed with one known measurement) and drafts the design, cut list and build steps for you to correct**; photo wood identification; "describe a project" starter designs; hands-free voice "next step" in Shop Mode. These need online AI services; costs and privacy are decided in this piece's spec | Both |
 | 16 | Projects & Templates | Expanded project and template libraries on both sides, ongoing until release | Both |
+| 17 | My Plans | A **My Plans** button on both sides: **write your own plans** (name, picture, tools, materials, numbered steps each with optional photo or 3D view, notes), attach and edit a design, and **print a step-by-step build guide** with the cut list; **bring in plans you already have** (PDF or photos of a book/magazine plan), kept page by page beside the editable plan, with the text of a PDF pulled in to start the steps | Both |
+| 18 | 3D Import & Export | Export STL, OBJ, 3MF (3D printing, other apps), STEP (CAD), DXF (laser/CNC outlines, flat patterns of parts) and glTF; import STL/OBJ/STEP/3MF models as reference objects (hardware, existing furniture) to design around | Adult |
 
 Each piece gets its own spec, plan and implementation cycle. Release happens
-only after all pieces are complete. Explicitly not planned: metric units,
-CNC/DXF export, business quotes/invoices, shop floor layout planner.
+only after all pieces are complete. Explicitly not planned: metric units, business quotes/invoices, shop floor layout planner.
 
 ### 2.1 Design principles from the research
 
@@ -275,3 +276,14 @@ Shown as a badge on the affected part and in a warnings list:
 
 `Woodworking\aa-woodworking-studio\` on Adam's laptop:
 `electron/`, `src/model/`, `src/templates/`, `src/ui/`, `tests/`, `docs/`.
+
+### 2.3 Features drawn from SolidCraft (added 2026-10-28)
+
+Adam asked to use SolidCraft (github.com/tangency-labs/solidcraft, open-source parametric CAD, MIT OR
+Apache-2.0) as a checklist of missing CAD capabilities. Chosen approach: build the woodworking-relevant
+features natively in A&A (same app, same model, tested), not embed or switch to SolidCraft. Features
+taken: freeform sketches with constraints and dimensions, shape-to-part, 3D modeling (Piece 7);
+named parameters with formulas, assemblies, exploded views, interference check, weight (Piece 3);
+moving doors and drawers (Piece 6); 3D import/export (Piece 18). SolidCraft is a reference for *what*
+to build; no SolidCraft code is copied (its own contribution rules are clean-room), so no licence
+obligations arise. If code is ever reused, its MIT licence and attribution go in the app's About box.
