@@ -3,20 +3,16 @@
   "version": "0.1.0",
   "description": "A&A Woodworking Studio",
   "main": "out/main/main.js",
-  "directories": {
-    "doc": "docs"
-  },
   "scripts": {
     "test": "vitest run",
     "dev": "electron-vite dev",
     "build": "electron-vite build",
     "e2e": "npm run build && playwright test",
-    "dist": "npm run build && electron-builder --win nsis",
+    "dist": "npm run build && electron-builder --win nsis --publish never",
     "typecheck": "tsc"
   },
-  "keywords": [],
   "author": "A&A Woodworking",
-  "license": "ISC",
+  "license": "UNLICENSED",
   "productName": "A&A Woodworking Studio",
   "dependencies": {
     "@react-three/drei": "^9.122.0",

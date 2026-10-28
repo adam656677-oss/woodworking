@@ -1,5 +1,5 @@
 import { worldBox } from '../../model/geometry'
-import { moveBoard, setEdgeBevel, setEndCut, updateBoard } from '../../model/ops'
+import { changeWood, moveBoard, setEdgeBevel, setEndCut, updateBoard } from '../../model/ops'
 import type { Board, EndCut, Vec3 } from '../../model/types'
 import { formatInches } from '../../model/units'
 import { studio, useStudio } from '../store'
@@ -68,10 +68,7 @@ export function PropertiesPanel() {
         <select
           aria-label="Wood"
           value={board.woodId}
-          onChange={e => {
-            const w = woods.find(x => x.id === e.target.value)
-            if (w) apply(p => updateBoard(p, board.id, { woodId: w.id, thickness: w.thickness }))
-          }}
+          onChange={e => apply(p => changeWood(p, board.id, e.target.value))}
           className="rounded border border-stone-300 px-1 py-1 text-sm"
         >
           {woods.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}

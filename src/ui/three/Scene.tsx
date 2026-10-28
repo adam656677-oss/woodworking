@@ -62,7 +62,7 @@ export default function Scene() {
       gl={{ preserveDrawingBuffer: true }}
       style={{ background: '#f5f1ea' }}
     >
-      <ViewControls view={view} bounds={bounds} projectKey={projectKey} />
+      <ViewControls view={view} bounds={bounds} projectKey={projectKey} boardCount={project.boards.length} />
       <ambientLight intensity={0.6} />
       <directionalLight position={[-40, -60, 90]} intensity={1.6} />
       <directionalLight position={[50, 40, 30]} intensity={0.5} />

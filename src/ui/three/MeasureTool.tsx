@@ -20,7 +20,7 @@ export function MeasureTool({ points }: { points: THREE.Vector3[] }) {
           </mesh>
           <Line points={[a, b]} color="#1565c0" lineWidth={2} />
           <Html position={a.clone().add(b).multiplyScalar(0.5)} center>
-            <div data-testid="measure-label" className="rounded bg-blue-700 px-2 py-0.5 text-sm font-semibold text-white shadow">
+            <div data-testid="measure-label" className="whitespace-nowrap rounded bg-blue-700 px-2 py-0.5 text-sm font-semibold text-white shadow">
               {formatInches(a.distanceTo(b))}
             </div>
           </Html>

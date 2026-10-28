@@ -8,5 +8,5 @@ html, body, #root { height: 100%; margin: 0; }
   @page { size: landscape; margin: 0.5in; }
   body * { visibility: hidden; }
   .print-area, .print-area * { visibility: visible; }
-  .print-area { position: absolute; inset: 0; }
+  .print-area { position: absolute !important; top: 0; left: 0; right: 0; bottom: auto; display: block !important; overflow: visible !important; }
 }

@@ -8,7 +8,7 @@ import type { View } from '../store'
 const UP = new THREE.Vector3(0, 0, 1)
 
 /** Camera for each view: orbit 3D (perspective) or flat Front / Side / Top (orthographic, no rotation). */
-export function ViewControls({ view, bounds, projectKey }: { view: View; bounds: Box | null; projectKey: number }) {
+export function ViewControls({ view, bounds, projectKey, boardCount }: { view: View; bounds: Box | null; projectKey: number; boardCount: number }) {
   const controls = useRef<any>(null)
   const { camera, size } = useThree()
 
@@ -36,11 +36,11 @@ export function ViewControls({ view, bounds, projectKey }: { view: View; bounds:
     }
   }, [bounds, camera, size.width, size.height, view])
 
-  // Refit when the view changes; refit on demand from the Fit button.
+  // Refit when the view, the project or the number of parts changes (not on moves); and on demand (Fit).
   useEffect(() => {
     fit()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [view, camera, projectKey])
+  }, [view, camera, projectKey, boardCount])
   useEffect(() => {
     const onFit = () => fit()
     window.addEventListener('aa:zoom-fit', onFit)

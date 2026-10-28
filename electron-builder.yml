@@ -1,0 +1,28 @@
+appId: com.aawoodworking.studio
+productName: A&A Woodworking Studio
+copyright: A&A Woodworking
+directories:
+  output: dist
+  buildResources: build
+files:
+  - out/**
+  - package.json
+win:
+  target: nsis
+  icon: build/icon.ico
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: always
+  createStartMenuShortcut: true
+  shortcutName: A&A Woodworking Studio
+  installerIcon: build/icon.ico
+  uninstallerIcon: build/icon.ico
+  artifactName: A&A Woodworking Studio Setup ${version}.${ext}
+fileAssociations:
+  - ext: aaw
+    name: A&A Project
+    description: A&A Woodworking project
+    icon: build/icon.ico
+
+publish: null

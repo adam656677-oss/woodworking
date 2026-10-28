@@ -17,7 +17,7 @@ export function CutListView() {
   }
 
   return (
-    <div role="dialog" aria-label="Cut list" className="print-area fixed inset-0 z-30 flex items-start justify-center overflow-y-auto bg-black/40 p-6 print:static print:bg-white print:p-0">
+    <div role="dialog" aria-label="Cut list" className="print-area fixed inset-0 z-30 flex items-start justify-center overflow-y-auto bg-black/40 p-6 print:bg-white print:p-0">
       <div className="w-[1000px] rounded-xl bg-white p-6 shadow-xl print:w-full print:shadow-none">
         <div className="mb-4 flex items-center justify-between">
           <div>

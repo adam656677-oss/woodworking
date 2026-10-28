@@ -61,6 +61,17 @@ export function updateBoard(p: Project, id: string, patch: Partial<Board>): Proj
   })
 }
 
+/** Switch a board to another wood: thickness always follows; a full-width board also takes the new full width. */
+export function changeWood(p: Project, id: string, woodId: string): Project {
+  const wood = findWood(p, woodId)
+  if (!wood) return p
+  return mapBoard(p, id, b => {
+    const old = findWood(p, b.woodId)
+    const fullWidth = old !== undefined && Math.abs(b.width - old.width) < 1e-9
+    return { ...b, woodId, thickness: wood.thickness, width: fullWidth ? snap64(wood.width) : b.width }
+  })
+}
+
 export function moveBoard(p: Project, id: string, position: Vec3): Project {
   return mapBoard(p, id, b => ({ ...b, position: snapVec(position) }))
 }

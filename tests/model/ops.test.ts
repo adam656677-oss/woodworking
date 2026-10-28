@@ -1,7 +1,7 @@
 import { cutList } from '../../src/model/cutlist'
 import { worldBox } from '../../src/model/geometry'
 import {
-  addBoard, addJoint, alignBoards, deleteBoards, duplicateBoards, mirrorBoards, moveBoard, removeJoint,
+  addBoard, addJoint, alignBoards, changeWood, deleteBoards, duplicateBoards, mirrorBoards, moveBoard, removeJoint,
   renameBoard, rotateBoard, setEdgeBevel, setEndCut, updateBoard, updateJoint
 } from '../../src/model/ops'
 import type { Project } from '../../src/model/types'
@@ -33,6 +33,17 @@ describe('addBoard and simple edits', () => {
     moveBoard(p, id, { x: 5, y: 0, z: 0 })
     expect(JSON.stringify(p)).toBe(before)
     expect(get(renameBoard(p, id, 'Leg'), id).name).toBe('Leg')
+  })
+})
+
+describe('changeWood', () => {
+  test('a full-width board takes the new stock width and thickness; a ripped board keeps its width', () => {
+    const { project: p, id } = addBoard(emptyProject('X'), { woodId: '1x4' })
+    const wide = changeWood(p, id, '1x10')
+    expect(get(wide, id)).toMatchObject({ woodId: '1x10', width: 9.25, thickness: 0.75 })
+    const ripped = changeWood(updateBoard(p, id, { width: 2 }), id, '1x10')
+    expect(get(ripped, id)).toMatchObject({ woodId: '1x10', width: 2 })
+    expect(get(changeWood(p, id, 'ply-3-4'), id).thickness).toBe(0.71875)
   })
 })
 
