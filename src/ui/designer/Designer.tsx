@@ -10,6 +10,7 @@ import { TemplatePanel } from './TemplatePanel'
 import { Toolbar } from './Toolbar'
 import { WarningsList } from './WarningsList'
 import { WoodLibraryDialog } from './WoodLibraryDialog'
+import { SceneBoundary } from '../three/SceneBoundary'
 
 const Scene = lazy(() => import('../three/Scene'))
 
@@ -89,9 +90,11 @@ export function Designer() {
           {empty ? (
             <StartPanel />
           ) : (
-            <Suspense fallback={<div className="p-4 text-stone-500">Loading 3D view…</div>}>
-              <Scene />
-            </Suspense>
+            <SceneBoundary>
+              <Suspense fallback={<div className="p-4 text-stone-500">Loading 3D view…</div>}>
+                <Scene />
+              </Suspense>
+            </SceneBoundary>
           )}
         </section>
         <aside className="w-72 overflow-y-auto border-l border-stone-300 bg-white p-3">

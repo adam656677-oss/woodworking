@@ -31,6 +31,8 @@ export type StudioState = {
   woodsOpen: boolean
   canUndo: boolean
   canRedo: boolean
+  /** Bumps whenever a different project is started or opened (the 3D view refits). */
+  projectKey: number
 
   goto(screen: Screen): void
   apply(fn: (p: Project) => Project | OpError): void
@@ -75,7 +77,7 @@ export function createStudioStore() {
     }
     const start = (project: Project, filePath: string | null, dirty: boolean) => {
       history = new History<Snapshot>({ project, selection: [] })
-      set({ filePath, screen: 'master', error: null, recovery: null })
+      set({ filePath, screen: 'master', error: null, recovery: null, projectKey: get().projectKey + 1 })
       sync(dirty)
     }
     const loadText = (text: string, path: string | null, backupPath: string | null, dirty: boolean) => {
@@ -108,6 +110,7 @@ export function createStudioStore() {
       woodsOpen: false,
       canUndo: false,
       canRedo: false,
+      projectKey: 0,
 
       goto: screen => set({ screen }),
 
