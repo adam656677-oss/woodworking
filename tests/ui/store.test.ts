@@ -248,3 +248,16 @@ test('opening a live-template project in the Simple Designer unlocks it so it ca
   expect(s.getState().project.template).toBeUndefined()
   expect(s.getState().project.boards.length).toBeGreaterThan(0)
 })
+
+test("a plan's attached design opens in the Master Shop as an unsaved copy", async () => {
+  const { serialize } = await import('../../src/model/fileFormat')
+  const { applyTemplate } = await import('../../src/templates')
+  const { emptyProject } = await import('../../src/model/woods')
+  fakeApi()
+  const s = createStudioStore()
+  s.getState().openDesignText(serialize(unlock(applyTemplate(emptyProject('Stool'), 'box'))))
+  expect(s.getState().screen).toBe('master')
+  expect(s.getState().kidsMode).toBe(false)
+  expect(s.getState().filePath).toBeNull()
+  expect(s.getState().project.boards.length).toBeGreaterThan(0)
+})
