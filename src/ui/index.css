@@ -3,9 +3,9 @@
 @tailwind utilities;
 html, body, #root { height: 100%; margin: 0; }
 
-/* Printing the cut list: only the cut list sheet, landscape. */
+/* Printing: only the .print-area sheet. Orientation is chosen by the print call (cut list and certificates landscape, project sheets portrait). */
 @media print {
-  @page { size: landscape; margin: 0.5in; }
+  @page { margin: 0.5in; }
   body * { visibility: hidden; }
   .print-area, .print-area * { visibility: visible; }
   .print-area { position: absolute !important; top: 0; left: 0; right: 0; bottom: auto; display: block !important; overflow: visible !important; }

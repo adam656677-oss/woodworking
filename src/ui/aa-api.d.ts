@@ -18,7 +18,8 @@ export type AaApi = {
   /** Remove the autosave for a file (null: the untitled autosave). */
   deleteAutosave(path: string | null): Promise<void>
   exportCsv(text: string, suggestedName: string): Promise<string | null>
-  print(): Promise<void>
+  /** Print the page; landscape unless told otherwise. */
+  print(opts?: { landscape?: boolean }): Promise<void>
   loadUserWoods(): Promise<Wood[]>
   saveUserWoods(woods: Wood[]): Promise<void>
   setDirty(dirty: boolean): void

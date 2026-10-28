@@ -8,7 +8,7 @@ contextBridge.exposeInMainWorld('aa', {
   readUntitledAutosave: () => ipcRenderer.invoke('aa:readUntitledAutosave'),
   deleteAutosave: (path: string | null) => ipcRenderer.invoke('aa:deleteAutosave', path),
   exportCsv: (text: string, suggestedName: string) => ipcRenderer.invoke('aa:exportCsv', text, suggestedName),
-  print: () => ipcRenderer.invoke('aa:print'),
+  print: (opts?: { landscape?: boolean }) => ipcRenderer.invoke('aa:print', opts),
   loadUserWoods: () => ipcRenderer.invoke('aa:loadUserWoods'),
   saveUserWoods: (woods: unknown) => ipcRenderer.invoke('aa:saveUserWoods', woods),
   setDirty: (dirty: boolean) => ipcRenderer.send('aa:setDirty', dirty),

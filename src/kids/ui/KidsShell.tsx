@@ -1,6 +1,8 @@
 import { useEffect } from 'react'
 import { kids, useKids } from '../kidsStore'
 import { BadgesView } from './BadgesView'
+import { Certificate } from './Certificate'
+import { ProjectSheet } from './ProjectSheet'
 import { KidsHome } from './KidsHome'
 import { LearnView } from './LearnView'
 import { LessonView } from './LessonView'
@@ -35,6 +37,10 @@ export function KidsShell() {
       return <BadgesView />
     case 'parent':
       return <ParentArea />
+    case 'sheet':
+      return <ProjectSheet key={page.id} projectId={page.id} />
+    case 'certificate':
+      return <Certificate key={page.badgeId} badgeId={page.badgeId} />
     default:
       return <KidsHome />
   }

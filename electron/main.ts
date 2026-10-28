@@ -98,8 +98,9 @@ function register(): void {
     await writeFile(r.filePath, text, 'utf8')
     return r.filePath
   })
-  ipcMain.handle('aa:print', async () => {
-    await new Promise<void>(resolve => win!.webContents.print({ landscape: true }, () => resolve()))
+  ipcMain.handle('aa:print', async (_e, opts?: { landscape?: boolean }) => {
+    const landscape = opts?.landscape ?? true
+    await new Promise<void>(resolve => win!.webContents.print({ landscape }, () => resolve()))
   })
   ipcMain.handle('aa:loadUserWoods', async () => {
     try {
