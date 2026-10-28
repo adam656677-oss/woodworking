@@ -2,7 +2,7 @@
 
 Woodworking design software for A&A Woodworking — a Kids' Workshop and a Master Shop on one shared engine.
 
-**Status:** Piece 1 of 15 (Design Core) complete. Nothing is released until every piece is done — see
+**Status:** Piece 1 of 16 (Design Core) complete. Nothing is released until every piece is done — see
 `docs/superpowers/specs/2026-10-27-design-core-design.md` for the full roadmap.
 
 ## Install

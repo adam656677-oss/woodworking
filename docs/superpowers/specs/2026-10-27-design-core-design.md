@@ -59,11 +59,12 @@ material only; no code is reused.
 | 8 | Realistic Rendering | Species grain textures, finish color and sheen, lighting, image export | Both |
 | 9 | Kids' Games | Lathe turning; tape-measure reading; spot-the-shop-hazard; match-the-wood; joint puzzle | Kids |
 | 10 | Joinery Library & Joint Designer | Western joints (lap, dowel, biscuit, box, mortise and tenon, dovetail, more) and Japanese joinery; Tsugite-style joint designer with fit and weak-point feedback; Japanese tools and water-stone sharpening; kid and adult levels | Both |
-| 11 | Deep Library | Species database (Janka, workability, toxicity/allergen warnings, uses, typical price) from a licensed data source; wood movement calculator and a design warning for cross-grain construction; shelf sag calculator and a sag warning on shelves; finishes (selector by properties, compatibility, dry times, food-safe, schedules, mixing); glues (open and clamp times); techniques; sharpening; adult safety (kickback, dust, hearing); lumber grades, nominal vs actual sizes; drill-press speeds; glossary | Adult (kid-level summaries) |
-| 12 | Shop Tools | Calculators (board feet, fractions, even spacing, compound miter angles, drawer sizing, golden ratio, shellac, epoxy); shop journal (photos, notes, time, cost per project); inventory (lumber, tools, hardware, finishes, low-stock alerts; feeds the optimizer) | Both |
-| 13 | Family & Sharing | Parent dashboard; multiple kid profiles; project packages to share between users; full backup and restore (projects, photos, journal) | Both |
-| 14 | Smart Helpers (internet) | Photo wood identification; "describe a project" starter designs; hands-free voice "next step" in Shop Mode. These need online AI services; costs and privacy are decided in this piece's spec | Both |
-| 15 | Projects & Templates | Expanded project and template libraries on both sides, ongoing until release | Both |
+| 11 | Deep Library | Species database (Janka, workability, toxicity/allergen warnings, uses, typical price) from a licensed data source; wood movement calculator and a design warning for cross-grain construction; shelf sag calculator and a sag warning on shelves; glues (open and clamp times); techniques; sharpening; adult safety (kickback, dust, hearing); lumber grades, nominal vs actual sizes; drill-press speeds; glossary | Adult (kid-level summaries) |
+| 12 | Finishing School | A dedicated place to learn and plan wood finishing on both sides, including a Mohawk Finishing Products section — see §2.2 | Both |
+| 13 | Shop Tools | Calculators (board feet, fractions, even spacing, compound miter angles, drawer sizing, golden ratio, shellac, epoxy); shop journal (photos, notes, time, cost per project); inventory (lumber, tools, hardware, finishes, low-stock alerts; feeds the optimizer) | Both |
+| 14 | Family & Sharing | Parent dashboard; multiple kid profiles; project packages to share between users; full backup and restore (projects, photos, journal) | Both |
+| 15 | Smart Helpers (internet) | Photo wood identification; "describe a project" starter designs; hands-free voice "next step" in Shop Mode. These need online AI services; costs and privacy are decided in this piece's spec | Both |
+| 16 | Projects & Templates | Expanded project and template libraries on both sides, ongoing until release | Both |
 
 Each piece gets its own spec, plan and implementation cycle. Release happens
 only after all pieces are complete. Explicitly not planned: metric units,
@@ -80,9 +81,50 @@ CNC/DXF export, business quotes/invoices, shop floor layout planner.
 - **Every design warning teaches.** Warnings (stock size, cross-grain movement,
   shelf sag, toxic species) link to the library page that explains them.
 
+### 2.2 Finishing School (Piece 12)
+
+Requested by Adam: a place that teaches putting finishes on wood, including Mohawk finishes.
+
+**Kids' Workshop — finishing basics**
+- Why wood gets a finish; sanding in order of grit (for example 80 → 120 → 180 → 220) and checking with a light.
+- Kid-friendly finishes: wipe-on water-based clear coats, paste wax, and food-safe oil for toys and cutting boards.
+- Safety first: ventilation, gloves and eye protection, keeping finishes away from the mouth, and why oily rags
+  must be laid flat to dry or put in water (they can catch fire on their own). "Adult does this" marks on
+  sprays and solvent finishes, following the tool-permission tiers.
+- A "finish sampler" practice project: one board, several finishes side by side.
+- Every kid project sheet ends with its finishing steps and drying times.
+
+**Master Shop — finishing in depth**
+- Surface prep: sanding sequence, raising the grain, grain filling, sealing.
+- Color: dye, pigment and gel stains; glazes; toners; color matching (primary, secondary and earth-tone mixing).
+- Topcoats: oils, wax, shellac, nitrocellulose lacquer, pre-catalyzed and post-catalyzed (conversion varnish),
+  varnish/polyurethane and waterborne systems — what each is good at, how it's applied (wipe, brush, spray),
+  dry and recoat times, sheen, durability, repairability and food safety.
+- Finish selector (choose the properties you need, compare finishes) and a compatibility checker
+  (what can go over what).
+- Finishing schedule builder: for each project, an ordered list of steps with products, coats, dry times and
+  sheen, printed with the plans and shown in the realistic rendering (Piece 8).
+- Touch-up and repair: damage analysis, fillers, burn-in sticks, color replacement, graining, sheen adjustment,
+  scratch removal and finish care.
+- Finishing safety: ventilation, respirators, flammability, spray safety, and rag disposal.
+
+**Mohawk Finishing Products section**
+- Who Mohawk is: a supplier of professional finishing, touch-up and repair products, based in Hudson, North
+  Carolina (part of RPM's industrial coatings group).
+- Their product families explained in plain terms, with what each is for: stains (for example Ultra®
+  Penetrating Stain and Wiping Wood™ Stain), toners and Tone Finish® aerosols, lacquers and other coatings,
+  sealers, Fil-Stik® putty sticks, Hard-Fill burn-in sticks, Blendal® color sticks and powders, touch-up and
+  graining markers, and care products.
+- Step-by-step lessons that name Mohawk products as an option in finishing schedules and touch-up
+  procedures (alongside generic equivalents).
+- Links to Mohawk's own technical data sheets, color chart and training workshops (Wood Touch-Up & Repair,
+  Professional Finishing) rather than copies, so product details stay current.
+- Content rules: the app describes products in its own words and links to Mohawk; it does not copy Mohawk's
+  text, photos or logos without written permission, and makes clear it is not affiliated with Mohawk.
+
 ## 3. Out of scope for Piece 1
 
-- Everything assigned to Pieces 2–15 in §2 (for example: cut optimization,
+- Everything assigned to Pieces 2–16 in §2 (for example: cut optimization,
   shop drawings, linked copies, curves, doors/drawers, rendering, games,
   library content)
 - Joints beyond butt, dado, rabbet, pocket screw and miter
