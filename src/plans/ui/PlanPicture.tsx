@@ -13,5 +13,5 @@ export function PlanPicture({ folder, plan, className }: { folder: string; plan:
       live = false
     }
   }, [folder, plan.picture])
-  return url ? <img src={url} alt="" className={`object-cover ${className ?? ''}`} /> : <div className={`flex items-center justify-center bg-amber-50 text-5xl ${className ?? ''}`} aria-hidden>📐</div>
+  return url ? <img src={url} alt="" className={`object-cover object-top ${className ?? ''}`} /> : <div className={`flex items-center justify-center bg-amber-50 text-5xl ${className ?? ''}`} aria-hidden>📐</div>
 }

@@ -28,6 +28,9 @@ function normalize(text: string): string {
   return text
     .replace(/[×*%]/g, ' x ')
     .replace(/(\d|["'])\s*X\s*(?=\d)/g, '$1 x ')
+    .replace(/(\d)X(?=\s|$)/g, '$1 x')
+    // "%x" or "X%" becomes "x x": two separators in a row are one.
+    .replace(/(?:\s*\bx\b\s*){2,}/g, ' x ')
     .replace(/[–—]/g, '-')
     .replace(/\s+/g, ' ')
     .trim()

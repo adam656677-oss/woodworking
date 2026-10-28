@@ -73,3 +73,11 @@ test('a number the reader was unsure of is flagged, not trusted', () => {
   const r = d.plan.cutRows[0]
   expect(d.flags[r.id]).toMatch(/unsure/)
 })
+
+test('a doubled "x" from the reader ("%x", "X%") still reads as one ×', () => {
+  const lines = ['Stool', '1-3/4x11-1/4%x 16" Top', '1-3/4x5-1/2X% 14-1/2" Step'].map((text, i) => ({ text, page: 1, box: [0, i * 20, 100, 12] as [number, number, number, number] }))
+  expect(draftPlan(lines, {}).plan.cutRows.map(r => [r.qty, r.part, r.thickness, r.width, r.length])).toEqual([
+    [1, 'Top', 0.75, 11.25, 16],
+    [1, 'Step', 0.75, 5.5, 14.5]
+  ])
+})

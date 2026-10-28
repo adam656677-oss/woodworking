@@ -18,3 +18,11 @@ test('a tilted, low-contrast phone photo of a plan page drafts its steps and mos
   const sides = d.plan.cutRows.find(r => r.part === 'Sides')
   if (sides) expect([sides.qty, sides.thickness, sides.width, sides.length]).toEqual([2, 0.75, 11.25, 9])
 }, 60_000)
+
+test('the same photo after the app\'s clean-up (grey, contrast stretched) still drafts at least 4 of its 5 cut rows', async () => {
+  const bytes = new Uint8Array(readFileSync(join(__dirname, '../plans/fixtures/photo-page-prepared.png')))
+  const d = draftPlan(await ocrImage(bytes, 1), { drill: 'drill' })
+  const parts = d.plan.cutRows.map(r => r.part)
+  expect(['Sides', 'Top', 'Stretcher', 'Aprons', 'Step'].filter(p => parts.includes(p)).length).toBeGreaterThanOrEqual(4)
+  expect(d.plan.steps).toHaveLength(5)
+}, 60_000)
