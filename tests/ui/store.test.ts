@@ -74,6 +74,24 @@ test('save as, then save; dirty clears', async () => {
   expect(s.getState().dirty).toBe(false)
 })
 
+test('the project name follows the file name on Save As and on Open', async () => {
+  const written: string[] = []
+  fakeApi({
+    saveAs: async (text: string) => { written.push(text); return 'C:\\Docs\\My Shelf.aaw' },
+    saveProject: async (_p: string, text: string) => { written.push(text) }
+  })
+  const s = createStudioStore()
+  s.getState().newFromTemplate('bookshelf')
+  await s.getState().saveAs()
+  expect(s.getState().project.name).toBe('My Shelf')
+  expect(JSON.parse(written[written.length - 1]).name).toBe('My Shelf')
+
+  const text = written[0] // a file whose stored name is still "Bookshelf"
+  fakeApi({ openProject: async () => ({ path: '/docs/Renamed.aaw', text, autosaveNewer: false, backupPath: '/docs/Renamed.aaw.bak' }) })
+  await s.getState().open()
+  expect(s.getState().project.name).toBe('Renamed')
+})
+
 test('a user wood joins new projects and is copied into a project when used', async () => {
   const saved: unknown[] = []
   fakeApi({ saveUserWoods: async (w: unknown) => { saved.push(w) } })

@@ -324,10 +324,25 @@ function boxesOverlap(a: Board, b: Board): boolean {
   return AXES.every(ax => Math.min(A.max[ax], B.max[ax]) - Math.max(A.min[ax], B.min[ax]) > 1 / 64)
 }
 
+/**
+ * What a joint changed on its boards. Joints made by templates (and older files) have no record,
+ * so for grooves it is worked out from how the boards sit: the partner went `depth` into the host.
+ */
+function restoreOf(p: Project, j: Joint): JointRestore[] {
+  if (j.restore) return j.restore
+  if (j.type !== 'dado' && j.type !== 'rabbet') return []
+  const host = p.boards.find(b => b.id === j.hostBoardId)
+  const partner = p.boards.find(b => b.id === j.partnerBoardId)
+  if (!host || !partner) return []
+  const lengthwise = localAxes(partner).length.axis === localAxes(host).thickness.axis
+  return [{ boardId: partner.id, side: sideFacing(partner, host, lengthwise), extend: (j.params as GrooveParams).depth }]
+}
+
 /** Change a joint's settings. A groove depth change moves the partner in or out of the groove. */
 export function updateJoint(p: Project, id: string, params: Record<string, unknown>): Project {
-  const j = p.joints.find(x => x.id === id)
-  if (!j) return p
+  const j0 = p.joints.find(x => x.id === id)
+  if (!j0) return p
+  const j = { ...j0, restore: restoreOf(p, j0) }
   let next = p
   let restore = j.restore
   const merged = { ...j.params, ...params } as Joint['params']
@@ -358,8 +373,9 @@ export function updateJoint(p: Project, id: string, params: Record<string, unkno
 export function removeJoint(p: Project, id: string): Project {
   const j = p.joints.find(x => x.id === id)
   if (!j) return p
+  const restore = restoreOf(p, j)
   let next: Project = { ...p, joints: p.joints.filter(x => x.id !== id) }
-  for (const r of j.restore ?? []) {
+  for (const r of restore) {
     if (!next.boards.some(b => b.id === r.boardId)) continue
     next = resizeAt(next, r.boardId, r.side, -r.extend)
     if (r.field) {

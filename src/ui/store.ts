@@ -82,7 +82,9 @@ export function createStudioStore() {
     }
     const loadText = (text: string, path: string | null, backupPath: string | null, dirty: boolean) => {
       try {
-        start(deserialize(text), path, dirty)
+        const project = deserialize(text)
+        // The file name is the project's name (a file renamed in Explorer shows its new name).
+        start(path ? { ...project, name: nameFromPath(path) } : project, path, dirty)
       } catch (e) {
         const msg = e instanceof ProjectFileError ? e.message : 'This project file could not be opened.'
         set({ error: backupPath ? `${msg} Your backup is at ${backupPath}` : msg, recovery: null })
@@ -183,9 +185,13 @@ export function createStudioStore() {
           const path = await api().saveAs(serialize(get().project), get().project.name)
           if (!path) return false
           const name = nameFromPath(path)
+          const renamed = name !== get().project.name
           const project = { ...get().project, name }
           history.current.project = project
-          set({ filePath: path, project, dirty: false })
+          set({ filePath: path, project })
+          // Re-save so the file itself carries the name it was saved under.
+          if (renamed) await api().saveProject(path, serialize(project))
+          set({ dirty: false })
           api().setDirty(false)
           return true
         } catch (e) {

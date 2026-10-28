@@ -117,6 +117,19 @@ describe('joints change the boards', () => {
   })
 })
 
+describe('template joints (made without a restore record)', () => {
+  test('a shallower template dado shortens just that shelf by 1/16; removing it shortens by the full 1/4', () => {
+    const p = applyTemplate(emptyProject('S'), 'bookshelf')
+    const shelf = p.boards.find(b => b.name === 'Shelf')!
+    const side = p.boards.find(b => b.name === 'Side')!
+    const j = p.joints.find(x => x.hostBoardId === side.id && x.partnerBoardId === shelf.id)!
+    const q = updateJoint(p, j.id, { depth: 0.1875 })
+    expect(get(q, shelf.id).length).toBe(29)
+    expect(worldBox(get(q, shelf.id)).max.x).toBe(worldBox(shelf).max.x)
+    expect(get(removeJoint(p, j.id), shelf.id).length).toBe(28.8125)
+  })
+})
+
 describe('picture frame miters', () => {
   // Rails run along x (14"), stiles along y (10") fitted between them: 14 x 14 outside.
   const frame = () => project([

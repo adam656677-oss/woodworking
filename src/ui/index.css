@@ -2,3 +2,11 @@
 @tailwind components;
 @tailwind utilities;
 html, body, #root { height: 100%; margin: 0; }
+
+/* Printing the cut list: only the cut list sheet, landscape. */
+@media print {
+  @page { size: landscape; margin: 0.5in; }
+  body * { visibility: hidden; }
+  .print-area, .print-area * { visibility: visible; }
+  .print-area { position: absolute; inset: 0; }
+}
