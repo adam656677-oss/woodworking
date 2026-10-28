@@ -1,5 +1,5 @@
 import type { Progress } from '../kids/progress'
-import type { Plan } from '../plans/types'
+import type { Plan, TextLine } from '../plans/types'
 import type { Wood } from '../model/types'
 
 export type OpenedProject = {
@@ -52,6 +52,10 @@ export type AaApi = {
   plansFileUrl(folder: string, rel: string): Promise<string | null>
   plansAddPhoto(folder: string, id: string): Promise<string | null>
   plansPickImport(kind: 'pdf' | 'photos'): Promise<{ name: string; bytes: Uint8Array }[]>
+  /** Read the text of a page picture (offline). */
+  plansOcr(bytes: Uint8Array, page: number): Promise<TextLine[]>
+  /** Open a web page once and save it as a PDF; rejects with 'web' on failure. */
+  plansCapture(url: string): Promise<Uint8Array>
 }
 
 declare global {

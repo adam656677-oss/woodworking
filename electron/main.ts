@@ -7,6 +7,7 @@ import {
   attachDesign, createPlanFolder, deletePlanFolder, fileDataUrl, listPlans, loadPlan, plansRoot, readDesign, savePage, savePhotoBytes, savePlan
 } from './plansStore'
 import type { Plan } from '../src/plans/types'
+import { configureOcr, ocrImage } from './ocr'
 import type { Progress } from '../src/kids/progress'
 
 // Test hooks: e2e runs point these at temp folders so they never touch real documents or settings.
@@ -180,6 +181,22 @@ function register(): void {
     if (scale < 1) img = img.resize({ width: Math.round(width * scale), height: Math.round(height * scale), quality: 'best' })
     return savePhotoBytes(root(), folder, id, img.toJPEG(85))
   })
+  ipcMain.handle('plans:ocr', async (_e, bytes: Uint8Array, page: number) => ocrImage(bytes, page))
+  ipcMain.handle('plans:capture', async (_e, url: string) => {
+    if (!/^https?:\/\//i.test(url)) throw new Error('web')
+    const hidden = new BrowserWindow({ show: false, webPreferences: { javascript: true, sandbox: true } })
+    try {
+      await Promise.race([
+        hidden.loadURL(url),
+        new Promise((_r, reject) => setTimeout(() => reject(new Error('web')), 30_000))
+      ])
+      return new Uint8Array(await hidden.webContents.printToPDF({ pageSize: 'Letter', printBackground: false }))
+    } catch {
+      throw new Error('web')
+    } finally {
+      hidden.destroy()
+    }
+  })
   ipcMain.handle('plans:pickImport', async (_e, kind: 'pdf' | 'photos') => {
     const filters = kind === 'pdf' ? [{ name: 'PDF plans', extensions: ['pdf'] }] : [{ name: 'Photos and scans', extensions: ['jpg', 'jpeg', 'png'] }]
     const r = await dialog.showOpenDialog(win!, { properties: kind === 'pdf' ? ['openFile'] : ['openFile', 'multiSelections'], filters })
@@ -201,6 +218,8 @@ function register(): void {
 }
 
 app.whenReady().then(async () => {
+  // The text reader's language data ships unpacked next to the app archive (see electron-builder.yml).
+  configureOcr({ langPath: join(app.getAppPath().replace(/app\.asar$/, 'app.asar.unpacked'), 'node_modules', '@tesseract.js-data', 'eng', '4.0.0_best_int') })
   await mkdir(defaultFolder(docsDir()), { recursive: true }).catch(() => undefined)
   register()
   createWindow()

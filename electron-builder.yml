@@ -7,6 +7,12 @@ directories:
 files:
   - out/**
   - package.json
+# The text reader runs in a worker thread and reads its language data from real files, so these stay
+# outside the app archive.
+asarUnpack:
+  - node_modules/tesseract.js/**
+  - node_modules/tesseract.js-core/**
+  - node_modules/@tesseract.js-data/eng/4.0.0_best_int/**
 win:
   target: nsis
   icon: build/icon.ico

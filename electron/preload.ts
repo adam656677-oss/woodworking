@@ -37,5 +37,7 @@ contextBridge.exposeInMainWorld('aa', {
   plansSavePage: (folder: string, n: number, png: Uint8Array) => ipcRenderer.invoke('plans:savePage', folder, n, png),
   plansFileUrl: (folder: string, rel: string) => ipcRenderer.invoke('plans:fileUrl', folder, rel),
   plansAddPhoto: (folder: string, id: string) => ipcRenderer.invoke('plans:addPhoto', folder, id),
-  plansPickImport: (kind: 'pdf' | 'photos') => ipcRenderer.invoke('plans:pickImport', kind)
+  plansPickImport: (kind: 'pdf' | 'photos') => ipcRenderer.invoke('plans:pickImport', kind),
+  plansOcr: (bytes: Uint8Array, page: number) => ipcRenderer.invoke('plans:ocr', bytes, page),
+  plansCapture: (url: string) => ipcRenderer.invoke('plans:capture', url)
 })
