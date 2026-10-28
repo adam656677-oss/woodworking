@@ -51,7 +51,11 @@ export type Board = {
 export type JointType = 'butt' | 'dado' | 'rabbet' | 'pocketScrew' | 'miter'
 
 export type ButtParams = { fastener: 'glue' | 'screws' | 'nails'; count: number }
-export type GrooveParams = { width: number; depth: number; offset: number; face: 'top' | 'bottom' }
+/**
+ * A dado or rabbet in the host. along 'width' (default): runs across the board, `offset` from the start end.
+ * along 'length': runs down the board, `offset` from the left edge.
+ */
+export type GrooveParams = { width: number; depth: number; offset: number; face: 'top' | 'bottom'; along?: 'width' | 'length' }
 export type PocketParams = { count: number; spacing: number; screwLength: number }
 export type MiterParams = { angle: number; fastener: 'glue' | 'nails' | 'splines' }
 
