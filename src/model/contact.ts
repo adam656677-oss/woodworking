@@ -1,0 +1,99 @@
+// How two boards meet, and which joints make sense for that meeting.
+import { AXES, type Axis, type Box, isAxisAligned, localAxes, overlap1, worldBox } from './geometry'
+import type { Board, JointType, Project } from './types'
+
+export type Contact = {
+  kind: 'endToFace' | 'edgeToFace' | 'faceToFace' | 'cornerEnds'
+  host: string
+  partner: string
+  nearHostEnd: boolean
+  cornerAngle?: number
+  /** For cornerEnds: whether the partner's end meets the host's face (box corner) or edge (frame corner). */
+  hostSurface?: 'face' | 'edge'
+}
+
+/** Coplanar within 1/64". */
+export const TOUCH_TOL = 1 / 64
+const AREA_MIN = 1e-6
+
+type Part = 'end' | 'edge' | 'face'
+
+function partOn(b: Board, axis: Axis): Part {
+  const a = localAxes(b)
+  if (a.length.axis === axis) return 'end'
+  if (a.width.axis === axis) return 'edge'
+  return 'face'
+}
+
+/** Along the host's length axis, the gap from the contact patch to the nearer host end. */
+function patchToHostEnd(host: Board, hb: Box, pb: Box): number {
+  const ax = localAxes(host).length.axis
+  const lo = Math.max(hb.min[ax], pb.min[ax])
+  const hi = Math.min(hb.max[ax], pb.max[ax])
+  return Math.min(lo - hb.min[ax], hb.max[ax] - hi)
+}
+
+/** Partner's outer surface flush with the host's end (along the host's length axis). */
+function flushWithHostEnd(host: Board, hb: Box, pb: Box): boolean {
+  const ax = localAxes(host).length.axis
+  return Math.abs(pb.min[ax] - hb.min[ax]) <= TOUCH_TOL || Math.abs(pb.max[ax] - hb.max[ax]) <= TOUCH_TOL
+}
+
+function hasMiteredEnd(b: Board): boolean {
+  return b.endCuts.start.miter !== 0 || b.endCuts.end.miter !== 0
+}
+
+/** How boards a and b meet, or null when they don't touch (or aren't square to each other). */
+export function contactBetween(project: Project, aId: string, bId: string): Contact | null {
+  const a = project.boards.find(b => b.id === aId)
+  const b = project.boards.find(b => b.id === bId)
+  if (!a || !b || a === b || !isAxisAligned(a) || !isAxisAligned(b)) return null
+  const A = worldBox(a)
+  const B = worldBox(b)
+  const ov = AXES.map(ax => overlap1(A.min[ax], A.max[ax], B.min[ax], B.max[ax]))
+
+  // Mitered corner: the boxes overlap in a corner region where both boards have mitered ends.
+  if (ov.every(o => o > TOUCH_TOL) && hasMiteredEnd(a) && hasMiteredEnd(b)) {
+    const la = localAxes(a).length.axis
+    const lb = localAxes(b).length.axis
+    if (la !== lb) return { kind: 'cornerEnds', host: a.id, partner: b.id, nearHostEnd: true, cornerAngle: 90, hostSurface: 'edge' }
+  }
+
+  // Touching: coplanar on exactly one axis, positive area on the other two.
+  const touchAxes = AXES.filter((ax, i) => Math.abs(ov[i]) <= TOUCH_TOL)
+  if (touchAxes.length !== 1) return null
+  const t = touchAxes[0]
+  if (AXES.some((ax, i) => ax !== t && ov[i] <= AREA_MIN)) return null
+
+  const pa = partOn(a, t)
+  const pb = partOn(b, t)
+  if (pa === 'face' && pb === 'face') return { kind: 'faceToFace', host: a.id, partner: b.id, nearHostEnd: false }
+
+  // The board touching with its end (or edge) is the partner; the one touching with its face (or edge) hosts.
+  const order: Part[] = ['end', 'edge', 'face']
+  const [partner, host, pPart, hPart] = order.indexOf(pa) <= order.indexOf(pb) ? [a, b, pa, pb] : [b, a, pb, pa]
+  const hb = worldBox(host)
+  const pbx = worldBox(partner)
+
+  if (pPart === 'end' && hPart !== 'end' && flushWithHostEnd(host, hb, pbx)) {
+    return { kind: 'cornerEnds', host: host.id, partner: partner.id, nearHostEnd: true, cornerAngle: 90, hostSurface: hPart === 'face' ? 'face' : 'edge' }
+  }
+  if (hPart !== 'face') return null
+  const near = patchToHostEnd(host, hb, pbx) <= host.thickness + TOUCH_TOL
+  if (pPart === 'end') return { kind: 'endToFace', host: host.id, partner: partner.id, nearHostEnd: near }
+  return { kind: 'edgeToFace', host: host.id, partner: partner.id, nearHostEnd: near }
+}
+
+/** The joints that make sense for a contact, in menu order. */
+export function jointOffers(c: Contact): JointType[] {
+  switch (c.kind) {
+    case 'endToFace':
+      return c.nearHostEnd ? ['butt', 'dado', 'pocketScrew', 'rabbet'] : ['butt', 'dado', 'pocketScrew']
+    case 'edgeToFace':
+      return ['butt', 'dado', 'rabbet']
+    case 'faceToFace':
+      return ['butt']
+    case 'cornerEnds':
+      return c.hostSurface === 'face' ? ['butt', 'miter', 'rabbet', 'pocketScrew'] : ['butt', 'miter']
+  }
+}
