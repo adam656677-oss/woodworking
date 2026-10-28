@@ -1,0 +1,20 @@
+{
+  "id": "tool-rotary-tool",
+  "title": "Rotary tool",
+  "level": 0,
+  "cards": [
+    {
+      "image": "rotary-tool",
+      "text": [
+        "A small fast tool for carving, sanding and shaping small parts."
+      ]
+    },
+    {
+      "image": "rotary-tool",
+      "text": [
+        "Clamp the part; wear safety glasses.",
+        "It is an Advanced tool."
+      ]
+    }
+  ]
+}

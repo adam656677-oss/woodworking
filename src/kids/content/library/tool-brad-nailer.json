@@ -1,0 +1,20 @@
+{
+  "id": "tool-brad-nailer",
+  "title": "Brad nailer",
+  "level": 0,
+  "cards": [
+    {
+      "image": "brad-nailer",
+      "text": [
+        "Shoots thin nails called brads."
+      ]
+    },
+    {
+      "image": "brad-nailer",
+      "text": [
+        "Never point it at anyone; keep your hand away from where the brad comes out.",
+        "It is an Advanced tool."
+      ]
+    }
+  ]
+}

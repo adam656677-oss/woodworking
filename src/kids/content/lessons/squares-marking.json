@@ -1,0 +1,30 @@
+{
+  "id": "squares-marking",
+  "title": "Squares and marking",
+  "level": 2,
+  "cards": [
+    {
+      "image": "square",
+      "text": [
+        "A square has a perfect corner. Use it to draw lines straight across a board."
+      ]
+    },
+    {
+      "image": "square",
+      "text": [
+        "Press the thick part of the square tight against the edge of the board.",
+        "Then draw along the blade."
+      ]
+    },
+    {
+      "image": "square",
+      "text": [
+        "Use it to check that a box corner is square, too."
+      ],
+      "tip": {
+        "kind": "try",
+        "text": "Mark your pieces with letters so you know which goes where."
+      }
+    }
+  ]
+}

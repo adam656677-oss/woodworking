@@ -1,0 +1,42 @@
+{
+  "id": "tic-tac-toe",
+  "name": "Tic-tac-toe board",
+  "level": 1,
+  "stars": 1,
+  "minutes": 60,
+  "kind": "toy",
+  "picture": "tic-tac-toe",
+  "blurb": "A wooden game board with raised lines. Use bottle caps or painted rocks for X and O.",
+  "tools": [
+    "tape-measure",
+    "square",
+    "pencil",
+    "hand-saw",
+    "miter-box",
+    "glue",
+    "clamps",
+    "sandpaper"
+  ],
+  "steps": [
+    {
+      "text": "Measure and mark the square base on the 1x10.",
+      "tool": "tape-measure"
+    },
+    {
+      "text": "Cut the base from the 1x10, then two long strips and six short strips from the 1x2.",
+      "tool": "hand-saw"
+    },
+    {
+      "text": "Mark where the strips go on the base (see the cut sheet and picture).",
+      "tool": "square"
+    },
+    {
+      "text": "Glue the strips on the lines and clamp them.",
+      "tool": "clamps"
+    },
+    {
+      "text": "Sand everything smooth.",
+      "tool": "sandpaper"
+    }
+  ]
+}

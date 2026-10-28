@@ -1,0 +1,43 @@
+{
+  "id": "safety-gear",
+  "title": "Safety gear",
+  "level": 1,
+  "cards": [
+    {
+      "image": "goggles",
+      "text": [
+        "Safety glasses go on before any tool comes out.",
+        "They stop chips and dust from hitting your eyes."
+      ],
+      "tip": {
+        "kind": "safety",
+        "text": "Regular glasses are not safety glasses. Wear safety glasses over them."
+      }
+    },
+    {
+      "image": "ear-muffs",
+      "text": [
+        "Loud tools can hurt your hearing, even if it does not hurt right away.",
+        "Ear muffs or ear plugs keep your ears safe."
+      ]
+    },
+    {
+      "image": "dust-mask",
+      "text": [
+        "Sanding makes fine dust that you should not breathe.",
+        "Wear a dust mask when you sand or sweep."
+      ]
+    },
+    {
+      "image": "goggles",
+      "text": [
+        "Wear closed-toe shoes in the shop.",
+        "Boards and tools can fall, and your toes are worth protecting."
+      ],
+      "tip": {
+        "kind": "try",
+        "text": "Gloves are for carrying rough boards, not for using spinning tools."
+      }
+    }
+  ]
+}

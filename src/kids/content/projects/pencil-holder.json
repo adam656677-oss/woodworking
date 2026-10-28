@@ -1,0 +1,47 @@
+{
+  "id": "pencil-holder",
+  "name": "Pencil holder",
+  "level": 1,
+  "stars": 1,
+  "minutes": 60,
+  "kind": "useful",
+  "picture": "pencil-holder",
+  "blurb": "A square cup for pencils and markers on your desk.",
+  "tools": [
+    "tape-measure",
+    "square",
+    "pencil",
+    "hand-saw",
+    "miter-box",
+    "glue",
+    "clamps",
+    "hammer",
+    "sandpaper"
+  ],
+  "steps": [
+    {
+      "text": "Measure and mark the four sides and the bottom on the 1x4.",
+      "tool": "tape-measure"
+    },
+    {
+      "text": "Draw square lines across the board at each mark.",
+      "tool": "square"
+    },
+    {
+      "text": "Cut the pieces in the miter box.",
+      "tool": "hand-saw"
+    },
+    {
+      "text": "Glue the sides and the bottom between the front and back, then clamp them.",
+      "tool": "clamps"
+    },
+    {
+      "text": "Add two small nails at each corner.",
+      "tool": "hammer"
+    },
+    {
+      "text": "Sand all the edges smooth.",
+      "tool": "sandpaper"
+    }
+  ]
+}

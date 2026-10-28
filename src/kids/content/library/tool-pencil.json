@@ -1,0 +1,20 @@
+{
+  "id": "tool-pencil",
+  "title": "Pencil",
+  "level": 0,
+  "cards": [
+    {
+      "image": "pencil",
+      "text": [
+        "Marks where to cut."
+      ]
+    },
+    {
+      "image": "pencil",
+      "text": [
+        "A sharp pencil makes a thin, exact line.",
+        "It is a Beginner tool."
+      ]
+    }
+  ]
+}

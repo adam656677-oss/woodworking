@@ -1,0 +1,14 @@
+{
+  "id": "wood-oak",
+  "title": "Oak",
+  "level": 0,
+  "cards": [
+    {
+      "image": "wood-grain",
+      "text": [
+        "Oak is a strong, heavy hardwood with bold grain.",
+        "It is harder to cut and nail, so drill pilot holes."
+      ]
+    }
+  ]
+}

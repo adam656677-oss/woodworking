@@ -1,0 +1,30 @@
+{
+  "id": "screws-nails",
+  "title": "Screws vs. nails",
+  "level": 2,
+  "cards": [
+    {
+      "image": "nail",
+      "text": [
+        "Nails go in fast and hold well when wood is pulled sideways."
+      ]
+    },
+    {
+      "image": "screw",
+      "text": [
+        "Screws hold tighter when wood is pulled apart, and you can take them out again."
+      ]
+    },
+    {
+      "image": "screw",
+      "text": [
+        "Drill a pilot hole first so the screw does not split the wood.",
+        "A pilot hole is a little smaller than the screw."
+      ],
+      "tip": {
+        "kind": "try",
+        "text": "Near the end of a board, always use a pilot hole."
+      }
+    }
+  ]
+}

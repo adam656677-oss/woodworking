@@ -1,0 +1,39 @@
+{
+  "id": "shop-rules",
+  "title": "Shop rules",
+  "level": 1,
+  "cards": [
+    {
+      "image": "rules",
+      "text": [
+        "A woodshop has rules so everyone goes home with all ten fingers.",
+        "Rule one: always ask a grown-up before you start."
+      ]
+    },
+    {
+      "image": "rules",
+      "text": [
+        "Keep the floor clear. Sweep up scraps so nobody trips.",
+        "Put tools back where they live when you are done."
+      ]
+    },
+    {
+      "image": "rules",
+      "text": [
+        "No running and no goofing around in the shop.",
+        "Tie back long hair and take off anything that dangles, like a hoodie string."
+      ],
+      "tip": {
+        "kind": "safety",
+        "text": "Loose sleeves and strings can get caught in spinning tools."
+      }
+    },
+    {
+      "image": "rules",
+      "text": [
+        "If something feels wrong or scary, stop and get your grown-up.",
+        "Stopping is always the right choice."
+      ]
+    }
+  ]
+}

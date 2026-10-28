@@ -1,0 +1,14 @@
+{
+  "id": "wood-plywood",
+  "title": "Plywood",
+  "level": 0,
+  "cards": [
+    {
+      "image": "plywood",
+      "text": [
+        "Plywood is made of thin layers glued together, each turned the other way.",
+        "That makes big, flat, strong sheets that do not crack easily."
+      ]
+    }
+  ]
+}

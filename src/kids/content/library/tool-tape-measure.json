@@ -1,0 +1,20 @@
+{
+  "id": "tool-tape-measure",
+  "title": "Tape measure",
+  "level": 0,
+  "cards": [
+    {
+      "image": "tape-measure",
+      "text": [
+        "Measures length in inches."
+      ]
+    },
+    {
+      "image": "tape-measure",
+      "text": [
+        "Hook the tip on the end and read the line at your mark.",
+        "It is a Beginner tool."
+      ]
+    }
+  ]
+}

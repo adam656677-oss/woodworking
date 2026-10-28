@@ -1,0 +1,20 @@
+{
+  "id": "dust-noise",
+  "title": "Dust and noise",
+  "level": 4,
+  "cards": [
+    {
+      "image": "dust-mask",
+      "text": [
+        "Fine dust floats in the air for a long time. Big tools make lots of it.",
+        "Dust collectors and masks keep lungs healthy."
+      ]
+    },
+    {
+      "image": "ear-muffs",
+      "text": [
+        "Big tools are loud. Wear hearing protection whenever they run."
+      ]
+    }
+  ]
+}

@@ -1,0 +1,66 @@
+{
+  "id": "quiz-4",
+  "level": 4,
+  "questions": [
+    {
+      "prompt": "Who runs the table saw?",
+      "choices": [
+        "Kids",
+        "Grown-ups",
+        "Anyone"
+      ],
+      "correct": 1,
+      "reason": "The table saw is a grown-up tool."
+    },
+    {
+      "prompt": "Kickback is when…",
+      "choices": [
+        "The saw throws the wood back",
+        "The saw is turned off",
+        "The wood is sanded"
+      ],
+      "correct": 0,
+      "reason": "That is why everyone stands to the side."
+    },
+    {
+      "prompt": "A miter saw is mostly for…",
+      "choices": [
+        "Cutting boards to length and angles",
+        "Sanding",
+        "Drilling holes"
+      ],
+      "correct": 0,
+      "reason": "Its blade comes down to chop boards."
+    },
+    {
+      "prompt": "A lathe…",
+      "choices": [
+        "Spins the wood",
+        "Spins a blade under a table",
+        "Drills holes"
+      ],
+      "correct": 0,
+      "reason": "The wood spins while a tool shapes it."
+    },
+    {
+      "prompt": "Why wear a mask around big tools?",
+      "choices": [
+        "To look cool",
+        "Fine dust hurts your lungs",
+        "To stay warm"
+      ],
+      "correct": 1,
+      "reason": "Fine dust stays in the air for a long time."
+    },
+    {
+      "prompt": "When big tools run, you wear…",
+      "choices": [
+        "Hearing protection",
+        "Sandals",
+        "Gloves near the blade"
+      ],
+      "correct": 0,
+      "reason": "Big tools are loud enough to hurt your hearing."
+    }
+  ]
+}

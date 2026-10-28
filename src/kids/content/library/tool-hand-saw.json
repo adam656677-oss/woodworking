@@ -1,0 +1,20 @@
+{
+  "id": "tool-hand-saw",
+  "title": "Hand saw",
+  "level": 0,
+  "cards": [
+    {
+      "image": "hand-saw",
+      "text": [
+        "Cuts boards by hand."
+      ]
+    },
+    {
+      "image": "hand-saw",
+      "text": [
+        "Long, steady push strokes; keep your other hand far from the blade.",
+        "It is a Beginner tool."
+      ]
+    }
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "id": "first-aid",
+  "title": "First aid basics",
+  "level": 1,
+  "cards": [
+    {
+      "image": "first-aid",
+      "text": [
+        "Know where the first aid kit is before you start working.",
+        "Ask your grown-up to show you."
+      ]
+    },
+    {
+      "image": "first-aid",
+      "text": [
+        "Small cut? Tell a grown-up, wash it with clean water, and cover it with a bandage."
+      ]
+    },
+    {
+      "image": "first-aid",
+      "text": [
+        "Splinter? Do not dig at it. A grown-up can take it out with clean tweezers."
+      ]
+    },
+    {
+      "image": "first-aid",
+      "text": [
+        "Anything in your eye, a big cut, or a bump on the head: stop and get a grown-up right away."
+      ],
+      "tip": {
+        "kind": "safety",
+        "text": "Always tell a grown-up when you get hurt, even if it seems small."
+      }
+    }
+  ]
+}

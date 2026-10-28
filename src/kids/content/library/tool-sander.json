@@ -1,0 +1,20 @@
+{
+  "id": "tool-sander",
+  "title": "Random-orbit sander",
+  "level": 0,
+  "cards": [
+    {
+      "image": "sander",
+      "text": [
+        "Sands fast and smooth."
+      ]
+    },
+    {
+      "image": "sander",
+      "text": [
+        "Set it down before turning it on; lift it after it stops.",
+        "It is an Intermediate tool."
+      ]
+    }
+  ]
+}

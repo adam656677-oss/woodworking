@@ -1,0 +1,34 @@
+{
+  "id": "tree-to-board",
+  "title": "From tree to board",
+  "level": 0,
+  "cards": [
+    {
+      "image": "tree",
+      "text": [
+        "Every board started as a tree.",
+        "Trees grow a new ring of wood every year."
+      ]
+    },
+    {
+      "image": "log",
+      "text": [
+        "At the sawmill, logs are sawn into thick boards."
+      ]
+    },
+    {
+      "image": "boards",
+      "text": [
+        "The boards dry for months so they do not shrink and crack later.",
+        "Then they are planed smooth and sold at the lumber store."
+      ]
+    },
+    {
+      "image": "wood-grain",
+      "text": [
+        "The lines you see in a board are the tree’s growth rings.",
+        "That pattern is called the grain."
+      ]
+    }
+  ]
+}

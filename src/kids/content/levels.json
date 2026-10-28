@@ -1,0 +1,48 @@
+[
+  {
+    "id": 1,
+    "name": "Sawdust Starter",
+    "lessons": [
+      "shop-rules",
+      "safety-gear",
+      "first-aid",
+      "measuring",
+      "hand-saw",
+      "hammer-nails",
+      "sandpaper"
+    ],
+    "quiz": "quiz-1"
+  },
+  {
+    "id": 2,
+    "name": "Builder",
+    "lessons": [
+      "drill-driver",
+      "screws-nails",
+      "clamps-glue",
+      "squares-marking"
+    ],
+    "quiz": "quiz-2"
+  },
+  {
+    "id": 3,
+    "name": "Craftsman",
+    "lessons": [
+      "jigsaw",
+      "scroll-saw",
+      "sander",
+      "kid-finishes"
+    ],
+    "quiz": "quiz-3"
+  },
+  {
+    "id": 4,
+    "name": "Workshop Pro",
+    "lessons": [
+      "big-saws",
+      "router-lathe",
+      "dust-noise"
+    ],
+    "quiz": "quiz-4"
+  }
+]

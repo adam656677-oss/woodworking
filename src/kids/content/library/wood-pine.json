@@ -1,0 +1,14 @@
+{
+  "id": "wood-pine",
+  "title": "Pine",
+  "level": 0,
+  "cards": [
+    {
+      "image": "boards",
+      "text": [
+        "Pine is a softwood from evergreen trees.",
+        "It is light, cheap and easy to cut and nail. Great for first projects."
+      ]
+    }
+  ]
+}

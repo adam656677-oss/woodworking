@@ -1,0 +1,36 @@
+{
+  "id": "sandpaper",
+  "title": "Sandpaper grits",
+  "level": 1,
+  "cards": [
+    {
+      "image": "sandpaper",
+      "text": [
+        "Sandpaper has a number called the grit. Small numbers are rough. Big numbers are smooth."
+      ]
+    },
+    {
+      "image": "sandpaper",
+      "text": [
+        "Start with 80 or 100 grit to remove marks. Then use 150. Finish with 220."
+      ]
+    },
+    {
+      "image": "sandpaper",
+      "text": [
+        "Sand along the grain, the same way the lines in the wood run.",
+        "Wrap the paper around a block to keep the surface flat."
+      ],
+      "tip": {
+        "kind": "try",
+        "text": "Wipe off the dust between grits so you can see what you missed."
+      }
+    },
+    {
+      "image": "dust-mask",
+      "text": [
+        "Sanding makes dust. Wear your dust mask."
+      ]
+    }
+  ]
+}

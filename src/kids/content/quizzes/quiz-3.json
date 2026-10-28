@@ -1,0 +1,66 @@
+{
+  "id": "quiz-3",
+  "level": 3,
+  "questions": [
+    {
+      "prompt": "What can a jigsaw do that a hand saw cannot do easily?",
+      "choices": [
+        "Cut curves",
+        "Drive screws",
+        "Sand"
+      ],
+      "correct": 0,
+      "reason": "Its thin blade turns to follow curves."
+    },
+    {
+      "prompt": "On a scroll saw, where do your fingers go?",
+      "choices": [
+        "In front of the blade",
+        "To the side of the blade",
+        "Under the table"
+      ],
+      "correct": 1,
+      "reason": "Fingers stay to the side, never in the blade’s path."
+    },
+    {
+      "prompt": "When do you lift a random-orbit sander off the wood?",
+      "choices": [
+        "While it spins",
+        "After it stops",
+        "Never"
+      ],
+      "correct": 1,
+      "reason": "Lifting it while spinning can gouge the wood or fly around."
+    },
+    {
+      "prompt": "Why are oily finish rags dangerous?",
+      "choices": [
+        "They smell",
+        "They can catch fire by themselves",
+        "They are sticky"
+      ],
+      "correct": 1,
+      "reason": "Drying oil makes heat. A grown-up lays them flat outside or puts them in water."
+    },
+    {
+      "prompt": "Which finish cleans up with soap and water?",
+      "choices": [
+        "Water-based finish",
+        "Oil-based finish",
+        "Paint thinner"
+      ],
+      "correct": 0,
+      "reason": "Water-based finishes are the easiest for kids."
+    },
+    {
+      "prompt": "Before cutting with the jigsaw, check that…",
+      "choices": [
+        "Nothing is under the cut",
+        "The blade is dull",
+        "The board is wet"
+      ],
+      "correct": 0,
+      "reason": "The blade pokes out below the board."
+    }
+  ]
+}

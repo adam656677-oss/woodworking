@@ -1,0 +1,86 @@
+{
+  "id": "quiz-1",
+  "level": 1,
+  "questions": [
+    {
+      "prompt": "What goes on before any tool comes out?",
+      "choices": [
+        "Safety glasses",
+        "A hat",
+        "Gloves"
+      ],
+      "correct": 0,
+      "reason": "Safety glasses protect your eyes from chips and dust."
+    },
+    {
+      "prompt": "What is the very first shop rule?",
+      "choices": [
+        "Work fast",
+        "Ask a grown-up before you start",
+        "Use the biggest tool"
+      ],
+      "correct": 1,
+      "reason": "A grown-up always knows what you are doing first."
+    },
+    {
+      "prompt": "Which sandpaper is the roughest?",
+      "choices": [
+        "220 grit",
+        "150 grit",
+        "80 grit"
+      ],
+      "correct": 2,
+      "reason": "Small grit numbers are rough; big numbers are smooth."
+    },
+    {
+      "prompt": "On a tape measure, the longest little line between two inches is…",
+      "choices": [
+        "1/2 inch",
+        "1/8 inch",
+        "1/16 inch"
+      ],
+      "correct": 0,
+      "reason": "The half-inch line is the longest one between the inch marks."
+    },
+    {
+      "prompt": "A hand saw cuts mostly when you…",
+      "choices": [
+        "Pull it",
+        "Push it",
+        "Twist it"
+      ],
+      "correct": 1,
+      "reason": "Most western hand saws cut on the push stroke."
+    },
+    {
+      "prompt": "You get a small cut. What do you do first?",
+      "choices": [
+        "Keep working",
+        "Hide it",
+        "Tell a grown-up"
+      ],
+      "correct": 2,
+      "reason": "Always tell a grown-up, even about small cuts."
+    },
+    {
+      "prompt": "How do you keep your fingers safe when starting a nail?",
+      "choices": [
+        "Hold it with a clothespin",
+        "Hit it really hard",
+        "Use your thumb as a guide"
+      ],
+      "correct": 0,
+      "reason": "A clothespin holds the nail so your fingers stay back."
+    },
+    {
+      "prompt": "Which way do you sand?",
+      "choices": [
+        "In circles",
+        "Along the grain",
+        "Across the grain"
+      ],
+      "correct": 1,
+      "reason": "Sanding along the grain leaves no scratches you can see."
+    }
+  ]
+}

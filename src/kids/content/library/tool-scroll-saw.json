@@ -1,0 +1,20 @@
+{
+  "id": "tool-scroll-saw",
+  "title": "Scroll saw",
+  "level": 0,
+  "cards": [
+    {
+      "image": "scroll-saw",
+      "text": [
+        "Cuts small, curvy shapes."
+      ]
+    },
+    {
+      "image": "scroll-saw",
+      "text": [
+        "Fingers to the side of the blade, hold-down foot on.",
+        "It is an Intermediate tool."
+      ]
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "id": "hammer-nails",
+  "title": "Hammer and nails",
+  "level": 1,
+  "cards": [
+    {
+      "image": "hammer",
+      "text": [
+        "Hold the hammer near the end of the handle for more power.",
+        "Look at the nail, not the hammer."
+      ]
+    },
+    {
+      "image": "nail",
+      "text": [
+        "Start a nail with gentle taps while you hold it.",
+        "Once it stands up by itself, move your fingers away and swing."
+      ],
+      "tip": {
+        "kind": "try",
+        "text": "Holding the nail with a clothespin keeps your fingers safe."
+      }
+    },
+    {
+      "image": "nail",
+      "text": [
+        "Bent nail? Pull it out with the claw and start a new one.",
+        "It happens to everybody."
+      ]
+    }
+  ]
+}

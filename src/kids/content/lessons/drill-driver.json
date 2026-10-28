@@ -1,0 +1,41 @@
+{
+  "id": "drill-driver",
+  "title": "The drill/driver",
+  "level": 2,
+  "cards": [
+    {
+      "image": "drill",
+      "text": [
+        "A drill/driver spins to make holes and drive screws.",
+        "Pick the right bit for the job."
+      ]
+    },
+    {
+      "image": "drill",
+      "text": [
+        "Clamp your board before drilling. Never hold it in your hand."
+      ],
+      "tip": {
+        "kind": "safety",
+        "text": "Keep both hands on the drill and your fingers behind the tip."
+      }
+    },
+    {
+      "image": "drill",
+      "text": [
+        "Start slow. Push straight in, and let the bit do the cutting.",
+        "Back the bit out with the drill still spinning."
+      ]
+    },
+    {
+      "image": "screwdriver",
+      "text": [
+        "To drive screws, use the clutch so screws do not go in too deep."
+      ],
+      "tip": {
+        "kind": "try",
+        "text": "Try it on a scrap piece first."
+      }
+    }
+  ]
+}

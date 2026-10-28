@@ -1,0 +1,32 @@
+{
+  "id": "big-saws",
+  "title": "Table saw and miter saw",
+  "level": 4,
+  "cards": [
+    {
+      "image": "table-saw",
+      "text": [
+        "A table saw rips long boards with a fast spinning blade.",
+        "Grown-ups run it. You can help plan the cuts."
+      ]
+    },
+    {
+      "image": "table-saw",
+      "text": [
+        "Kickback is when the saw throws the wood back hard.",
+        "Stand to the side and stay away while it runs."
+      ],
+      "tip": {
+        "kind": "safety",
+        "text": "Only grown-ups use the table saw."
+      }
+    },
+    {
+      "image": "miter-saw",
+      "text": [
+        "A miter saw chops boards to length and cuts angles.",
+        "Its blade comes down from above."
+      ]
+    }
+  ]
+}

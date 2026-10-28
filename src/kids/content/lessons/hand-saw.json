@@ -1,0 +1,42 @@
+{
+  "id": "hand-saw",
+  "title": "Hand saw and miter box",
+  "level": 1,
+  "cards": [
+    {
+      "image": "hand-saw",
+      "text": [
+        "A hand saw cuts on the push stroke. Let the saw do the work.",
+        "Use long, steady strokes."
+      ]
+    },
+    {
+      "image": "miter-box",
+      "text": [
+        "A miter box holds the saw straight so your cut comes out square.",
+        "Clamp the board or hold it firmly against the back of the box."
+      ]
+    },
+    {
+      "image": "clamp",
+      "text": [
+        "Keep your holding hand far from the saw blade."
+      ],
+      "tip": {
+        "kind": "safety",
+        "text": "If the board wiggles, clamp it. Never hold a short piece near the blade."
+      }
+    },
+    {
+      "image": "hand-saw",
+      "text": [
+        "Start the cut with a few slow pull strokes to make a groove.",
+        "Then saw with smooth pushes."
+      ],
+      "tip": {
+        "kind": "try",
+        "text": "Cut on the waste side of your line so the board stays the right length."
+      }
+    }
+  ]
+}

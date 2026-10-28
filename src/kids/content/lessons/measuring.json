@@ -1,0 +1,38 @@
+{
+  "id": "measuring",
+  "title": "Measuring and the tape measure",
+  "level": 1,
+  "cards": [
+    {
+      "image": "tape-measure",
+      "text": [
+        "A tape measure shows inches. The big numbers are whole inches.",
+        "The little lines between them are parts of an inch."
+      ]
+    },
+    {
+      "image": "tape-measure",
+      "text": [
+        "The longest little line is the half inch. Shorter lines are quarters.",
+        "The shortest lines on most tapes are eighths of an inch."
+      ]
+    },
+    {
+      "image": "tape-measure",
+      "text": [
+        "Hook the metal tip on the end of the board and pull the tape straight.",
+        "Read the line right where your mark goes."
+      ]
+    },
+    {
+      "image": "pencil",
+      "text": [
+        "Mark with a sharp pencil and draw a small V that points at your spot."
+      ],
+      "tip": {
+        "kind": "try",
+        "text": "Measure twice, cut once!"
+      }
+    }
+  ]
+}

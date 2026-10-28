@@ -1,0 +1,31 @@
+{
+  "id": "sander",
+  "title": "The random-orbit sander",
+  "level": 3,
+  "cards": [
+    {
+      "image": "sander",
+      "text": [
+        "A random-orbit sander sands fast and smooth.",
+        "It uses round sanding discs that stick on."
+      ]
+    },
+    {
+      "image": "sander",
+      "text": [
+        "Set the sander flat on the board before you turn it on.",
+        "Move it slowly. Let its weight do the work."
+      ]
+    },
+    {
+      "image": "dust-mask",
+      "text": [
+        "Hook it to a shop vacuum and wear your dust mask."
+      ],
+      "tip": {
+        "kind": "safety",
+        "text": "Lift the sander only after it stops spinning."
+      }
+    }
+  ]
+}

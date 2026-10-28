@@ -1,0 +1,20 @@
+{
+  "id": "tool-drill",
+  "title": "Cordless drill/driver",
+  "level": 0,
+  "cards": [
+    {
+      "image": "drill",
+      "text": [
+        "Makes holes and drives screws."
+      ]
+    },
+    {
+      "image": "drill",
+      "text": [
+        "Clamp the work; start slow.",
+        "It is an Intermediate tool."
+      ]
+    }
+  ]
+}

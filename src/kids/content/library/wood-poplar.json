@@ -1,0 +1,14 @@
+{
+  "id": "wood-poplar",
+  "title": "Poplar",
+  "level": 0,
+  "cards": [
+    {
+      "image": "boards",
+      "text": [
+        "Poplar is a soft hardwood. It is smooth and paints beautifully.",
+        "It is a little harder than pine."
+      ]
+    }
+  ]
+}

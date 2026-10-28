@@ -1,0 +1,134 @@
+{
+  "tape-measure": {
+    "id": "tape-measure",
+    "name": "Tape measure",
+    "tier": "beginner",
+    "page": "tool-tape-measure"
+  },
+  "square": {
+    "id": "square",
+    "name": "Square",
+    "tier": "beginner",
+    "page": "tool-square"
+  },
+  "pencil": {
+    "id": "pencil",
+    "name": "Pencil",
+    "tier": "beginner",
+    "page": "tool-pencil"
+  },
+  "hand-saw": {
+    "id": "hand-saw",
+    "name": "Hand saw",
+    "tier": "beginner",
+    "page": "tool-hand-saw"
+  },
+  "miter-box": {
+    "id": "miter-box",
+    "name": "Miter box",
+    "tier": "beginner",
+    "page": "tool-miter-box"
+  },
+  "hammer": {
+    "id": "hammer",
+    "name": "Hammer",
+    "tier": "beginner",
+    "page": "tool-hammer"
+  },
+  "clamps": {
+    "id": "clamps",
+    "name": "Clamps",
+    "tier": "beginner",
+    "page": "tool-clamps"
+  },
+  "sandpaper": {
+    "id": "sandpaper",
+    "name": "Sandpaper and block",
+    "tier": "beginner",
+    "page": "tool-sandpaper"
+  },
+  "glue": {
+    "id": "glue",
+    "name": "Wood glue",
+    "tier": "beginner",
+    "page": "tool-glue"
+  },
+  "screwdriver": {
+    "id": "screwdriver",
+    "name": "Screwdriver",
+    "tier": "beginner",
+    "page": "tool-screwdriver"
+  },
+  "drill": {
+    "id": "drill",
+    "name": "Cordless drill/driver",
+    "tier": "intermediate",
+    "page": "tool-drill"
+  },
+  "jigsaw": {
+    "id": "jigsaw",
+    "name": "Jigsaw",
+    "tier": "intermediate",
+    "page": "tool-jigsaw"
+  },
+  "scroll-saw": {
+    "id": "scroll-saw",
+    "name": "Scroll saw",
+    "tier": "intermediate",
+    "page": "tool-scroll-saw"
+  },
+  "sander": {
+    "id": "sander",
+    "name": "Random-orbit sander",
+    "tier": "intermediate",
+    "page": "tool-sander"
+  },
+  "brad-nailer": {
+    "id": "brad-nailer",
+    "name": "Brad nailer",
+    "tier": "advanced",
+    "page": "tool-brad-nailer"
+  },
+  "block-plane": {
+    "id": "block-plane",
+    "name": "Block plane",
+    "tier": "advanced",
+    "page": "tool-block-plane"
+  },
+  "rotary-tool": {
+    "id": "rotary-tool",
+    "name": "Rotary tool",
+    "tier": "advanced",
+    "page": "tool-rotary-tool"
+  },
+  "table-saw": {
+    "id": "table-saw",
+    "name": "Table saw",
+    "tier": "adult"
+  },
+  "miter-saw": {
+    "id": "miter-saw",
+    "name": "Miter saw",
+    "tier": "adult"
+  },
+  "router": {
+    "id": "router",
+    "name": "Router",
+    "tier": "adult"
+  },
+  "lathe": {
+    "id": "lathe",
+    "name": "Lathe",
+    "tier": "adult"
+  },
+  "band-saw": {
+    "id": "band-saw",
+    "name": "Band saw",
+    "tier": "adult"
+  },
+  "planer": {
+    "id": "planer",
+    "name": "Planer",
+    "tier": "adult"
+  }
+}

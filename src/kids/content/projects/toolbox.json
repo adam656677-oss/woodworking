@@ -1,0 +1,51 @@
+{
+  "id": "toolbox",
+  "name": "Toolbox",
+  "level": 3,
+  "stars": 3,
+  "minutes": 180,
+  "kind": "useful",
+  "picture": "toolbox",
+  "blurb": "Your own toolbox with a handle, sized for hand tools.",
+  "tools": [
+    "tape-measure",
+    "square",
+    "pencil",
+    "jigsaw",
+    "drill",
+    "screwdriver",
+    "glue",
+    "clamps",
+    "sander"
+  ],
+  "steps": [
+    {
+      "text": "Cut the bottom, ends and sides from the 1x6.",
+      "tool": "jigsaw"
+    },
+    {
+      "text": "Cut the 1x2 handle to length.",
+      "tool": "jigsaw"
+    },
+    {
+      "text": "Drill pilot holes in the sides.",
+      "tool": "drill"
+    },
+    {
+      "text": "Glue and screw the sides to the ends.",
+      "tool": "screwdriver"
+    },
+    {
+      "text": "Screw the bottom on.",
+      "tool": "screwdriver"
+    },
+    {
+      "text": "Screw the handle between the ends.",
+      "tool": "screwdriver"
+    },
+    {
+      "text": "Sand everything smooth.",
+      "tool": "sander"
+    }
+  ]
+}

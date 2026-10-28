@@ -1,0 +1,20 @@
+{
+  "id": "tool-clamps",
+  "title": "Clamps",
+  "level": 0,
+  "cards": [
+    {
+      "image": "clamp",
+      "text": [
+        "Hold parts still while you work or while glue dries."
+      ]
+    },
+    {
+      "image": "clamp",
+      "text": [
+        "Snug is enough.",
+        "It is a Beginner tool."
+      ]
+    }
+  ]
+}

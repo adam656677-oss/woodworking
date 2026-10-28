@@ -1,0 +1,38 @@
+{
+  "id": "kid-finishes",
+  "title": "Kid-safe finishes",
+  "level": 3,
+  "cards": [
+    {
+      "image": "finish",
+      "text": [
+        "A finish protects wood and makes the grain look great."
+      ]
+    },
+    {
+      "image": "finish",
+      "text": [
+        "Water-based finishes are easiest for kids: low smell and soap-and-water cleanup.",
+        "Food-safe mineral oil is good for cutting boards."
+      ]
+    },
+    {
+      "image": "finish",
+      "text": [
+        "Put on thin coats with a rag or brush. Let each coat dry before the next.",
+        "Sand lightly with 220 grit between coats."
+      ]
+    },
+    {
+      "image": "finish",
+      "text": [
+        "Rags with oil finishes can catch fire by themselves as they dry.",
+        "A grown-up should lay them flat outside to dry or put them in water."
+      ],
+      "tip": {
+        "kind": "safety",
+        "text": "Oily rags are a real fire danger. Always tell your grown-up."
+      }
+    }
+  ]
+}

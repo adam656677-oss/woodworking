@@ -1,0 +1,26 @@
+{
+  "id": "router-lathe",
+  "title": "Router and lathe",
+  "level": 4,
+  "cards": [
+    {
+      "image": "router",
+      "text": [
+        "A router shapes edges and cuts grooves with a bit that spins very fast."
+      ]
+    },
+    {
+      "image": "lathe",
+      "text": [
+        "A lathe spins wood so a tool can shape it, like bowls and pens.",
+        "Loose clothes and long hair are a big danger here."
+      ]
+    },
+    {
+      "image": "lathe",
+      "text": [
+        "A grown-up runs these tools. Watch from a safe spot with your safety glasses on."
+      ]
+    }
+  ]
+}

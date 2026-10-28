@@ -1,0 +1,66 @@
+{
+  "id": "quiz-2",
+  "level": 2,
+  "questions": [
+    {
+      "prompt": "Before drilling, the board should be…",
+      "choices": [
+        "Held in your hand",
+        "Clamped down",
+        "Standing on end"
+      ],
+      "correct": 1,
+      "reason": "A clamped board cannot spin or slip."
+    },
+    {
+      "prompt": "Why drill a pilot hole for a screw?",
+      "choices": [
+        "So the wood does not split",
+        "To make it look nice",
+        "So you need fewer screws"
+      ],
+      "correct": 0,
+      "reason": "A pilot hole makes room so the screw does not split the board."
+    },
+    {
+      "prompt": "Which holds tighter when two boards are pulled apart?",
+      "choices": [
+        "Nails",
+        "Screws",
+        "Tape"
+      ],
+      "correct": 1,
+      "reason": "Screw threads grip the wood."
+    },
+    {
+      "prompt": "What do you do with glue that squeezes out?",
+      "choices": [
+        "Leave it",
+        "Paint over it",
+        "Wipe it with a damp rag"
+      ],
+      "correct": 2,
+      "reason": "Dried glue stops finish from soaking in."
+    },
+    {
+      "prompt": "A square is used to…",
+      "choices": [
+        "Draw straight lines across a board",
+        "Hammer nails",
+        "Sand corners"
+      ],
+      "correct": 0,
+      "reason": "The square has a perfect corner for marking and checking."
+    },
+    {
+      "prompt": "How tight should clamps be?",
+      "choices": [
+        "As tight as possible",
+        "Snug",
+        "Loose"
+      ],
+      "correct": 1,
+      "reason": "Too tight squeezes all the glue out."
+    }
+  ]
+}

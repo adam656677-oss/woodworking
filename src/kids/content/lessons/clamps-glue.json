@@ -1,0 +1,39 @@
+{
+  "id": "clamps-glue",
+  "title": "Clamps and glue",
+  "level": 2,
+  "cards": [
+    {
+      "image": "glue",
+      "text": [
+        "Wood glue is very strong when pieces fit tight together.",
+        "Spread a thin layer on one side."
+      ]
+    },
+    {
+      "image": "clamp",
+      "text": [
+        "Clamps squeeze the joint while the glue dries.",
+        "Snug is enough. Do not crank them super tight."
+      ]
+    },
+    {
+      "image": "glue",
+      "text": [
+        "Wipe off glue that squeezes out with a damp rag.",
+        "Glue left on the wood stops finish from soaking in."
+      ]
+    },
+    {
+      "image": "clamp",
+      "text": [
+        "Leave the clamps on for at least 30 minutes.",
+        "Wait a full day before you work the joint hard."
+      ],
+      "tip": {
+        "kind": "try",
+        "text": "Read the glue bottle for its times."
+      }
+    }
+  ]
+}

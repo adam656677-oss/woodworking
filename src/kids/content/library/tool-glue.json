@@ -1,0 +1,20 @@
+{
+  "id": "tool-glue",
+  "title": "Wood glue",
+  "level": 0,
+  "cards": [
+    {
+      "image": "glue",
+      "text": [
+        "Sticks wood together very strongly."
+      ]
+    },
+    {
+      "image": "glue",
+      "text": [
+        "Thin layer, clamp, wipe the squeeze-out.",
+        "It is a Beginner tool."
+      ]
+    }
+  ]
+}

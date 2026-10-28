@@ -1,0 +1,44 @@
+{
+  "id": "picture-frame",
+  "name": "Picture frame",
+  "level": 2,
+  "stars": 2,
+  "minutes": 90,
+  "kind": "gift",
+  "picture": "picture-frame",
+  "blurb": "A frame for a 5 × 7 photo. A great gift.",
+  "tools": [
+    "tape-measure",
+    "square",
+    "pencil",
+    "hand-saw",
+    "miter-box",
+    "glue",
+    "clamps",
+    "drill",
+    "screwdriver",
+    "sandpaper"
+  ],
+  "steps": [
+    {
+      "text": "Cut two rails and two stiles from the 1x3.",
+      "tool": "hand-saw"
+    },
+    {
+      "text": "Glue the stiles between the rails and clamp them square.",
+      "tool": "clamps"
+    },
+    {
+      "text": "Drill pilot holes through the rails into the stiles.",
+      "tool": "drill"
+    },
+    {
+      "text": "Drive a screw into each corner.",
+      "tool": "screwdriver"
+    },
+    {
+      "text": "Sand and finish, then tape the photo to the back.",
+      "tool": "sandpaper"
+    }
+  ]
+}

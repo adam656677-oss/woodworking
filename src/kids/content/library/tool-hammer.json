@@ -1,0 +1,20 @@
+{
+  "id": "tool-hammer",
+  "title": "Hammer",
+  "level": 0,
+  "cards": [
+    {
+      "image": "hammer",
+      "text": [
+        "Drives nails and taps parts together."
+      ]
+    },
+    {
+      "image": "hammer",
+      "text": [
+        "Grip near the end and watch the nail.",
+        "It is a Beginner tool."
+      ]
+    }
+  ]
+}

@@ -1,0 +1,35 @@
+{
+  "id": "scroll-saw",
+  "title": "The scroll saw",
+  "level": 3,
+  "cards": [
+    {
+      "image": "scroll-saw",
+      "text": [
+        "A scroll saw has a thin blade for small, curvy cuts.",
+        "The table holds the wood while the blade moves."
+      ]
+    },
+    {
+      "image": "scroll-saw",
+      "text": [
+        "Hold the wood flat on the table with your fingers to the side of the blade."
+      ],
+      "tip": {
+        "kind": "safety",
+        "text": "Keep the hold-down foot on the wood. Fingers never go in front of the blade."
+      }
+    },
+    {
+      "image": "scroll-saw",
+      "text": [
+        "Turn the wood slowly to follow your line.",
+        "For a tight corner, cut into it, back out, and come from another side."
+      ],
+      "tip": {
+        "kind": "try",
+        "text": "Practice on a scrap with a drawn wavy line."
+      }
+    }
+  ]
+}

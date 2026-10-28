@@ -1,0 +1,30 @@
+{
+  "id": "jigsaw",
+  "title": "The jigsaw",
+  "level": 3,
+  "cards": [
+    {
+      "image": "jigsaw",
+      "text": [
+        "A jigsaw has a small blade that goes up and down. It can cut curves."
+      ]
+    },
+    {
+      "image": "jigsaw",
+      "text": [
+        "Clamp the board with the part you are cutting hanging over the edge of the table.",
+        "Make sure nothing is under the cut, like the table or a cord."
+      ],
+      "tip": {
+        "kind": "safety",
+        "text": "Keep both hands on the saw and wait for the blade to stop before you set it down."
+      }
+    },
+    {
+      "image": "jigsaw",
+      "text": [
+        "Press the shoe flat on the board and push gently. Do not force it around tight curves."
+      ]
+    }
+  ]
+}
