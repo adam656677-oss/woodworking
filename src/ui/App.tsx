@@ -3,6 +3,7 @@ import { UnsavedDialog } from './common/UnsavedDialog'
 import { Designer } from './designer/Designer'
 import { Home } from './Home'
 import { KidsShell } from '../kids/ui/KidsShell'
+import { PlansShell } from '../plans/ui/PlansShell'
 import { APP_NAME, studio, useStudio } from './store'
 
 const AUTOSAVE_MS = 30_000
@@ -31,7 +32,7 @@ export default function App() {
 
   return (
     <>
-      {screen === 'kids' ? <KidsShell /> : screen === 'master' ? <Designer /> : <Home />}
+      {screen === 'kids' ? <KidsShell /> : screen === 'master' ? <Designer /> : screen === 'plans' ? <PlansShell /> : <Home />}
       <UnsavedDialog />
     </>
   )

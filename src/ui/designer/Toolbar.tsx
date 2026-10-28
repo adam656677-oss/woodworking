@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { worldBox } from '../../model/geometry'
 import { addBoard, alignBoards, deleteBoards, duplicateBoards, mirrorBoards, rotateBoard } from '../../model/ops'
+import { plans } from '../../plans/plansStore'
 import { TEMPLATES } from '../../templates'
 import { studio, useStudio, type View } from '../store'
 
@@ -111,6 +112,9 @@ export function Toolbar() {
       <span className="mx-1 h-5 w-px bg-stone-300" />
       {!kidsMode && <Btn onClick={() => s.set({ woodsOpen: true })}>Woods</Btn>}
       <Btn className="bg-amber-100 font-semibold" onClick={() => s.set({ cutListOpen: true })}>Cut List</Btn>
+      {!kidsMode && (
+        <Btn className="font-semibold" onClick={() => { s.goto('plans'); void plans.getState().openLibrary(false, () => s.goto('master')) }}>📋 My Plans</Btn>
+      )}
     </nav>
   )
 }
