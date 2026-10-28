@@ -1,8 +1,12 @@
 import { app, BrowserWindow, dialog, ipcMain, nativeImage } from 'electron'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
-import { join } from 'node:path'
+import { basename, join } from 'node:path'
 import { autosavePath, defaultFolder, deleteAutosave, load, safeSave, writeAutosave } from './fileStore'
 import { checkPin, loadProgress, pinFilePath, pinIsSet, saveProgress, setPin } from './kidsStore'
+import {
+  attachDesign, createPlanFolder, deletePlanFolder, fileDataUrl, listPlans, loadPlan, plansRoot, readDesign, savePage, savePhotoBytes, savePlan
+} from './plansStore'
+import type { Plan } from '../src/plans/types'
 import type { Progress } from '../src/kids/progress'
 
 // Test hooks: e2e runs point these at temp folders so they never touch real documents or settings.
@@ -149,6 +153,38 @@ function register(): void {
     } catch {
       return null
     }
+  })
+  // ---- My Plans ----
+  const root = () => plansRoot(docsDir())
+  ipcMain.handle('plans:list', async () => listPlans(root()))
+  ipcMain.handle('plans:load', async (_e, folder: string) => loadPlan(root(), folder))
+  ipcMain.handle('plans:create', async (_e, plan: Plan) => createPlanFolder(root(), plan))
+  ipcMain.handle('plans:save', async (_e, folder: string, plan: Plan) => savePlan(root(), folder, plan))
+  ipcMain.handle('plans:discard', async (_e, folder: string) => deletePlanFolder(root(), folder))
+  ipcMain.handle('plans:attachDesign', async (_e, folder: string, text: string) => attachDesign(root(), folder, text))
+  ipcMain.handle('plans:pickDesign', async () => {
+    const r = await dialog.showOpenDialog(win!, { properties: ['openFile'], filters: AAW, defaultPath: defaultFolder(docsDir()) })
+    if (r.canceled || !r.filePaths[0]) return null
+    return readFile(r.filePaths[0], 'utf8')
+  })
+  ipcMain.handle('plans:readDesign', async (_e, folder: string) => readDesign(root(), folder))
+  ipcMain.handle('plans:savePage', async (_e, folder: string, n: number, png: Uint8Array) => savePage(root(), folder, n, png))
+  ipcMain.handle('plans:fileUrl', async (_e, folder: string, rel: string) => fileDataUrl(root(), folder, rel))
+  ipcMain.handle('plans:addPhoto', async (_e, folder: string, id: string) => {
+    const r = await dialog.showOpenDialog(win!, { properties: ['openFile'], filters: [{ name: 'Photos', extensions: ['jpg', 'jpeg', 'png'] }] })
+    if (r.canceled || !r.filePaths[0]) return null
+    let img = nativeImage.createFromPath(r.filePaths[0])
+    if (img.isEmpty()) throw new Error("That photo couldn't be read. Try a JPG or PNG.")
+    const { width, height } = img.getSize()
+    const scale = Math.min(1, PHOTO_MAX / Math.max(width, height))
+    if (scale < 1) img = img.resize({ width: Math.round(width * scale), height: Math.round(height * scale), quality: 'best' })
+    return savePhotoBytes(root(), folder, id, img.toJPEG(85))
+  })
+  ipcMain.handle('plans:pickImport', async (_e, kind: 'pdf' | 'photos') => {
+    const filters = kind === 'pdf' ? [{ name: 'PDF plans', extensions: ['pdf'] }] : [{ name: 'Photos and scans', extensions: ['jpg', 'jpeg', 'png'] }]
+    const r = await dialog.showOpenDialog(win!, { properties: kind === 'pdf' ? ['openFile'] : ['openFile', 'multiSelections'], filters })
+    if (r.canceled) return []
+    return Promise.all(r.filePaths.map(async p => ({ name: basename(p), bytes: new Uint8Array(await readFile(p)) })))
   })
   ipcMain.on('aa:setDirty', (_e, value: boolean) => {
     dirty = value

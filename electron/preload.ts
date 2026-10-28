@@ -25,5 +25,17 @@ contextBridge.exposeInMainWorld('aa', {
   kidsCheckPin: (pin: string) => ipcRenderer.invoke('kids:checkPin', pin),
   kidsPinPath: () => ipcRenderer.invoke('kids:pinPath'),
   kidsAddPhoto: (projectId: string) => ipcRenderer.invoke('kids:addPhoto', projectId),
-  kidsPhotoUrl: (name: string) => ipcRenderer.invoke('kids:photoUrl', name)
+  kidsPhotoUrl: (name: string) => ipcRenderer.invoke('kids:photoUrl', name),
+  plansList: () => ipcRenderer.invoke('plans:list'),
+  plansLoad: (folder: string) => ipcRenderer.invoke('plans:load', folder),
+  plansCreate: (plan: unknown) => ipcRenderer.invoke('plans:create', plan),
+  plansSave: (folder: string, plan: unknown) => ipcRenderer.invoke('plans:save', folder, plan),
+  plansDiscard: (folder: string) => ipcRenderer.invoke('plans:discard', folder),
+  plansAttachDesign: (folder: string, text: string) => ipcRenderer.invoke('plans:attachDesign', folder, text),
+  plansPickDesign: () => ipcRenderer.invoke('plans:pickDesign'),
+  plansReadDesign: (folder: string) => ipcRenderer.invoke('plans:readDesign', folder),
+  plansSavePage: (folder: string, n: number, png: Uint8Array) => ipcRenderer.invoke('plans:savePage', folder, n, png),
+  plansFileUrl: (folder: string, rel: string) => ipcRenderer.invoke('plans:fileUrl', folder, rel),
+  plansAddPhoto: (folder: string, id: string) => ipcRenderer.invoke('plans:addPhoto', folder, id),
+  plansPickImport: (kind: 'pdf' | 'photos') => ipcRenderer.invoke('plans:pickImport', kind)
 })

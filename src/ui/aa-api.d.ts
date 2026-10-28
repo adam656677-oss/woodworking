@@ -1,4 +1,5 @@
 import type { Progress } from '../kids/progress'
+import type { Plan } from '../plans/types'
 import type { Wood } from '../model/types'
 
 export type OpenedProject = {
@@ -36,6 +37,21 @@ export type AaApi = {
   /** Opens a file picker; returns the saved photo's file name, or null if cancelled. */
   kidsAddPhoto(projectId: string): Promise<string | null>
   kidsPhotoUrl(name: string): Promise<string | null>
+  plansList(): Promise<{ folder: string; plan: Plan | null; error?: string; notice?: string }[]>
+  plansLoad(folder: string): Promise<{ plan: Plan; notice: string | null }>
+  /** Makes the plan's folder (named after the plan) and returns the folder name. */
+  plansCreate(plan: Plan): Promise<string>
+  plansSave(folder: string, plan: Plan): Promise<void>
+  /** Removes a plan folder; used when an import is cancelled. */
+  plansDiscard(folder: string): Promise<void>
+  plansAttachDesign(folder: string, aawText: string): Promise<void>
+  /** File picker for an .aaw design; returns its text or null. */
+  plansPickDesign(): Promise<string | null>
+  plansReadDesign(folder: string): Promise<string | null>
+  plansSavePage(folder: string, n: number, png: Uint8Array): Promise<string>
+  plansFileUrl(folder: string, rel: string): Promise<string | null>
+  plansAddPhoto(folder: string, id: string): Promise<string | null>
+  plansPickImport(kind: 'pdf' | 'photos'): Promise<{ name: string; bytes: Uint8Array }[]>
 }
 
 declare global {
