@@ -98,12 +98,14 @@ test('4. autosave: an unsaved edit survives a crash and can be recovered', async
   }
 })
 
-test("5. Kids' Workshop shows coming soon and Back returns Home", async () => {
+test("5. Kids' Workshop shows its five tiles and Home returns to the start", async () => {
   const { app, win } = await launch(newDirs())
   try {
     await win.getByRole('button', { name: /Kids' Workshop/ }).click()
-    await expect(win.getByText("Coming soon — the Kids' Workshop is being built.")).toBeVisible()
-    await win.getByRole('button', { name: 'Back' }).click()
+    for (const t of ['My Path', 'Projects', 'Learn', 'My Badges', 'Simple Designer']) {
+      await expect(win.getByRole('button', { name: t })).toBeVisible()
+    }
+    await win.getByRole('button', { name: '← Home' }).click()
     await expect(win.getByRole('button', { name: /Master Shop/ })).toBeVisible()
   } finally {
     kill(app)

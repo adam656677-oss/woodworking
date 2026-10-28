@@ -35,8 +35,14 @@ export type StudioState = {
   projectKey: number
   /** True while asking whether to save unsaved work before it is replaced. */
   pendingReplace: boolean
+  /** The designer is the kids' Simple Designer (fewer tools, 1/8" sizes, butt joints, kid woods). */
+  kidsMode: boolean
 
   goto(screen: Screen): void
+  /** Open the kids' Simple Designer: back to the kid's design if there is one, else a blank one. */
+  enterKidsDesigner(): void
+  /** Open the full Master Shop designer (kids' limits off; the current project stays). */
+  enterMasterShop(): void
   apply(fn: (p: Project) => Project | OpError): void
   undo(): void
   redo(): void
@@ -136,8 +142,20 @@ export function createStudioStore() {
       canRedo: false,
       projectKey: 0,
       pendingReplace: false,
+      kidsMode: false,
 
       goto: screen => set({ screen }),
+      enterKidsDesigner: () => {
+        if (get().kidsMode) {
+          set({ screen: 'master' })
+          return
+        }
+        void guard(() => {
+          start(newProject('My design'), null, false)
+          set({ kidsMode: true })
+        })
+      },
+      enterMasterShop: () => set({ kidsMode: false, screen: 'master' }),
 
       apply: fn => {
         const result = fn(get().project)

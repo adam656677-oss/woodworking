@@ -210,3 +210,15 @@ test('I9: the untitled autosave is checked only once per launch', async () => {
   await s.getState().checkUntitledAutosave()
   expect(reads).toBe(1)
 })
+
+test('the Simple Designer opens a blank project in kids mode; the Master Shop turns kids mode off', () => {
+  fakeApi()
+  const s = createStudioStore()
+  s.getState().enterKidsDesigner()
+  expect(s.getState().kidsMode).toBe(true)
+  expect(s.getState().screen).toBe('master')
+  expect(s.getState().project.boards).toEqual([])
+  s.getState().enterMasterShop()
+  expect(s.getState().kidsMode).toBe(false)
+  expect(s.getState().screen).toBe('master')
+})

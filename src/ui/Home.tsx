@@ -3,7 +3,7 @@ import { studio } from './store'
 export function Home() {
   const enterMaster = async () => {
     const s = studio.getState()
-    s.goto('master')
+    s.enterMasterShop()
     await s.checkUntitledAutosave()
   }
   return (

@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import { UnsavedDialog } from './common/UnsavedDialog'
 import { Designer } from './designer/Designer'
 import { Home } from './Home'
-import { KidsPlaceholder } from './KidsPlaceholder'
+import { KidsShell } from '../kids/ui/KidsShell'
 import { APP_NAME, studio, useStudio } from './store'
 
 const AUTOSAVE_MS = 30_000
@@ -31,7 +31,7 @@ export default function App() {
 
   return (
     <>
-      {screen === 'kids' ? <KidsPlaceholder /> : screen === 'master' ? <Designer /> : <Home />}
+      {screen === 'kids' ? <KidsShell /> : screen === 'master' ? <Designer /> : <Home />}
       <UnsavedDialog />
     </>
   )
