@@ -98,3 +98,43 @@ test('if the attached design file is gone, the cut list falls back to typed rows
   expect(await screen.findByText(/attached design couldn't be found/)).toBeTruthy()
   expect(screen.getByRole('button', { name: 'Add row' })).toBeTruthy()
 })
+
+// ---- Final review fixes ----
+test('attaching a design keeps a copy of its cut list in the plan, in case the design is lost', async () => {
+  const design = serialize(unlock(applyTemplate(emptyProject('Box'), 'box')))
+  setup(newPlan('Box', 'p_1'))
+  ;(window as any).aa.plansPickDesign = async () => design
+  ;(window as any).aa.plansAttachDesign = async () => {}
+  render(<PlanEditor />)
+  fireEvent.click(screen.getByRole('button', { name: 'Attach a design file…' }))
+  await vi.waitFor(() => expect(latest().design).toBe('design.aaw'))
+  expect(latest().cutRows.map(r => r.part)).toContain('Front / Back')
+})
+
+test('editing a drafted step counts as checking it', async () => {
+  setup(draftedPlan())
+  plans.setState({ view: 'import' })
+  render(<ImportReview />)
+  fireEvent.change(screen.getByLabelText('Drafted step 1'), { target: { value: 'Cut all the parts.' } })
+  await vi.waitFor(() => expect(latest().unchecked).toEqual(['r_1']))
+})
+
+test('a plan can be marked kid-friendly only after every drafted item is checked', async () => {
+  setup(draftedPlan())
+  render(<PlanEditor />)
+  const box = screen.getByRole('checkbox', { name: /Kid-friendly/ }) as HTMLInputElement
+  expect(box.disabled).toBe(true)
+  expect(screen.getByText(/Check the drafted items first/)).toBeTruthy()
+})
+
+test('page pictures load as they scroll into view, not all at once', async () => {
+  const seen: string[] = []
+  ;(globalThis as any).IntersectionObserver = class { observe() {} disconnect() {} }
+  setup({ ...draftedPlan(), source: { kind: 'pdf', name: 'book.pdf', pages: 40 } })
+  ;(window as any).aa.plansFileUrl = async (_f: string, rel: string) => { seen.push(rel); return null }
+  plans.setState({ view: 'import' })
+  render(<ImportReview />)
+  await new Promise(r => setTimeout(r, 20))
+  expect(seen.length).toBeLessThanOrEqual(2)
+  delete (globalThis as any).IntersectionObserver
+})

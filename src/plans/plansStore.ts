@@ -4,7 +4,9 @@ import { newId } from '../model/ids'
 import { draftPlan } from './draft'
 import { prepareForReading } from './image'
 import { PlanImportError } from './importError'
-import { pdfTextLines, renderPdfPage } from './pdf'
+import { TOOLS } from '../kids/content'
+import { TIER_RANK } from '../kids/logic'
+import { openPdf, type OpenPdf } from './pdf'
 import { TOOL_NAMES } from './toolNames'
 import { newPlan, type Plan, type TextLine } from './types'
 
@@ -33,7 +35,7 @@ export type PlansState = {
   acceptAll(): Promise<void>
   deleteItem(id: string): Promise<void>
   showGuide(): void
-  back(): void
+  back(): Promise<void>
 }
 
 /** Plans the viewer may see: the kids' side lists only kid-friendly plans that open. */
@@ -42,6 +44,10 @@ export function visiblePlans(list: PlanEntry[], kidsView: boolean): PlanEntry[] 
 }
 
 const api = () => window.aa
+const TOOL_RANK = Object.fromEntries(Object.values(TOOLS).map(t => [t.id, TIER_RANK[t.tier]]))
+const ipcMessage = (e: unknown) => String((e as Error)?.message ?? e).replace(/^Error invoking remote method '[^']+': (Error: )?/, '')
+/** PDF text positions are in points (72 per inch); scanned pages are read from 150 dpi pictures. */
+const POINTS_PER_PIXEL = 72 / 150
 class Cancelled extends Error {}
 const plainError = (e: unknown) =>
   e instanceof PlanImportError ? e.message : /\bweb\b/.test(String((e as Error)?.message)) ? new PlanImportError('web').message
@@ -94,8 +100,12 @@ export function createPlansStore() {
       },
       create: async () => {
         const plan = newPlan('New plan', newId('p'))
-        const folder = await api().plansCreate(plan)
-        set({ current: { folder, plan }, view: 'edit', reviewNotes: [] })
+        try {
+          const folder = await api().plansCreate(plan)
+          set({ current: { folder, plan }, view: 'edit', reviewNotes: [], notice: null })
+        } catch (e) {
+          set({ notice: `Couldn't create the plan — check that the Plans folder in Documents can be written to. (${ipcMessage(e)})` })
+        }
       },
       update: fn => setPlan(fn),
 
@@ -117,8 +127,15 @@ export function createPlansStore() {
         const name = kind === 'web' ? new URL(sourceName).hostname.replace(/^www\./, '') : sources[0].name.replace(/\.[^.]+$/, '')
         cancelled = false
         const start = newPlan(name, newId('p'))
-        const folder = await api().plansCreate(start)
+        let folder: string
+        try {
+          folder = await api().plansCreate(start)
+        } catch (e) {
+          set({ notice: `Couldn't create the plan — check that the Plans folder in Documents can be written to. (${ipcMessage(e)})` })
+          return
+        }
         set({ current: { folder, plan: start }, importing: { stage: 'Opening', page: 0, pages: 0 } })
+        let doc: OpenPdf | null = null
         try {
           const lines: TextLine[] = []
           let pages = 0
@@ -129,16 +146,25 @@ export function createPlansStore() {
           } else if (kind === 'pdf') pdf = sources[0].bytes
           checkpoint()
           if (pdf) {
-            const r = await pdfTextLines(pdf)
+            // One open PDF serves both its text and its page pictures; it is closed in `finally`.
+            doc = await openPdf(pdf)
+            const r = await doc.textLines()
             lines.push(...r.lines)
-            pages = r.pageCount
+            pages = doc.pageCount
             for (let n = 1; n <= pages; n++) {
               checkpoint()
               set({ importing: { stage: r.scanPages.includes(n) ? 'Reading a scanned page' : 'Saving pages', page: n, pages } })
-              const { png } = await renderPdfPage(pdf, n)
+              const { png } = await doc.render(n)
               await api().plansSavePage(folder, n, png)
               checkpoint()
-              if (r.scanPages.includes(n)) lines.push(...(await api().plansOcr(png, n)))
+              if (r.scanPages.includes(n)) {
+                const read = await api().plansOcr(png, n)
+                lines.push(...read.map(l => ({
+                  ...l,
+                  box: l.box.map(v => v * POINTS_PER_PIXEL) as TextLine['box'],
+                  size: l.size === undefined ? undefined : l.size * POINTS_PER_PIXEL
+                })))
+              }
             }
           } else {
             pages = sources.length
@@ -152,7 +178,7 @@ export function createPlansStore() {
             }
           }
           checkpoint()
-          const d = draftPlan(lines, TOOL_NAMES)
+          const d = draftPlan(lines, TOOL_NAMES, TOOL_RANK)
           const plan: Plan = {
             ...d.plan,
             id: start.id,
@@ -169,6 +195,8 @@ export function createPlansStore() {
           await api().plansDiscard(folder).catch(() => undefined)
           set({ current: null, importing: null, view: 'library', notice: e instanceof Cancelled ? null : plainError(e) })
           await get().refresh().catch(() => undefined)
+        } finally {
+          await doc?.destroy().catch(() => undefined)
         }
       },
       cancelImport: () => {
@@ -187,14 +215,22 @@ export function createPlansStore() {
         })),
 
       showGuide: () => set({ view: 'guide' }),
-      back: () => {
+      back: async () => {
         const v = get().view
-        if (v === 'guide' && !get().kidsView) set({ view: 'edit' })
-        else if (v === 'library') get().leave()
-        else {
-          set({ view: 'library', current: null })
-          void get().refresh()
+        if (v === 'guide' && !get().kidsView) return set({ view: 'edit' })
+        if (v === 'library') return get().leave()
+        const cur = get().current
+        await saving
+        // The folder follows the plan's name (so it reads right in File Explorer).
+        if (cur && !get().kidsView && cur.plan.name.trim()) {
+          try {
+            await api().plansRename(cur.folder, cur.plan.name)
+          } catch {
+            // A folder that can't be renamed (open in Explorer) keeps its old name; nothing is lost.
+          }
         }
+        set({ view: 'library', current: null })
+        await get().refresh().catch(() => undefined)
       }
     }
   })

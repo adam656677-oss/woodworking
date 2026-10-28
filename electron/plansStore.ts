@@ -1,5 +1,5 @@
 // My Plans on disk: one folder per plan under Documents/A&A Woodworking/Plans.
-import { mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
+import { mkdir, readdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises'
 import { join, relative, resolve, sep } from 'node:path'
 import { isPlan, type Plan } from '../src/plans/types'
 import { defaultFolder, safeSave } from './fileStore'
@@ -8,9 +8,13 @@ export function plansRoot(docsDir: string): string {
   return join(defaultFolder(docsDir), 'Plans')
 }
 
+const RESERVED = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/i
+const MAX_NAME = 72
+
 /** A folder name Windows accepts, unique among `existing` (adds " (2)", " (3)" …). */
 export function folderName(name: string, existing: string[]): string {
-  const clean = name.replace(/[\\/:*?"<>|]/g, '').replace(/\s+/g, ' ').replace(/^[\s.]+|[\s.]+$/g, '') || 'Plan'
+  let clean = name.replace(/[\\/:*?"<>|\x00-\x1f]/g, '').replace(/\s+/g, ' ').slice(0, MAX_NAME).replace(/^[\s.]+|[\s.]+$/g, '') || 'Plan'
+  if (RESERVED.test(clean)) clean = `${clean} plan`
   const taken = new Set(existing.map(e => e.toLowerCase()))
   if (!taken.has(clean.toLowerCase())) return clean
   for (let n = 2; ; n++) {
@@ -19,8 +23,9 @@ export function folderName(name: string, existing: string[]): string {
   }
 }
 
-/** The folder's full path, refusing anything that would land outside the plans folder. */
+/** The folder's full path, refusing anything that is not one folder directly inside the plans folder. */
 function folderPath(root: string, folder: string): string {
+  if (typeof folder !== 'string' || !folder || /[\\/]/.test(folder) || folder === '.' || folder === '..') throw new Error('That plan folder is not inside My Plans')
   const full = resolve(root, folder)
   const rel = relative(resolve(root), full)
   if (!rel || rel.startsWith('..') || rel.includes(`..${sep}`) || resolve(root, rel) !== full) throw new Error('That plan folder is not inside My Plans')
@@ -79,12 +84,24 @@ export async function createPlanFolder(root: string, plan: Plan): Promise<string
   return folder
 }
 
+/** Rename a plan's folder to follow its name (kept unique). Returns the folder's (possibly new) name. */
+export async function renamePlanFolder(root: string, folder: string, name: string): Promise<string> {
+  const from = folderPath(root, folder)
+  const others = (await readdir(root, { withFileTypes: true })).filter(d => d.isDirectory() && d.name !== folder).map(d => d.name)
+  const to = folderName(name, others)
+  if (to === folder) return folder
+  await rename(from, folderPath(root, to))
+  return to
+}
+
 /** Remove a plan folder (used when an import is cancelled). */
 export async function deletePlanFolder(root: string, folder: string): Promise<void> {
-  await rm(folderPath(root, folder), { recursive: true, force: true })
+  // OneDrive or antivirus may hold a file for a moment; retry before giving up.
+  await rm(folderPath(root, folder), { recursive: true, force: true, maxRetries: 5, retryDelay: 200 })
 }
 
 export async function savePage(root: string, folder: string, n: number, png: Uint8Array): Promise<string> {
+  if (!Number.isInteger(n) || n < 1 || n > 9999) throw new Error('Bad page number')
   const dir = join(folderPath(root, folder), 'pages')
   await mkdir(dir, { recursive: true })
   const name = `page-${String(n).padStart(3, '0')}.png`

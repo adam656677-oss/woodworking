@@ -1,13 +1,15 @@
-import { app, BrowserWindow, dialog, ipcMain, nativeImage } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, nativeImage, net } from 'electron'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { basename, join } from 'node:path'
 import { autosavePath, defaultFolder, deleteAutosave, load, safeSave, writeAutosave } from './fileStore'
 import { checkPin, loadProgress, pinFilePath, pinIsSet, saveProgress, setPin } from './kidsStore'
 import {
-  attachDesign, createPlanFolder, deletePlanFolder, fileDataUrl, listPlans, loadPlan, plansRoot, readDesign, savePage, savePhotoBytes, savePlan
+  attachDesign, createPlanFolder, deletePlanFolder, fileDataUrl, listPlans, loadPlan, plansRoot, readDesign, renamePlanFolder, savePage, savePhotoBytes, savePlan
 } from './plansStore'
 import type { Plan } from '../src/plans/types'
 import { configureOcr, ocrImage } from './ocr'
+import { heicToRgba, isHeic } from './heic'
+import { capturePage } from './webCapture'
 import type { Progress } from '../src/kids/progress'
 
 // Test hooks: e2e runs point these at temp folders so they never touch real documents or settings.
@@ -51,6 +53,25 @@ function createWindow(): void {
   })
   if (process.env['ELECTRON_RENDERER_URL']) win.loadURL(process.env['ELECTRON_RENDERER_URL'])
   else win.loadFile(join(__dirname, '../renderer/index.html'))
+}
+
+const PHOTO_TYPES = ['jpg', 'jpeg', 'png', 'heic', 'heif']
+
+/** A photo file as a picture Electron can work with; iPhone HEIC photos are decoded first. */
+async function loadPhoto(path: string): Promise<Electron.NativeImage> {
+  const bytes = new Uint8Array(await readFile(path))
+  if (isHeic(bytes)) {
+    const { width, height, data } = await heicToRgba(bytes)
+    const bgra = Buffer.alloc(data.length)
+    for (let i = 0; i < data.length; i += 4) {
+      bgra[i] = data[i + 2]
+      bgra[i + 1] = data[i + 1]
+      bgra[i + 2] = data[i]
+      bgra[i + 3] = data[i + 3]
+    }
+    return nativeImage.createFromBitmap(bgra, { width, height })
+  }
+  return nativeImage.createFromBuffer(Buffer.from(bytes))
 }
 
 function register(): void {
@@ -133,9 +154,9 @@ function register(): void {
   ipcMain.handle('kids:pinPath', async () => pinFilePath(await kidsDir()))
   ipcMain.handle('kids:addPhoto', async (_e, projectId: string) => {
     if (!/^[a-z0-9-]+$/.test(projectId)) return null
-    const r = await dialog.showOpenDialog(win!, { properties: ['openFile'], filters: [{ name: 'Photos', extensions: ['jpg', 'jpeg', 'png'] }] })
+    const r = await dialog.showOpenDialog(win!, { properties: ['openFile'], filters: [{ name: 'Photos', extensions: PHOTO_TYPES }] })
     if (r.canceled || !r.filePaths[0]) return null
-    let img = nativeImage.createFromPath(r.filePaths[0])
+    let img = await loadPhoto(r.filePaths[0]).catch(() => nativeImage.createEmpty())
     if (img.isEmpty()) throw new Error("That photo couldn't be read. Try a JPG or PNG.")
     const { width, height } = img.getSize()
     const scale = Math.min(1, PHOTO_MAX / Math.max(width, height))
@@ -162,6 +183,7 @@ function register(): void {
   ipcMain.handle('plans:create', async (_e, plan: Plan) => createPlanFolder(root(), plan))
   ipcMain.handle('plans:save', async (_e, folder: string, plan: Plan) => savePlan(root(), folder, plan))
   ipcMain.handle('plans:discard', async (_e, folder: string) => deletePlanFolder(root(), folder))
+  ipcMain.handle('plans:rename', async (_e, folder: string, name: string) => renamePlanFolder(root(), folder, name))
   ipcMain.handle('plans:attachDesign', async (_e, folder: string, text: string) => attachDesign(root(), folder, text))
   ipcMain.handle('plans:pickDesign', async () => {
     const r = await dialog.showOpenDialog(win!, { properties: ['openFile'], filters: AAW, defaultPath: defaultFolder(docsDir()) })
@@ -172,9 +194,9 @@ function register(): void {
   ipcMain.handle('plans:savePage', async (_e, folder: string, n: number, png: Uint8Array) => savePage(root(), folder, n, png))
   ipcMain.handle('plans:fileUrl', async (_e, folder: string, rel: string) => fileDataUrl(root(), folder, rel))
   ipcMain.handle('plans:addPhoto', async (_e, folder: string, id: string) => {
-    const r = await dialog.showOpenDialog(win!, { properties: ['openFile'], filters: [{ name: 'Photos', extensions: ['jpg', 'jpeg', 'png'] }] })
+    const r = await dialog.showOpenDialog(win!, { properties: ['openFile'], filters: [{ name: 'Photos', extensions: PHOTO_TYPES }] })
     if (r.canceled || !r.filePaths[0]) return null
-    let img = nativeImage.createFromPath(r.filePaths[0])
+    let img = await loadPhoto(r.filePaths[0]).catch(() => nativeImage.createEmpty())
     if (img.isEmpty()) throw new Error("That photo couldn't be read. Try a JPG or PNG.")
     const { width, height } = img.getSize()
     const scale = Math.min(1, PHOTO_MAX / Math.max(width, height))
@@ -182,26 +204,21 @@ function register(): void {
     return savePhotoBytes(root(), folder, id, img.toJPEG(85))
   })
   ipcMain.handle('plans:ocr', async (_e, bytes: Uint8Array, page: number) => ocrImage(bytes, page))
-  ipcMain.handle('plans:capture', async (_e, url: string) => {
-    if (!/^https?:\/\//i.test(url)) throw new Error('web')
-    const hidden = new BrowserWindow({ show: false, webPreferences: { javascript: true, sandbox: true } })
-    try {
-      await Promise.race([
-        hidden.loadURL(url),
-        new Promise((_r, reject) => setTimeout(() => reject(new Error('web')), 30_000))
-      ])
-      return new Uint8Array(await hidden.webContents.printToPDF({ pageSize: 'Letter', printBackground: false }))
-    } catch {
-      throw new Error('web')
-    } finally {
-      hidden.destroy()
-    }
-  })
+  ipcMain.handle('plans:capture', async (_e, url: string) =>
+    capturePage(url, { fetcher: u => net.fetch(u), makeWindow: opts => new BrowserWindow(opts) })
+  )
   ipcMain.handle('plans:pickImport', async (_e, kind: 'pdf' | 'photos') => {
-    const filters = kind === 'pdf' ? [{ name: 'PDF plans', extensions: ['pdf'] }] : [{ name: 'Photos and scans', extensions: ['jpg', 'jpeg', 'png'] }]
+    const filters = kind === 'pdf' ? [{ name: 'PDF plans', extensions: ['pdf'] }] : [{ name: 'Photos and scans', extensions: PHOTO_TYPES }]
     const r = await dialog.showOpenDialog(win!, { properties: kind === 'pdf' ? ['openFile'] : ['openFile', 'multiSelections'], filters })
     if (r.canceled) return []
-    return Promise.all(r.filePaths.map(async p => ({ name: basename(p), bytes: new Uint8Array(await readFile(p)) })))
+    return Promise.all(r.filePaths.map(async p => {
+      if (kind === 'pdf') return { name: basename(p), bytes: new Uint8Array(await readFile(p)) }
+      // Photos arrive as PNG/JPEG bytes the page can draw (HEIC is decoded here).
+      const raw = new Uint8Array(await readFile(p))
+      if (!isHeic(raw)) return { name: basename(p), bytes: raw }
+      const img = await loadPhoto(p)
+      return { name: basename(p).replace(/\.hei[cf]$/i, '.png'), bytes: new Uint8Array(img.toPNG()) }
+    }))
   })
   ipcMain.on('aa:setDirty', (_e, value: boolean) => {
     dirty = value

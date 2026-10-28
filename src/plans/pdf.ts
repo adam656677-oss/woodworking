@@ -21,21 +21,32 @@ function pdfjs(): Promise<PdfJs> {
   return lib
 }
 
+/** Where pdf.js finds its decoders for black-and-white scans (JBIG2 / CCITT), JPEG 2000 and colour profiles. */
+function wasmUrl(): string {
+  if (typeof document !== 'undefined' && typeof location !== 'undefined') return new URL('./pdfjs-wasm/', location.href).href
+  return `file://${process.cwd().replace(/\\/g, '/')}/node_modules/pdfjs-dist/wasm/`
+}
+
 async function open(data: Uint8Array) {
   const m = await pdfjs()
+  const task = m.getDocument({ data: data.slice(), useSystemFonts: true, wasmUrl: wasmUrl() } as never)
   try {
-    return await m.getDocument({ data: data.slice(), useSystemFonts: true }).promise
+    const doc = await task.promise
+    // The loading task owns the PDF's worker: destroying it frees both.
+    return Object.assign(doc, { close: () => task.destroy() })
   } catch (e) {
+    void task.destroy()
     throw new PlanImportError((e as { name?: string }).name === 'PasswordException' ? 'locked' : 'damaged')
   }
 }
+
+type PdfDoc = Awaited<ReturnType<typeof open>>
 
 /** Fewer characters than this on a page means it is a picture of text (a scan). */
 const SCAN_CHARS = 20
 
 /** The text of every page as lines (top to bottom), with each line's box and text height. */
-export async function pdfTextLines(data: Uint8Array): Promise<{ lines: TextLine[]; scanPages: number[]; pageCount: number }> {
-  const doc = await open(data)
+async function textLinesOf(doc: PdfDoc): Promise<{ lines: TextLine[]; scanPages: number[] }> {
   const lines: TextLine[] = []
   const scanPages: number[] = []
   for (let n = 1; n <= doc.numPages; n++) {
@@ -77,12 +88,40 @@ export async function pdfTextLines(data: Uint8Array): Promise<{ lines: TextLine[
       lines.push({ text: text.replace(/\s+/g, ' ').trim(), page: n, box: [x, y, right - x, size], size })
     }
   }
-  return { lines, scanPages, pageCount: doc.numPages }
+  return { lines, scanPages }
 }
 
-/** A page drawn as a PNG at the given resolution (in the app only; it needs a canvas). */
-export async function renderPdfPage(data: Uint8Array, n: number, dpi = 150): Promise<{ png: Uint8Array; scale: number }> {
+/** Read a PDF's text without keeping it open. */
+export async function pdfTextLines(data: Uint8Array): Promise<{ lines: TextLine[]; scanPages: number[]; pageCount: number }> {
   const doc = await open(data)
+  try {
+    return { ...(await textLinesOf(doc)), pageCount: doc.numPages }
+  } finally {
+    await doc.close()
+  }
+}
+
+export type OpenPdf = {
+  pageCount: number
+  textLines(): Promise<{ lines: TextLine[]; scanPages: number[] }>
+  /** A page drawn as a PNG (in the app only; it needs a canvas). */
+  render(n: number, dpi?: number): Promise<{ png: Uint8Array; scale: number }>
+  /** Free the PDF and its worker. Always call when done. */
+  destroy(): Promise<void>
+}
+
+/** Open a PDF once for reading its text and drawing its pages. */
+export async function openPdf(data: Uint8Array): Promise<OpenPdf> {
+  const doc = await open(data)
+  return {
+    pageCount: doc.numPages,
+    textLines: () => textLinesOf(doc),
+    render: (n, dpi = 150) => renderPage(doc, n, dpi),
+    destroy: () => doc.close()
+  }
+}
+
+async function renderPage(doc: PdfDoc, n: number, dpi: number): Promise<{ png: Uint8Array; scale: number }> {
   const page = await doc.getPage(n)
   const scale = dpi / 72
   const viewport = page.getViewport({ scale })
@@ -93,6 +132,8 @@ export async function renderPdfPage(data: Uint8Array, n: number, dpi = 150): Pro
   ctx.fillStyle = '#fff'
   ctx.fillRect(0, 0, canvas.width, canvas.height)
   await page.render({ canvas, canvasContext: ctx, viewport } as never).promise
+  page.cleanup()
   const blob: Blob = await new Promise(res => canvas.toBlob(b => res(b!), 'image/png'))
+  canvas.width = canvas.height = 0
   return { png: new Uint8Array(await blob.arrayBuffer()), scale }
 }

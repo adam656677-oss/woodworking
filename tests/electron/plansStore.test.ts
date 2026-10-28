@@ -84,3 +84,26 @@ test('no design attached reads as null', async () => {
   const folder = await createPlanFolder(root, newPlan('Box', 'p_1'))
   expect(await readDesign(root, folder)).toBeNull()
 })
+
+// ---- Final review fixes ----
+import { renamePlanFolder } from '../../electron/plansStore'
+
+test('a plan folder follows the plan name, staying unique', async () => {
+  const a = await createPlanFolder(root, newPlan('New plan', 'p_a'))
+  await createPlanFolder(root, newPlan('Bench', 'p_b'))
+  expect(await renamePlanFolder(root, a, 'Bench')).toBe('Bench (2)')
+  expect((await listPlans(root)).map(e => e.folder).sort()).toEqual(['Bench', 'Bench (2)'])
+  expect(await renamePlanFolder(root, 'Bench', 'Bench')).toBe('Bench')
+})
+
+test('page numbers must be whole numbers and folders a single name', async () => {
+  const folder = await createPlanFolder(root, newPlan('Box', 'p_1'))
+  await expect(savePage(root, folder, '/../../x' as unknown as number, new Uint8Array([1]))).rejects.toThrow()
+  await expect(savePage(root, folder, 0, new Uint8Array([1]))).rejects.toThrow()
+  await expect(loadPlan(root, `${folder}/photos`)).rejects.toThrow()
+})
+
+test('Windows reserved names and very long names make valid folders', () => {
+  expect(folderName('CON', [])).toBe('CON plan')
+  expect(folderName('x'.repeat(200), []).length).toBeLessThanOrEqual(80)
+})

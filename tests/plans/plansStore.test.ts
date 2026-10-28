@@ -2,9 +2,14 @@
 import { createPlansStore, visiblePlans } from '../../src/plans/plansStore'
 import { newPlan, type Plan } from '../../src/plans/types'
 
+const pdfDoc = {
+  pageCount: 1,
+  textLines: vi.fn(async () => ({ lines: [{ text: 'Shelf', page: 1, box: [0, 0, 10, 10], size: 20 }, { text: '1. Cut it.', page: 1, box: [0, 20, 10, 10], size: 10 }], scanPages: [] as number[] })),
+  render: vi.fn(async () => ({ png: new Uint8Array([1]), scale: 1 })),
+  destroy: vi.fn(async () => {})
+}
 vi.mock('../../src/plans/pdf', () => ({
-  pdfTextLines: vi.fn(async () => ({ lines: [{ text: 'Shelf', page: 1, box: [0, 0, 10, 10], size: 20 }, { text: '1. Cut it.', page: 1, box: [0, 20, 10, 10], size: 10 }], scanPages: [], pageCount: 1 })),
-  renderPdfPage: async () => ({ png: new Uint8Array([1]), scale: 1 })
+  openPdf: vi.fn(async () => pdfDoc)
 }))
 
 function fakeAa(over: Record<string, unknown> = {}) {
@@ -95,10 +100,50 @@ test('a failed import shows its plain message and leaves nothing behind', async 
   const { calls } = fakeAa({ plansPickImport: async () => [{ name: 'bad.pdf', bytes: new Uint8Array([1]) }] })
   const pdf = await import('../../src/plans/pdf')
   const { PlanImportError } = await import('../../src/plans/importError')
-  vi.mocked(pdf.pdfTextLines).mockRejectedValueOnce(new PlanImportError('locked'))
+  vi.mocked(pdf.openPdf).mockRejectedValueOnce(new PlanImportError('locked'))
   const s = createPlansStore()
   await s.getState().startImport('pdf')
   expect(s.getState().notice).toMatch(/locked/)
   expect(calls).toContain('discard:bad')
   expect(s.getState().view).toBe('library')
+})
+
+// ---- Final review fixes ----
+test('a PDF is opened once for both reading and drawing its pages, and closed afterwards', async () => {
+  fakeAa()
+  const pdf = await import('../../src/plans/pdf')
+  vi.mocked(pdf.openPdf).mockClear()
+  pdfDoc.destroy.mockClear()
+  const s = createPlansStore()
+  await s.getState().startImport('pdf')
+  expect(pdf.openPdf).toHaveBeenCalledTimes(1)
+  expect(pdfDoc.destroy).toHaveBeenCalledTimes(1)
+})
+
+test('text read from a scanned PDF page is placed on the page picture correctly', async () => {
+  fakeAa({ plansOcr: async () => [{ text: 'Shelf', page: 1, box: [300, 300, 150, 60], size: 60 }, { text: '1. Cut it.', page: 1, box: [300, 600, 150, 30], size: 30 }] })
+  pdfDoc.textLines.mockResolvedValueOnce({ lines: [], scanPages: [1] })
+  const s = createPlansStore()
+  await s.getState().startImport('pdf')
+  const ref = s.getState().current!.plan.review![0]
+  // The reader works on the 150 dpi picture; positions are kept in PDF points (72 per inch) like typed text.
+  expect(ref.box.map(v => Math.round(v * 100) / 100)).toEqual([144, 288, 72, 14.4])
+})
+
+test('leaving a renamed plan renames its folder to match', async () => {
+  const renamed: string[] = []
+  fakeAa({ plansRename: async (f: string, name: string) => { renamed.push(`${f}->${name}`); return name } })
+  const s = createPlansStore()
+  await s.getState().create()
+  await s.getState().update(p => ({ ...p, name: 'Garden bench' }))
+  await s.getState().back()
+  expect(renamed).toEqual(['New plan->Garden bench'])
+})
+
+test('if the Plans folder cannot be written, a plain message says so', async () => {
+  fakeAa({ plansCreate: async () => { throw new Error("Error invoking remote method 'plans:create': Error: EPERM: operation not permitted") } })
+  const s = createPlansStore()
+  await s.getState().create()
+  expect(s.getState().notice).toMatch(/couldn't create the plan/i)
+  expect(s.getState().current).toBeNull()
 })

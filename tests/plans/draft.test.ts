@@ -81,3 +81,14 @@ test('a doubled "x" from the reader ("%x", "X%") still reads as one ×', () => {
     [1, 'Step', 0.75, 5.5, 14.5]
   ])
 })
+
+// ---- Final review fixes ----
+test('a step names its tools: the highest-tier tool in its text becomes the step tool, and it joins the tools list', () => {
+  const lines = ['Shelf', '1. Drill pilot holes with a cordless drill.', '2. Cut the curve with a jig saw, then sand.', '3. Glue it up.']
+    .map((text, i) => ({ text, page: 1, box: [0, i * 20, 100, 12] as [number, number, number, number] }))
+  const names = { 'cordless drill': 'drill', drill: 'drill', 'jig saw': 'jigsaw', sandpaper: 'sandpaper', glue: 'glue' }
+  const rank = { drill: 1, jigsaw: 1, sandpaper: 0, glue: 0, 'table-saw': 3 }
+  const d = draftPlan(lines, names, rank)
+  expect(d.plan.steps.map(s => s.tool)).toEqual(['drill', 'jigsaw', 'glue'])
+  expect(d.plan.tools).toEqual(['drill', 'jigsaw', 'glue'])
+})

@@ -44,6 +44,8 @@ export type AaApi = {
   plansSave(folder: string, plan: Plan): Promise<void>
   /** Removes a plan folder; used when an import is cancelled. */
   plansDiscard(folder: string): Promise<void>
+  /** Rename a plan's folder to follow its name; returns the folder name now in use. */
+  plansRename(folder: string, name: string): Promise<string>
   plansAttachDesign(folder: string, aawText: string): Promise<void>
   /** File picker for an .aaw design; returns its text or null. */
   plansPickDesign(): Promise<string | null>

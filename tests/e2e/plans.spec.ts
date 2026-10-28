@@ -146,3 +146,22 @@ test("plans 4. a kid-friendly plan shows on the kids' side with grown-up steps m
     kill(app)
   }
 })
+
+test('plans 5. a black-and-white office-scanner PDF (CCITT G4) is read, and an iPhone HEIC photo too', async () => {
+  test.setTimeout(150_000)
+  const { app, win } = await launch(newDirs())
+  try {
+    await openPlans(win)
+    await stubPicker(app, [join(FX, 'scan-g4.pdf')])
+    await bringIn(win, 'PDF…')
+    const draft = win.getByRole('region', { name: 'Drafted plan' })
+    await expect(draft.getByRole('textbox', { name: /Drafted step/ })).toHaveCount(3)
+    await expect(draft.getByText('4 × Legs', { exact: false })).toBeVisible()
+    await win.getByRole('button', { name: '← My Plans' }).click()
+    await stubPicker(app, [join(FX, 'photo-page.heic')])
+    await bringIn(win, 'Photos or scans…')
+    await expect(win.getByRole('region', { name: 'Drafted plan' }).getByRole('textbox', { name: /Drafted step/ })).toHaveCount(5)
+  } finally {
+    kill(app)
+  }
+})

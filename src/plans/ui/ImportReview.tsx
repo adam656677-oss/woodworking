@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useNearView } from './useNearView'
 import { TOOLS } from '../../kids/content'
 import { formatInches } from '../../model/units'
 import { plans, usePlans } from '../plansStore'
@@ -10,13 +11,14 @@ const scaleFor = (plan: Plan) => (plan.source?.kind === 'photos' ? 1 : 150 / 72)
 function PageWithBox({ folder, plan, page, focus }: { folder: string; plan: Plan; page: number; focus: ReviewRef | null }) {
   const [url, setUrl] = useState<string | null>(null)
   const [natural, setNatural] = useState<{ w: number; h: number } | null>(null)
+  const [ref, visible] = useNearView<HTMLElement>(page === 1 || focus?.page === page)
   useEffect(() => {
-    void window.aa.plansFileUrl(folder, `pages/page-${String(page).padStart(3, '0')}.png`).then(setUrl)
-  }, [folder, page])
+    if (visible && !url) void window.aa.plansFileUrl(folder, `pages/page-${String(page).padStart(3, '0')}.png`).then(setUrl)
+  }, [folder, page, visible, url])
   const box = focus && focus.page === page ? focus.box : null
   const k = scaleFor(plan)
   return (
-    <figure className="relative mb-4 border bg-white shadow" id={`page-${page}`}>
+    <figure ref={ref} className="relative mb-4 min-h-[300px] border bg-white shadow" id={`page-${page}`}>
       {url ? <img src={url} alt={`Page ${page}`} className="block w-full" onLoad={e => setNatural({ w: e.currentTarget.naturalWidth, h: e.currentTarget.naturalHeight })} /> : <div className="p-6 text-sm text-stone-500">Page {page}</div>}
       {box && (
         <div
@@ -107,7 +109,7 @@ export function ImportReview() {
                 <li key={s.id} className="flex items-start gap-2 text-sm">
                   <span className="font-bold">{i + 1}.</span>
                   <div className="flex-1">
-                    <textarea aria-label={`Drafted step ${i + 1}`} rows={2} value={s.text} onChange={e => void up(x => ({ ...x, steps: x.steps.map(y => (y.id === s.id ? { ...y, text: e.target.value } : y)) }))} className="w-full rounded border border-stone-300 px-2 py-1" />
+                    <textarea aria-label={`Drafted step ${i + 1}`} rows={2} value={s.text} onChange={e => void up(x => ({ ...x, steps: x.steps.map(y => (y.id === s.id ? { ...y, text: e.target.value } : y)), unchecked: x.unchecked.filter(u => u !== s.id) }))} className="w-full rounded border border-stone-300 px-2 py-1" />
                     <CheckMe plan={plan} id={s.id} />
                     {plan.checkNotes?.[s.id] && plan.unchecked.includes(s.id) && <div className="text-xs text-amber-800">{plan.checkNotes[s.id]}</div>}
                   </div>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { TOOLS } from '../../kids/content'
 import { CutSheet } from '../../kids/ui/CutSheet'
+import { cutList } from '../../model/cutlist'
 import { deserialize, serialize } from '../../model/fileFormat'
 import { newId } from '../../model/ids'
 import type { Project } from '../../model/types'
@@ -9,6 +10,7 @@ import { studio } from '../../ui/store'
 import { plans, usePlans } from '../plansStore'
 import type { CutRow, Plan, PlanStep } from '../types'
 import { PlanPicture } from './PlanPicture'
+import { useNearView } from './useNearView'
 
 type Tab = 'overview' | 'steps' | 'cut' | 'pages'
 const field = 'rounded border border-stone-300 px-2 py-1 text-sm'
@@ -38,6 +40,11 @@ export function usePlanDesign(folder: string | undefined, plan: Plan | undefined
   return design
 }
 
+/** The design's cut list as the plan's own rows, so the plan still has a cut list if the design is lost. */
+function rowsFrom(project: Project): CutRow[] {
+  return cutList(project).rows.map(r => ({ id: newId('r'), qty: r.qty, part: r.part, thickness: r.thickness, width: r.width, length: r.length, wood: r.woodName, notes: r.notes.join('; ') }))
+}
+
 function Overview({ folder, plan }: { folder: string; plan: Plan }) {
   const up = plans.getState().update
   const [msg, setMsg] = useState<string | null>(null)
@@ -45,19 +52,20 @@ function Overview({ folder, plan }: { folder: string; plan: Plan }) {
     const p = studio.getState().project
     if (p.boards.length === 0) return setMsg('The Master Shop has no design open. Open or build one there first.')
     await window.aa.plansAttachDesign(folder, serialize(p))
-    await up(x => ({ ...x, design: 'design.aaw' }))
+    await up(x => ({ ...x, design: 'design.aaw', cutRows: rowsFrom(p) }))
     setMsg(`Attached "${p.name}".`)
   }
   const attachFile = async () => {
     const text = await window.aa.plansPickDesign()
     if (!text) return
+    let project: Project
     try {
-      deserialize(text)
+      project = deserialize(text)
     } catch {
       return setMsg("That file isn't an A&A project.")
     }
     await window.aa.plansAttachDesign(folder, text)
-    await up(x => ({ ...x, design: 'design.aaw' }))
+    await up(x => ({ ...x, design: 'design.aaw', cutRows: rowsFrom(project) }))
     setMsg('Design attached.')
   }
   const openDesign = async () => {
@@ -71,7 +79,11 @@ function Overview({ folder, plan }: { folder: string; plan: Plan }) {
           <input aria-label="Plan name" value={plan.name} onChange={e => void up(x => ({ ...x, name: e.target.value }))} className={`${field} text-lg font-semibold`} />
         </label>
         <div className="flex flex-wrap items-center gap-4 text-sm">
-          <label className="flex items-center gap-2"><input type="checkbox" checked={plan.kidFriendly} onChange={e => void up(x => ({ ...x, kidFriendly: e.target.checked }))} /> Kid-friendly (shows in the Kids&apos; Workshop)</label>
+          <label className="flex items-center gap-2">
+            <input type="checkbox" checked={plan.kidFriendly} disabled={plan.unchecked.length > 0 && !plan.kidFriendly} onChange={e => void up(x => ({ ...x, kidFriendly: e.target.checked }))} />
+            Kid-friendly (shows in the Kids&apos; Workshop)
+          </label>
+          {plan.unchecked.length > 0 && !plan.kidFriendly && <span className="text-xs text-amber-800">Check the drafted items first — kids only see plans a grown-up has checked.</span>}
           <label className="flex items-center gap-1">Difficulty
             <select aria-label="Difficulty" value={plan.stars} onChange={e => void up(x => ({ ...x, stars: Number(e.target.value) as 1 | 2 | 3 }))} className={field}>
               <option value={1}>★</option><option value={2}>★★</option><option value={3}>★★★</option>
@@ -211,15 +223,23 @@ function CutRows({ plan }: { plan: Plan }) {
   )
 }
 
-function Pages({ folder, plan }: { folder: string; plan: Plan }) {
-  const [urls, setUrls] = useState<(string | null)[]>([])
+function LazyPage({ folder, n }: { folder: string; n: number }) {
+  const [ref, visible] = useNearView<HTMLDivElement>(n === 1)
+  const [url, setUrl] = useState<string | null | undefined>(undefined)
   useEffect(() => {
-    const n = plan.source?.pages ?? 0
-    void Promise.all(Array.from({ length: n }, (_, i) => window.aa.plansFileUrl(folder, `pages/page-${String(i + 1).padStart(3, '0')}.png`))).then(setUrls)
-  }, [folder, plan.source?.pages])
+    if (visible && url === undefined) void window.aa.plansFileUrl(folder, `pages/page-${String(n).padStart(3, '0')}.png`).then(setUrl)
+  }, [folder, n, visible, url])
+  return (
+    <div ref={ref} className="min-h-[300px] w-full max-w-3xl">
+      {url ? <img src={url} alt={`Page ${n}`} className="w-full border shadow" /> : url === null ? <p>Page {n} is missing.</p> : <p className="text-stone-400">Page {n}…</p>}
+    </div>
+  )
+}
+
+function Pages({ folder, plan }: { folder: string; plan: Plan }) {
   return (
     <div className="flex flex-col items-center gap-4">
-      {urls.map((u, i) => (u ? <img key={i} src={u} alt={`Page ${i + 1}`} className="max-w-3xl border shadow" /> : <p key={i}>Page {i + 1} is missing.</p>))}
+      {Array.from({ length: plan.source?.pages ?? 0 }, (_, i) => <LazyPage key={i} folder={folder} n={i + 1} />)}
     </div>
   )
 }
@@ -254,7 +274,7 @@ export function PlanEditor() {
         {tab === 'cut' && (plan.design && design !== 'missing' ? (
           design ? (
             <div className="rounded bg-white p-3">
-              <p className="mb-2 text-sm text-stone-600">From the attached design — change it in the Master Shop (Overview → Open the design).</p>
+              <p className="mb-2 text-sm text-stone-600">From the attached design. To change it: Overview → Open the design, change it in the Master Shop, then come back and use Attach the open Master Shop design.</p>
               <CutSheet project={design} />
             </div>
           ) : <p className="text-sm text-stone-600">Loading the attached design…</p>

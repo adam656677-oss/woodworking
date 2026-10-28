@@ -90,8 +90,25 @@ function stepStart(t: string): { n: number; text: string } | null {
   return m ? { n: Number(m[1]), text: m[2].trim() } : null
 }
 
-/** Draft a plan from its text lines. `toolNames` maps lower-case tool names and aliases to tool ids. */
-export function draftPlan(lines: TextLine[], toolNames: Record<string, string>): Draft {
+const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
+/** Tools named in a piece of text, in the order they appear (longest name wins where names overlap). */
+function toolsIn(text: string, toolNames: Record<string, string>): string[] {
+  const lower = ` ${text.toLowerCase()} `
+  const found = Object.keys(toolNames)
+    .map(name => ({ name, at: lower.search(new RegExp(String.raw`[^a-z]${escape(name)}[^a-z]`)) }))
+    .filter(x => x.at >= 0)
+    .sort((a, b) => a.at - b.at || b.name.length - a.name.length)
+  const ids: string[] = []
+  for (const f of found) if (!ids.includes(toolNames[f.name])) ids.push(toolNames[f.name])
+  return ids
+}
+
+/**
+ * Draft a plan from its text lines. `toolNames` maps lower-case tool names and aliases to tool ids;
+ * `toolRank` (tool id → tier rank) picks each step's tool: the highest-tier tool its text names.
+ */
+export function draftPlan(lines: TextLine[], toolNames: Record<string, string>, toolRank: Record<string, number> = {}): Draft {
   const plan = newPlan('Imported plan', newId('p'))
   const flags: Record<string, string> = {}
   const notes: string[] = []
@@ -156,12 +173,8 @@ export function draftPlan(lines: TextLine[], toolNames: Record<string, string>):
 
     // Tools are picked up from any line outside the steps.
     if (section !== 'steps') {
-      const lower = ` ${text.toLowerCase()} `
-      const found = Object.keys(toolNames)
-        .map(name => ({ name, at: lower.search(new RegExp(String.raw`[^a-z]${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}[^a-z]`)) }))
-        .filter(x => x.at >= 0)
-        .sort((a, b) => a.at - b.at || b.name.length - a.name.length)
-      for (const f of found) if (!tools.includes(toolNames[f.name])) tools.push(toolNames[f.name])
+      const found = toolsIn(text, toolNames)
+      for (const id of found) if (!tools.includes(id)) tools.push(id)
       if (found.length && section === 'tools') continue
     }
 
@@ -194,6 +207,12 @@ export function draftPlan(lines: TextLine[], toolNames: Record<string, string>):
     if (section === 'intro' && l.page === nameLine?.page && (bodySize === undefined || (l.size ?? bodySize) >= bodySize)) description.push(text)
   }
 
+  // Each step's tool is the highest-tier tool it names, so "Adult does this" works on imported plans too.
+  for (const { step } of steps) {
+    const named = toolsIn(step.text, toolNames)
+    for (const id of named) if (!tools.includes(id)) tools.push(id)
+    if (named.length) step.tool = named.reduce((best, id) => ((toolRank[id] ?? 0) > (toolRank[best] ?? 0) ? id : best), named[0])
+  }
   plan.steps = steps.map(s => s.step)
   plan.cutRows = rows
   plan.materials = materials

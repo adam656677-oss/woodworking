@@ -31,6 +31,7 @@ contextBridge.exposeInMainWorld('aa', {
   plansCreate: (plan: unknown) => ipcRenderer.invoke('plans:create', plan),
   plansSave: (folder: string, plan: unknown) => ipcRenderer.invoke('plans:save', folder, plan),
   plansDiscard: (folder: string) => ipcRenderer.invoke('plans:discard', folder),
+  plansRename: (folder: string, name: string) => ipcRenderer.invoke('plans:rename', folder, name),
   plansAttachDesign: (folder: string, text: string) => ipcRenderer.invoke('plans:attachDesign', folder, text),
   plansPickDesign: () => ipcRenderer.invoke('plans:pickDesign'),
   plansReadDesign: (folder: string) => ipcRenderer.invoke('plans:readDesign', folder),
