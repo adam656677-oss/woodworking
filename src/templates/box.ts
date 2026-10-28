@@ -14,6 +14,11 @@ export const box: TemplateDef = {
     { key: 'lid', label: 'Lid', kind: 'bool', default: false },
     { key: 'corners', label: 'Corners', kind: 'choice', default: 'butt', options: ['butt', 'rabbet'] }
   ],
+  adjust(params, woods: Wood[]) {
+    // The inside must be at least 1" across, or the sides and bottom would have no (or negative) size.
+    const min = 2 * woodOf(woods, params.wood as string).thickness + 1
+    return { ...params, W: Math.max(params.W as number, min), D: Math.max(params.D as number, min) }
+  },
   build(params, woods: Wood[]) {
     const W = params.W as number
     const D = params.D as number
@@ -21,7 +26,7 @@ export const box: TemplateDef = {
     const wood = woodOf(woods, params.wood as string)
     const T = wood.thickness
     const rabbet = params.corners === 'rabbet'
-    const depth = T / 2
+    const depth = Math.floor((T / 2) * 64 + 1e-9) / 64
 
     const front = makeBoard('Front', wood, H, W, ORIENT.wallX, { x: 0, y: 0, z: 0 })
     const back = makeBoard('Back', wood, H, W, ORIENT.wallX, { x: 0, y: D - T, z: 0 })

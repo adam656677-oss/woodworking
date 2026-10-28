@@ -1,8 +1,8 @@
 // Design warnings: overlapping boards, parts bigger than the stock, and joints or angles that can't be made.
-import { TOUCH_TOL } from './contact'
-import { AXES, isAxisAligned, overlap1, worldBox } from './geometry'
+import { contactBetween, TOUCH_TOL } from './contact'
+import { AXES, boxInLocal, isAxisAligned, overlap1, worldBox } from './geometry'
 import { validateBoard, validateJoint } from './joints'
-import type { Project } from './types'
+import type { GrooveParams, Joint, Project } from './types'
 import { formatInches } from './units'
 import { findWood } from './woods'
 
@@ -45,9 +45,34 @@ export function validate(project: Project): Warning[] {
     if (angleProblem) warnings.push({ kind: 'badJoint', boardIds: [b.id], message: angleProblem })
   }
 
+  const NAMES: Record<string, string> = { butt: 'butt', dado: 'dado', rabbet: 'rabbet', pocketScrew: 'pocket-screw', miter: 'miter' }
   for (const j of project.joints) {
     const reason = validateJoint(project, j)
-    if (reason) warnings.push({ kind: 'badJoint', boardIds: [j.hostBoardId, j.partnerBoardId], message: reason })
+    if (reason) {
+      warnings.push({ kind: 'badJoint', boardIds: [j.hostBoardId, j.partnerBoardId], message: reason })
+      continue
+    }
+    // A joint only means something while its boards still meet the way it describes.
+    if (!contactBetween(project, j.hostBoardId, j.partnerBoardId) || !seatedInGroove(project, j)) {
+      const name = (id: string) => project.boards.find(b => b.id === id)?.name ?? '?'
+      warnings.push({
+        kind: 'badJoint',
+        boardIds: [j.hostBoardId, j.partnerBoardId],
+        message: `The ${NAMES[j.type]} joint between ${name(j.hostBoardId)} and ${name(j.partnerBoardId)} no longer lines up — move them back together or remove the joint`
+      })
+    }
   }
   return warnings
+}
+
+/** For a dado or rabbet: the partner board still sits inside the groove (not just somewhere on the host's face). */
+function seatedInGroove(project: Project, j: Joint): boolean {
+  if (j.type !== 'dado' && j.type !== 'rabbet') return true
+  const host = project.boards.find(b => b.id === j.hostBoardId)
+  const partner = project.boards.find(b => b.id === j.partnerBoardId)
+  if (!host || !partner || !isAxisAligned(host) || !isAxisAligned(partner)) return true
+  const p = j.params as GrooveParams
+  const local = boxInLocal(host, worldBox(partner))
+  const ax = (p.along ?? 'width') === 'width' ? 'y' : 'x'
+  return local.min[ax] >= p.offset - TOUCH_TOL && local.max[ax] <= p.offset + p.width + TOUCH_TOL
 }

@@ -6,6 +6,7 @@ contextBridge.exposeInMainWorld('aa', {
   saveAs: (text: string, suggestedName: string) => ipcRenderer.invoke('aa:saveAs', text, suggestedName),
   writeAutosave: (path: string | null, text: string) => ipcRenderer.invoke('aa:writeAutosave', path, text),
   readUntitledAutosave: () => ipcRenderer.invoke('aa:readUntitledAutosave'),
+  deleteAutosave: (path: string | null) => ipcRenderer.invoke('aa:deleteAutosave', path),
   exportCsv: (text: string, suggestedName: string) => ipcRenderer.invoke('aa:exportCsv', text, suggestedName),
   print: () => ipcRenderer.invoke('aa:print'),
   loadUserWoods: () => ipcRenderer.invoke('aa:loadUserWoods'),

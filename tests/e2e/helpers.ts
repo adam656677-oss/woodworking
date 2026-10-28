@@ -66,3 +66,9 @@ export async function typeInches(win: Page, label: string, value: string) {
 export function part(win: Page, name: string, nth = 0) {
   return win.getByRole('list', { name: 'Parts' }).getByRole('listitem').filter({ hasText: new RegExp(`^(⚠ )?${name}`) }).nth(nth)
 }
+
+/** Turn a live template into free-form parts (Unlock, then confirm). */
+export async function unlockTemplate(win: Page) {
+  await win.getByRole('button', { name: 'Unlock for free-form editing' }).click()
+  await win.getByRole('button', { name: 'Unlock', exact: true }).click()
+}

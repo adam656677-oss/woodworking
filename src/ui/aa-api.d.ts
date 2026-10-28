@@ -14,6 +14,8 @@ export type AaApi = {
   saveAs(text: string, suggestedName: string): Promise<string | null>
   writeAutosave(path: string | null, text: string): Promise<void>
   readUntitledAutosave(): Promise<string | null>
+  /** Remove the autosave for a file (null: the untitled autosave). */
+  deleteAutosave(path: string | null): Promise<void>
   exportCsv(text: string, suggestedName: string): Promise<string | null>
   print(): Promise<void>
   loadUserWoods(): Promise<Wood[]>

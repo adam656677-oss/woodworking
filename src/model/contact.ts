@@ -69,7 +69,7 @@ export function contactBetween(project: Project, aId: string, bId: string): Cont
   // Touching: coplanar on exactly one axis (or seated in a groove), positive area on the other two.
   let touchAxes = AXES.filter((ax, i) => Math.abs(ov[i]) <= TOUCH_TOL)
   if (touchAxes.length === 0 && seat > 0) {
-    const seated = AXES.filter((ax, i) => Math.abs(ov[i] - seat) <= TOUCH_TOL)
+    const seated = AXES.filter((ax, i) => Math.abs(ov[i] - seat) <= 1e-6) // sizes are on the 1/64" grid, so the seat matches exactly
     if (seated.length === 1) touchAxes = seated
   }
   if (touchAxes.length !== 1) return null

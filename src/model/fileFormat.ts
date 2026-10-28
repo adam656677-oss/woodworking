@@ -37,6 +37,26 @@ function invalid(msg: string): never {
   throw new ProjectFileError('invalid', `This file isn't a valid A&A project: ${msg}.`)
 }
 
+const oneOf = (v: unknown, options: string[]) => typeof v === 'string' && options.includes(v)
+
+/** Each joint type's settings must be complete and numeric, or the app would show ?" sizes or worse. */
+function jointParamsOk(type: string, p: Record<string, any>): boolean {
+  switch (type) {
+    case 'butt':
+      return oneOf(p.fastener, ['glue', 'screws', 'nails']) && isNum(p.count)
+    case 'dado':
+    case 'rabbet':
+      return isNum(p.width) && isNum(p.depth) && isNum(p.offset) && oneOf(p.face, ['top', 'bottom']) &&
+        (p.along === undefined || oneOf(p.along, ['width', 'length']))
+    case 'pocketScrew':
+      return isNum(p.count) && isNum(p.spacing) && isNum(p.screwLength)
+    case 'miter':
+      return isNum(p.angle) && oneOf(p.fastener, ['glue', 'nails', 'splines'])
+    default:
+      return false
+  }
+}
+
 function check(raw: any): Project {
   if (!isObj(raw)) invalid('it has no project data')
   if (typeof raw.name !== 'string') invalid('the project name is missing')
@@ -54,12 +74,16 @@ function check(raw: any): Project {
     if (!isVec(b.position) || !isVec(b.rotation)) invalid(`board "${name}" has no valid position`)
     if (!isObj(b.endCuts) || !isEnd(b.endCuts.start) || !isEnd(b.endCuts.end)) invalid(`board "${name}" has damaged end cuts`)
     if (!isObj(b.edgeBevels) || !isNum(b.edgeBevels.left) || !isNum(b.edgeBevels.right)) invalid(`board "${name}" has damaged edge bevels`)
-    if (!Array.isArray(b.holes)) invalid(`board "${name}" has damaged holes`)
+    if (!Array.isArray(b.holes) || !b.holes.every((h: any) => isObj(h) && isNum(h.diameter) && h.diameter > 0 && isNum(h.u) && isNum(h.v))) {
+      invalid(`board "${name}" has damaged holes`)
+    }
+    if (b.grain !== 'length' && b.grain !== 'width') invalid(`board "${name}" has an unknown grain direction`)
     if (!woodIds.has(b.woodId)) invalid(`board "${name}" uses a wood that isn't in the file`)
     boardIds.add(b.id)
   }
   for (const j of raw.joints) {
     if (!isObj(j) || typeof j.type !== 'string' || !isObj(j.params)) invalid('a joint is damaged')
+    if (!jointParamsOk(j.type, j.params)) invalid(`a ${j.type} joint has damaged settings`)
     if (!boardIds.has(j.hostBoardId) || !boardIds.has(j.partnerBoardId)) invalid('a joint refers to a board that is missing')
   }
   return raw as Project

@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
 import { join } from 'node:path'
 import {
-  cutListRows, enterMasterShop, kill, launch, newDirs, part, startTemplate, stubOpenDialog, stubSaveDialog, typeInches
+  cutListRows, enterMasterShop, kill, launch, newDirs, part, startTemplate, stubOpenDialog, stubSaveDialog, typeInches, unlockTemplate
 } from './helpers'
 
 test('1. box template: change the width, the cut list follows', async () => {
@@ -22,6 +22,7 @@ test('2. bookshelf: a side and a shelf show their dado; a shallower dado shorten
   try {
     await enterMasterShop(win)
     await win.getByRole('button', { name: 'Bookshelf', exact: true }).click()
+    await unlockTemplate(win)
     await part(win, 'Side').click()
     await part(win, 'Shelf').click({ modifiers: ['Control'] })
     const panel = win.getByRole('region', { name: 'Joint' })
@@ -72,6 +73,7 @@ test('4. autosave: an unsaved edit survives a crash and can be recovered', async
     const { app, win } = await launch(dirs)
     await enterMasterShop(win)
     await win.getByRole('button', { name: 'Box', exact: true }).click()
+    await unlockTemplate(win)
     await stubSaveDialog(app, file)
     await win.getByRole('button', { name: 'Save', exact: true }).click()
     await expect(win).toHaveTitle('A&A Woodworking Studio — crash')
@@ -153,6 +155,30 @@ test('6. free-form picture frame: four miters give 4 × 3/4 × 2 × 14 with 45°
     const rows = await cutListRows(win)
     expect(rows).toEqual([['4', 'Rail / Stile', '3/4"', '2"', '14"', '1x4', 'length', '45° miter both ends']])
     await expect(win.getByRole('region', { name: 'Warnings' })).toHaveCount(0)
+  } finally {
+    kill(app)
+  }
+})
+
+test('7. unsaved work: New asks first; Cancel keeps it. A part turns to a typed angle', async () => {
+  const { app, win } = await launch(newDirs())
+  try {
+    await enterMasterShop(win)
+    await win.getByRole('button', { name: 'Box', exact: true }).click()
+    await unlockTemplate(win)
+    await win.getByRole('button', { name: 'New ▾' }).click()
+    await win.getByRole('menuitem', { name: 'Blank project' }).click()
+    const ask = win.getByRole('dialog', { name: 'Unsaved changes' })
+    await expect(ask).toBeVisible()
+    await ask.getByRole('button', { name: 'Cancel' }).click()
+    await expect(ask).toBeHidden()
+    await expect(part(win, 'Front')).toBeVisible()
+
+    await part(win, 'Front').click()
+    const turnZ = win.getByLabel('Turn Z°')
+    await turnZ.fill('30')
+    await turnZ.press('Enter')
+    await expect(win.getByLabel('Turn Z°')).toHaveValue('30')
   } finally {
     kill(app)
   }

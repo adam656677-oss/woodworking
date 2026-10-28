@@ -33,6 +33,8 @@ export type StudioState = {
   canRedo: boolean
   /** Bumps whenever a different project is started or opened (the 3D view refits). */
   projectKey: number
+  /** True while asking whether to save unsaved work before it is replaced. */
+  pendingReplace: boolean
 
   goto(screen: Screen): void
   apply(fn: (p: Project) => Project | OpError): void
@@ -43,6 +45,7 @@ export type StudioState = {
   newBlank(): void
   open(): Promise<void>
   resolveRecovery(useAutosave: boolean): void
+  resolvePending(choice: 'save' | 'discard' | 'cancel'): Promise<void>
   save(): Promise<boolean>
   saveAs(): Promise<boolean>
   autosaveNow(): Promise<void>
@@ -65,8 +68,13 @@ function nameFromPath(path: string): string {
   return base.replace(/\.aaw$/i, '')
 }
 
+const LIVE_TEMPLATE = 'This is a live template — change its sizes in the template panel, or Unlock to edit parts freely.'
+
 export function createStudioStore() {
   let history = new History<Snapshot>({ project: emptyProject('Untitled'), selection: [] })
+  /** What to do once the person answers the unsaved-work question. */
+  let pending: (() => void | Promise<void>) | null = null
+  let untitledChecked = false
 
   return createStore<StudioState>()((set, get) => {
     /** Publish the history's current snapshot into state. */
@@ -91,6 +99,20 @@ export function createStudioStore() {
       }
     }
     const newProject = (name: string) => emptyProject(name, get().userWoods)
+    /** Run an action that replaces the current project, asking first if there is unsaved work. */
+    const guard = async (action: () => void | Promise<void>) => {
+      if (get().dirty) {
+        pending = action
+        set({ pendingReplace: true })
+        return
+      }
+      await action()
+    }
+    const afterSave = async (path: string, wasUntitled: boolean) => {
+      // The saved file is now the newest copy: its autosave (and an untitled one it came from) are spent.
+      await api().deleteAutosave?.(path)
+      if (wasUntitled) await api().deleteAutosave?.(null)
+    }
     const persistWoods = async (woods: Wood[]) => {
       set({ userWoods: woods })
       await api()?.saveUserWoods(woods)
@@ -113,6 +135,7 @@ export function createStudioStore() {
       canUndo: false,
       canRedo: false,
       projectKey: 0,
+      pendingReplace: false,
 
       goto: screen => set({ screen }),
 
@@ -123,6 +146,12 @@ export function createStudioStore() {
           return
         }
         if (result === get().project) return
+        const prev = get().project
+        // Template parts are rebuilt from the template sizes, so a direct edit would be silently lost.
+        if (prev.template && result.template === prev.template && (result.boards !== prev.boards || result.joints !== prev.joints)) {
+          set({ error: LIVE_TEMPLATE })
+          return
+        }
         const ids = new Set(result.boards.map(b => b.id))
         history.push({ project: result, selection: get().selection.filter(id => ids.has(id)) })
         set({ error: null })
@@ -146,11 +175,12 @@ export function createStudioStore() {
       newFromTemplate: id => {
         const t = findTemplate(id)
         if (!t) return
-        start(applyTemplate(newProject(t.name), id), null, true)
+        // An untouched template is nothing the person would lose, so it starts clean.
+        void guard(() => start(applyTemplate(newProject(t.name), id), null, false))
       },
-      newBlank: () => start(newProject('Untitled'), null, false),
+      newBlank: () => void guard(() => start(newProject('Untitled'), null, false)),
 
-      open: async () => {
+      open: () => guard(async () => {
         const r = await api().openProject()
         if (!r) return
         if (r.autosaveNewer && r.autosaveText) {
@@ -158,13 +188,29 @@ export function createStudioStore() {
           return
         }
         loadText(r.text, r.path, r.backupPath, false)
-      },
+      }),
       resolveRecovery: useAutosave => {
         const rec = get().recovery
         if (!rec) return
-        if (useAutosave) loadText(rec.autosaveText, rec.path, rec.backupPath, true)
-        else if (rec.savedText !== null) loadText(rec.savedText, rec.path, rec.backupPath, false)
-        else set({ recovery: null })
+        if (useAutosave) {
+          // Recovered work is unsaved until saved, so leave the autosave in place until then.
+          set({ recovery: null })
+          void guard(() => loadText(rec.autosaveText, rec.path, rec.backupPath, true))
+        } else if (rec.savedText !== null) {
+          loadText(rec.savedText, rec.path, rec.backupPath, false)
+        } else {
+          // Dismissing an untitled recovery throws that work away for good.
+          set({ recovery: null })
+          void api().deleteAutosave?.(null)
+        }
+      },
+      resolvePending: async choice => {
+        const action = pending
+        pending = null
+        set({ pendingReplace: false })
+        if (!action || choice === 'cancel') return
+        if (choice === 'save' && !(await get().save())) return
+        await action()
       },
 
       save: async () => {
@@ -178,12 +224,14 @@ export function createStudioStore() {
         }
         set({ dirty: false })
         api().setDirty(false)
+        await afterSave(path, false)
         return true
       },
       saveAs: async () => {
         try {
           const path = await api().saveAs(serialize(get().project), get().project.name)
           if (!path) return false
+          const wasUntitled = get().filePath === null
           const name = nameFromPath(path)
           const renamed = name !== get().project.name
           const project = { ...get().project, name }
@@ -193,6 +241,7 @@ export function createStudioStore() {
           if (renamed) await api().saveProject(path, serialize(project))
           set({ dirty: false })
           api().setDirty(false)
+          await afterSave(path, wasUntitled)
           return true
         } catch (e) {
           set({ error: (e as Error).message.replace(/^Error invoking remote method '[^']+': (Error: )?/, '') })
@@ -208,6 +257,8 @@ export function createStudioStore() {
         }
       },
       checkUntitledAutosave: async () => {
+        if (untitledChecked) return
+        untitledChecked = true
         const text = await api().readUntitledAutosave()
         if (text) set({ recovery: { path: null, savedText: null, autosaveText: text, backupPath: null } })
       },

@@ -2,19 +2,13 @@ import { contactBetween, jointOffers } from '../../model/contact'
 import { addJoint, removeJoint, updateJoint } from '../../model/ops'
 import type { ButtParams, GrooveParams, Joint, JointType, MiterParams, PocketParams } from '../../model/types'
 import { studio, useStudio } from '../store'
+import { NumberInput } from '../common/NumberInput'
 import { InchInput } from './InchInput'
 
 const NAMES: Record<JointType, string> = { butt: 'Butt', dado: 'Dado', rabbet: 'Rabbet', pocketScrew: 'Pocket screws', miter: 'Miter' }
 
 function NumberField({ label, value, onChange, min = 0, max }: { label: string; value: number; onChange(v: number): void; min?: number; max?: number }) {
-  return (
-    <label className="flex items-center justify-between text-xs text-stone-600">
-      {label}
-      <input type="number" aria-label={label} min={min} max={max} value={value}
-        onChange={e => Number.isFinite(Number(e.target.value)) && onChange(Number(e.target.value))}
-        className="w-20 rounded border border-stone-300 px-1 text-right text-sm" />
-    </label>
-  )
+  return <NumberInput label={label} value={value} onChange={onChange} min={min} max={max} />
 }
 
 function JointSettings({ joint }: { joint: Joint }) {

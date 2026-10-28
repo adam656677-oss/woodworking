@@ -1,7 +1,7 @@
 import { app, BrowserWindow, dialog, ipcMain } from 'electron'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import { autosavePath, defaultFolder, load, safeSave, writeAutosave } from './fileStore'
+import { autosavePath, defaultFolder, deleteAutosave, load, safeSave, writeAutosave } from './fileStore'
 
 // Test hooks: e2e runs point these at temp folders so they never touch real documents or settings.
 if (process.env.AA_USER_DATA) app.setPath('userData', process.env.AA_USER_DATA)
@@ -72,6 +72,13 @@ function register(): void {
     const target = autosavePath(path, docsDir())
     await mkdir(join(target, '..'), { recursive: true })
     await writeAutosave(target, text)
+  })
+  ipcMain.handle('aa:deleteAutosave', async (_e, path: string | null) => {
+    try {
+      await deleteAutosave(autosavePath(path, docsDir()))
+    } catch {
+      // A leftover autosave is harmless; it is offered again only if newer than the file.
+    }
   })
   ipcMain.handle('aa:readUntitledAutosave', async () => {
     try {

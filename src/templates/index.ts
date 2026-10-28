@@ -20,6 +20,8 @@ export type TemplateDef = {
   name: string
   params: ParamDef[]
   build(params: Record<string, ParamValue>, woods: Wood[]): { boards: Board[]; joints: Joint[] }
+  /** Raise sizes that are too small for the chosen wood (e.g. a box narrower than two walls). */
+  adjust?(params: Record<string, ParamValue>, woods: Wood[]): Record<string, ParamValue>
 }
 
 export const TEMPLATES: TemplateDef[] = [box, bookshelf, birdhouse]
@@ -53,7 +55,8 @@ export function resolveParams(def: TemplateDef, given: Record<string, ParamValue
 export function applyTemplate(project: Project, id: string, params: Record<string, ParamValue> = {}): Project {
   const def = findTemplate(id)
   if (!def) throw new Error(`Unknown template ${id}`)
-  const resolved = resolveParams(def, params)
+  const base = resolveParams(def, params)
+  const resolved = def.adjust ? def.adjust(base, project.woods) : base
   const { boards, joints } = def.build(resolved, project.woods)
   return { ...project, boards, joints, template: { templateId: id, params: resolved } }
 }

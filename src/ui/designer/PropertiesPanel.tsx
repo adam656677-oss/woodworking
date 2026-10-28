@@ -1,31 +1,13 @@
 import { worldBox } from '../../model/geometry'
-import { changeWood, moveBoard, setEdgeBevel, setEndCut, updateBoard } from '../../model/ops'
+import { changeWood, moveBoard, rotateBoard, setEdgeBevel, setEndCut, updateBoard } from '../../model/ops'
 import type { Board, EndCut, Vec3 } from '../../model/types'
 import { formatInches } from '../../model/units'
 import { studio, useStudio } from '../store'
+import { NumberInput } from '../common/NumberInput'
 import { InchInput } from './InchInput'
 
 function AngleInput({ label, value, onChange }: { label: string; value: number; onChange(v: number): void }) {
-  return (
-    <label className="flex items-center justify-between gap-2 text-xs text-stone-600">
-      {label}
-      <input
-        type="number"
-        min={-60}
-        max={60}
-        step={0.5}
-        aria-label={label}
-        defaultValue={value}
-        key={value}
-        onKeyDown={e => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
-        onBlur={e => {
-          const v = Number(e.target.value)
-          if (Number.isFinite(v) && v !== value) onChange(v)
-        }}
-        className="w-20 rounded border border-stone-300 px-1 py-0.5 text-right text-sm"
-      />
-    </label>
-  )
+  return <NumberInput label={label} value={value} onChange={onChange} min={-60} max={60} step={0.5} />
 }
 
 function EndControls({ board, end }: { board: Board; end: 'start' | 'end' }) {
@@ -50,6 +32,7 @@ export function PropertiesPanel() {
   const selection = useStudio(s => s.selection)
   const board = useStudio(s => (s.selection.length === 1 ? s.project.boards.find(b => b.id === s.selection[0]) : undefined))
   const woods = useStudio(s => s.project.woods)
+  const live = useStudio(s => s.project.template !== undefined)
   if (selection.length === 0) return <p className="text-sm text-stone-500">Select a part to edit it. Ctrl-click two touching parts to join them.</p>
   if (!board) return <p className="text-sm text-stone-600">{selection.length} parts selected. Use Align, Mirror or Duplicate in the toolbar.</p>
 
@@ -63,6 +46,11 @@ export function PropertiesPanel() {
   return (
     <div className="flex flex-col gap-3" aria-label="Properties">
       <h2 className="text-sm font-bold">{board.name}</h2>
+      {live && (
+        <p role="note" className="rounded bg-amber-50 px-2 py-1 text-xs text-amber-900">
+          This part belongs to a live template. Change its sizes in the template panel, or Unlock to edit parts freely.
+        </p>
+      )}
       <label className="flex flex-col gap-0.5 text-xs text-stone-600">
         Wood
         <select
@@ -86,6 +74,20 @@ export function PropertiesPanel() {
         <InchInput label="X" allowZero value={wb.min.x} onChange={v => moveTo('x', v)} />
         <InchInput label="Y" allowZero value={wb.min.y} onChange={v => moveTo('y', v)} />
         <InchInput label="Z" allowZero value={wb.min.z} onChange={v => moveTo('z', v)} />
+      </div>
+      <div className="grid grid-cols-3 gap-2" aria-label="Rotation">
+        {(['x', 'y', 'z'] as const).map(axis => (
+          <NumberInput
+            key={axis}
+            label={`Turn ${axis.toUpperCase()}°`}
+            value={board.rotation[axis]}
+            min={-180}
+            max={180}
+            step={1}
+            width="w-14"
+            onChange={v => apply(p => rotateBoard(p, board.id, axis, v - board.rotation[axis]))}
+          />
+        ))}
       </div>
       <label className="flex items-center justify-between text-xs text-stone-600">
         Grain runs along

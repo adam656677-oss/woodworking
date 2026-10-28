@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { UnsavedDialog } from './common/UnsavedDialog'
 import { Designer } from './designer/Designer'
 import { Home } from './Home'
 import { KidsPlaceholder } from './KidsPlaceholder'
@@ -28,7 +29,10 @@ export default function App() {
     window.aa?.setTitle(title)
   }, [screen, name, dirty])
 
-  if (screen === 'kids') return <KidsPlaceholder />
-  if (screen === 'master') return <Designer />
-  return <Home />
+  return (
+    <>
+      {screen === 'kids' ? <KidsPlaceholder /> : screen === 'master' ? <Designer /> : <Home />}
+      <UnsavedDialog />
+    </>
+  )
 }

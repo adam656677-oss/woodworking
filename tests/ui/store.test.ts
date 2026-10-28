@@ -10,6 +10,7 @@ function fakeApi(over: Record<string, unknown> = {}) {
     saveAs: async () => { calls.push('saveAs'); return '/docs/Box.aaw' },
     writeAutosave: async () => { calls.push('autosave') },
     readUntitledAutosave: async () => null,
+    deleteAutosave: async (path: string | null) => { calls.push(`deleteAutosave:${path}`) },
     exportCsv: async () => null,
     print: async () => {},
     loadUserWoods: async () => [],
@@ -28,6 +29,7 @@ test('apply then undo restores the project and the selection; redo re-applies', 
   fakeApi()
   const s = createStudioStore()
   s.getState().newFromTemplate('box')
+  s.getState().apply(unlock)
   const first = s.getState().project.boards[0]
   s.getState().select([first.id])
   s.getState().apply(p => renameBoard(p, first.id, 'Lid'))
@@ -63,6 +65,7 @@ test('save as, then save; dirty clears', async () => {
   const calls = fakeApi()
   const s = createStudioStore()
   s.getState().newFromTemplate('box')
+  s.getState().apply(unlock)
   expect(s.getState().dirty).toBe(true)
   await s.getState().save()
   expect(calls).toContain('saveAs')
@@ -103,4 +106,107 @@ test('a user wood joins new projects and is copied into a project when used', as
   expect(walnut).toMatchObject({ builtIn: false, thickness: 0.8125 })
   s.getState().apply(p => addBoard(p, { woodId: walnut.id }).project)
   expect(s.getState().project.boards[0].thickness).toBe(0.8125)
+})
+
+// ---- Final review fixes ----
+import { moveBoard } from '../../src/model/ops'
+import { unlock } from '../../src/templates'
+
+test('C1: New with unsaved work asks first; Cancel keeps the work, Don\'t Save replaces it', async () => {
+  fakeApi()
+  const s = createStudioStore()
+  s.getState().newFromTemplate('box')
+  s.getState().apply(unlock)
+  const work = s.getState().project
+  s.getState().newBlank()
+  expect(s.getState().pendingReplace).toBe(true)
+  expect(s.getState().project).toBe(work)
+  await s.getState().resolvePending('cancel')
+  expect(s.getState().pendingReplace).toBe(false)
+  expect(s.getState().project).toBe(work)
+  s.getState().newBlank()
+  await s.getState().resolvePending('discard')
+  expect(s.getState().project.boards).toEqual([])
+  expect(s.getState().dirty).toBe(false)
+})
+
+test('C1: Save in the prompt saves, then carries on; a cancelled Save As keeps the work', async () => {
+  const calls = fakeApi()
+  const s = createStudioStore()
+  s.getState().newFromTemplate('box')
+  s.getState().apply(unlock)
+  s.getState().newBlank()
+  await s.getState().resolvePending('save')
+  expect(calls).toContain('saveAs')
+  expect(s.getState().project.boards).toEqual([])
+
+  fakeApi({ saveAs: async () => null })
+  const t = createStudioStore()
+  t.getState().newFromTemplate('box')
+  t.getState().apply(unlock)
+  const work = t.getState().project
+  t.getState().newBlank()
+  await t.getState().resolvePending('save')
+  expect(t.getState().project).toBe(work)
+})
+
+test('C1: Open with unsaved work asks first and opens nothing until answered', async () => {
+  let opened = 0
+  fakeApi({ openProject: async () => { opened++; return null } })
+  const s = createStudioStore()
+  s.getState().newFromTemplate('box')
+  s.getState().apply(unlock)
+  await s.getState().open()
+  expect(opened).toBe(0)
+  expect(s.getState().pendingReplace).toBe(true)
+  await s.getState().resolvePending('discard')
+  expect(opened).toBe(1)
+})
+
+test('C1: a clean project, or an untouched template, is replaced without asking', () => {
+  fakeApi()
+  const s = createStudioStore()
+  s.getState().newBlank()
+  s.getState().newFromTemplate('box')
+  expect(s.getState().pendingReplace).toBe(false)
+  expect(s.getState().project.boards.length).toBeGreaterThan(0)
+  s.getState().newFromTemplate('bookshelf')
+  expect(s.getState().pendingReplace).toBe(false)
+  expect(s.getState().project.name).toBe('Bookshelf')
+})
+
+test('I4: a part of a live template cannot be edited directly; the template sizes and Unlock still work', () => {
+  fakeApi()
+  const s = createStudioStore()
+  s.getState().newFromTemplate('box')
+  const before = s.getState().project
+  const b = before.boards[0]
+  s.getState().apply(p => moveBoard(p, b.id, { ...b.position, x: b.position.x + 5 }))
+  expect(s.getState().project).toBe(before)
+  expect(s.getState().error).toMatch(/Unlock/)
+  s.getState().apply(unlock)
+  expect(s.getState().project.template).toBeUndefined()
+})
+
+test('I9: saving removes the autosave; dismissing an untitled recovery removes it too', async () => {
+  const calls = fakeApi({ readUntitledAutosave: async () => '{}' })
+  const s = createStudioStore()
+  await s.getState().checkUntitledAutosave()
+  expect(s.getState().recovery).not.toBeNull()
+  s.getState().resolveRecovery(false)
+  expect(calls).toContain('deleteAutosave:null')
+  s.getState().newFromTemplate('box')
+  s.getState().apply(unlock)
+  await s.getState().saveAs()
+  expect(calls).toContain('deleteAutosave:/docs/Box.aaw')
+  expect(calls).toContain('deleteAutosave:null')
+})
+
+test('I9: the untitled autosave is checked only once per launch', async () => {
+  let reads = 0
+  fakeApi({ readUntitledAutosave: async () => { reads++; return null } })
+  const s = createStudioStore()
+  await s.getState().checkUntitledAutosave()
+  await s.getState().checkUntitledAutosave()
+  expect(reads).toBe(1)
 })

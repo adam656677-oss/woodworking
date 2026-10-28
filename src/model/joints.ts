@@ -121,7 +121,7 @@ export function validateJoint(project: Project, joint: Joint): string | null {
     const name = joint.type
     if (!(p.width > 0)) return `The ${name} width must be more than 0`
     if (!(p.depth > 0)) return `The ${name} depth must be more than 0`
-    if (p.depth > host.thickness / 2 + EPS) return `The ${name} is deeper than half of ${host.name} (${formatInches(host.thickness / 2)} max)`
+    if (p.depth > host.thickness / 2 + EPS) return `The ${name} is deeper than half of ${host.name} (${formatInches(host.thickness / 2, { sixtyFourths: true })} max)`
     const extent = (p.along ?? 'width') === 'width' ? host.length : host.width
     if (p.offset < -EPS || p.offset + p.width > extent + EPS) return `The ${name} runs past the end of ${host.name}`
     if (joint.type === 'rabbet' && Math.abs(p.offset) > EPS && Math.abs(p.offset + p.width - extent) > EPS) {

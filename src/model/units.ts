@@ -15,18 +15,23 @@ function gcd(a: number, b: number): number {
   return b === 0 ? a : gcd(b, a % b)
 }
 
-/** Format inches to the nearest 1/32", reduced: 11-3/4", 3/4", 6", 23/32". Never shows feet. */
-export function formatInches(n: number): string {
+/**
+ * Format inches to the nearest 1/32" (or 1/64" when asked), reduced: 11-3/4", 3/4", 6", 23/32".
+ * Never shows feet. A damaged (non-numeric) value shows as ?" instead of failing.
+ */
+export function formatInches(n: number, opts: { sixtyFourths?: boolean } = {}): string {
+  if (!Number.isFinite(n)) return '?"'
+  const den = opts.sixtyFourths ? 64 : 32
   const negative = n < 0
-  const thirtySeconds = Math.round(Math.abs(n) * 32)
-  const whole = Math.floor(thirtySeconds / 32)
-  const rem = thirtySeconds % 32
+  const parts = Math.round(Math.abs(n) * den)
+  const whole = Math.floor(parts / den)
+  const rem = parts % den
   let text: string
   if (rem === 0) {
     text = `${whole}`
   } else {
-    const g = gcd(rem, 32)
-    const frac = `${rem / g}/${32 / g}`
+    const g = gcd(rem, den)
+    const frac = `${rem / g}/${den / g}`
     text = whole === 0 ? frac : `${whole}-${frac}`
   }
   return `${negative ? '-' : ''}${text}"`

@@ -61,13 +61,16 @@ export function updateBoard(p: Project, id: string, patch: Partial<Board>): Proj
   })
 }
 
-/** Switch a board to another wood: thickness always follows; a full-width board also takes the new full width. */
+/**
+ * Switch a board to another wood: thickness always follows. Between dimensional lumber sizes, a board that
+ * was the full width of its stock (a 1x4 used as-is) takes the new stock's width; otherwise width is kept.
+ */
 export function changeWood(p: Project, id: string, woodId: string): Project {
   const wood = findWood(p, woodId)
   if (!wood) return p
   return mapBoard(p, id, b => {
     const old = findWood(p, b.woodId)
-    const fullWidth = old !== undefined && Math.abs(b.width - old.width) < 1e-9
+    const fullWidth = old?.kind === 'lumber' && wood.kind === 'lumber' && Math.abs(b.width - old.width) < 1e-9
     return { ...b, woodId, thickness: wood.thickness, width: fullWidth ? snap64(wood.width) : b.width }
   })
 }
@@ -165,13 +168,13 @@ export function alignBoards(p: Project, ids: string[], axis: Axis, mode: 'min' |
   }
 }
 
-/** Delete boards and every joint that touches them. */
+/** Delete boards. Their joints are removed first, so what a joint did to the surviving board is undone. */
 export function deleteBoards(p: Project, ids: string[]): Project {
-  return {
-    ...p,
-    boards: p.boards.filter(b => !ids.includes(b.id)),
-    joints: p.joints.filter(j => !ids.includes(j.hostBoardId) && !ids.includes(j.partnerBoardId))
+  let next = p
+  for (const j of p.joints) {
+    if (ids.includes(j.hostBoardId) || ids.includes(j.partnerBoardId)) next = removeJoint(next, j.id)
   }
+  return { ...next, boards: next.boards.filter(b => !ids.includes(b.id)) }
 }
 
 export function setEndCut(p: Project, id: string, end: 'start' | 'end', cut: Partial<EndCut>): Project | OpError {
