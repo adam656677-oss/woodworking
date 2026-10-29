@@ -3,6 +3,7 @@ import { jointNotes } from './joints'
 import { SHAPED_NOTE } from './shaped'
 import { TURN_NOTE } from '../shaping/turning'
 import { TAPER_NOTE } from '../shaping/taper'
+import { edgeNotes, edgeSignature } from '../shaping/edges'
 import type { Board, GrooveParams, Project } from './types'
 import { formatInches } from './units'
 import { boardFeet, findWood } from './woods'
@@ -108,7 +109,7 @@ export function cutList(project: Project): { rows: CutListRow[]; totals: CutList
   const groups = new Map<string, Group>()
   for (const b of project.boards) {
     const f = featuresOf(project, b)
-    const base = JSON.stringify([b.woodId, b.thickness, b.width, b.length, b.grain, fastenersOn(project, b), b.outline ?? null, b.turning ?? null, b.taper ?? null, b.edges ?? null])
+    const base = JSON.stringify([b.woodId, b.thickness, b.width, b.length, b.grain, fastenersOn(project, b), b.outline ?? null, b.turning ?? null, b.taper ?? null, edgeSignature(b)])
     const canon = canonical(f, b)
     const key = JSON.stringify([base, canon])
     const g = groups.get(key)
@@ -119,7 +120,7 @@ export function cutList(project: Project): { rows: CutListRow[]; totals: CutList
       const wood = findWood(project, b.woodId)
       groups.set(key, {
         qty: 1, part: '', thickness: b.thickness, width: b.width, length: b.length,
-        woodName: wood?.name ?? 'Unknown wood', grain: b.grain, notes: [...(b.outline ? [SHAPED_NOTE] : []), ...(b.turning ? [TURN_NOTE(b.turning)] : []), ...(b.taper && !b.turning ? [TAPER_NOTE(b, b.taper)] : []), ...jointNotes(project, b.id)], woodId: b.woodId, names: [b.name],
+        woodName: wood?.name ?? 'Unknown wood', grain: b.grain, notes: [...(b.outline ? [SHAPED_NOTE] : []), ...(b.turning ? [TURN_NOTE(b.turning)] : []), ...(b.taper && !b.turning ? [TAPER_NOTE(b, b.taper)] : []), ...edgeNotes(b), ...jointNotes(project, b.id)], woodId: b.woodId, names: [b.name],
         base, canon, mirror: canonical(reflect(f, 'z', b), b)
       })
     }

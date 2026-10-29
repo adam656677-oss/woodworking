@@ -2,12 +2,13 @@
 import type { Board, ButtParams, GrooveParams, Joint, MiterParams, PocketParams, Project, Vec3 } from './types'
 import { formatInches } from './units'
 import { taperCuts } from '../shaping/taper'
+import { inSection, profileCuts, toEdge, type ProfileCut } from '../shaping/edges'
 
 export type BoxCut = { boardId: string; kind: 'dado' | 'rabbet'; min: Vec3; max: Vec3 }
 export type HoleCut = { boardId: string; kind: 'hole'; center: Vec3; diameter: number; depth: number }
 /** Material on the `normal` side of the plane through `point` is removed (board-local coordinates). */
 export type PlaneCut = { boardId: string; kind: 'miter' | 'bevel' | 'taper'; plane: { point: Vec3; normal: Vec3 } }
-export type Cut = BoxCut | HoleCut | PlaneCut
+export type Cut = BoxCut | HoleCut | PlaneCut | ProfileCut
 
 export const MAX_ANGLE = 60
 const EPS = 1e-9
@@ -77,17 +78,23 @@ export function cutGeometry(project: Project): Cut[] {
     for (const h of b.holes) {
       cuts.push({ boardId: b.id, kind: 'hole', center: { x: h.u, y: h.v, z: 0 }, diameter: h.diameter, depth: b.thickness })
     }
-    cuts.push(...endAndEdgeCuts(b), ...taperCuts(b))
+    cuts.push(...endAndEdgeCuts(b), ...taperCuts(b), ...profileCuts(b))
   }
   return cuts
 }
 
 /** True when a board-local point falls in material the cut removes. */
-export function pointRemovedBy(cut: Cut, p: Vec3): boolean {
+/** `board` is needed for edge-profile cuts (they are measured from its edges). */
+export function pointRemovedBy(cut: Cut, p: Vec3, board?: Board): boolean {
   if (cut.kind === 'hole') {
     const dx = p.x - cut.center.x
     const dy = p.y - cut.center.y
     return dx * dx + dy * dy < (cut.diameter / 2) ** 2 && p.z >= cut.center.z && p.z <= cut.center.z + cut.depth
+  }
+  if (cut.kind === 'profile') {
+    if (!board) return false
+    const { u, v } = toEdge(board, cut, p)
+    return inSection(cut.section, u, v)
   }
   if (cut.kind === 'miter' || cut.kind === 'bevel' || cut.kind === 'taper') {
     const { point, normal } = cut.plane
