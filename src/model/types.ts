@@ -1,5 +1,6 @@
 import type { Outline, Sketch } from '../sketch/types'
 import type { EdgeProfile, Taper, Turning } from '../shaping/types'
+import type { Rule, SizeDef } from '../formulas/types'
 // The project model: plain data shared by every part of the app. Sizes are inches.
 
 export type Vec3 = { x: number; y: number; z: number }
@@ -55,6 +56,8 @@ export type Board = {
   taper?: Taper
   /** Router edge profiles. */
   edges?: EdgeProfile[]
+  /** Formulas for this board's sizes and positions, by field path (width, length, x, y, z, turning.top, holes.0.u, …). */
+  formulas?: Record<string, string>
 }
 
 export type JointType = 'butt' | 'dado' | 'rabbet' | 'pocketScrew' | 'miter'
@@ -86,13 +89,15 @@ export type Joint = {
   partnerBoardId: string
   params: ButtParams | GrooveParams | PocketParams | MiterParams
   restore?: JointRestore[]
+  /** Formulas for groove width, depth and offset. */
+  formulas?: Record<string, string>
 }
 
 export type TemplateState = { templateId: string; params: Record<string, number | boolean | string> }
 
 export type Project = {
   /** 2 adds drawings; version 1 files are upgraded when opened. */
-  formatVersion: 1 | 2 | 3
+  formatVersion: 1 | 2 | 3 | 4
   name: string
   units: 'in'
   boards: Board[]
@@ -101,6 +106,10 @@ export type Project = {
   template?: TemplateState
   /** Drawings (sketches) — shaped parts point into these. */
   sketches?: Sketch[]
+  /** Named sizes. */
+  sizes?: SizeDef[]
+  /** Layout rules (spacing, centred, gap, count). */
+  rules?: Rule[]
 }
 
 export const SQUARE: EndCut = { miter: 0, bevel: 0 }

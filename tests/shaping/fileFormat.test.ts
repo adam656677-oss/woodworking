@@ -18,16 +18,16 @@ function leg(): Project {
   return p
 }
 
-test('projects are format 3', () => {
-  expect(FORMAT_VERSION).toBe(3)
-  expect(emptyProject('X').formatVersion).toBe(3)
+test('turning, taper and edges came in format 3', () => {
+  expect(FORMAT_VERSION).toBeGreaterThanOrEqual(3)
+  expect(emptyProject('X').formatVersion).toBe(FORMAT_VERSION)
 })
 
 test('a version 2 file opens unchanged', () => {
   const raw = JSON.parse(serialize(emptyProject('Old')))
   raw.formatVersion = 2
   const p = deserialize(JSON.stringify(raw))
-  expect(p.formatVersion).toBe(3)
+  expect(p.formatVersion).toBe(FORMAT_VERSION)
 })
 
 test('turning, taper and edges round-trip', () => {
@@ -55,6 +55,6 @@ test('a turning whose drawing is missing is dropped (the leg is a square blank)'
 
 test('a newer format says so', () => {
   const raw = JSON.parse(serialize(emptyProject('X')))
-  raw.formatVersion = 4
+  raw.formatVersion = FORMAT_VERSION + 1
   expect(() => deserialize(JSON.stringify(raw))).toThrow(/newer version/)
 })

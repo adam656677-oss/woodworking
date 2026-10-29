@@ -1,9 +1,10 @@
 // .aaw project files: versioned JSON with structural checks, so a damaged file gives a plain message, not a crash.
 import { CONSTRAINT_KINDS } from '../sketch/types'
 import { EDGE_SIDES, FACES, PROFILE_KINDS, TURN_STYLES } from '../shaping/types'
+import { AXES3 } from '../formulas/types'
 import type { Project } from './types'
 
-export const FORMAT_VERSION = 3
+export const FORMAT_VERSION = 4
 
 export class ProjectFileError extends Error {
   constructor(public code: 'corrupt' | 'newerVersion' | 'invalid', message: string) {
@@ -18,7 +19,9 @@ const MIGRATIONS: Record<number, Migration> = {
   // Version 2 adds drawings.
   1: raw => ({ ...raw, formatVersion: 2, sketches: [] }),
   // Version 3 adds turned legs, tapers and edge profiles (all optional on boards).
-  2: raw => ({ ...raw, formatVersion: 3 })
+  2: raw => ({ ...raw, formatVersion: 3 }),
+  // Version 4 adds named sizes, formulas and layout rules (all optional).
+  3: raw => ({ ...raw, formatVersion: 4 })
 }
 
 export function serialize(p: Project): string {
@@ -164,6 +167,24 @@ function check(raw: any): Project {
         }
       }
     }
+  }
+  // Sizes, formulas and rules: checked for shape only. A name or part that is missing is shown as a formula error, not refused.
+  const formulasOk = (f: unknown) => f === undefined || (isObj(f) && Object.values(f).every(isStr))
+  if (raw.sizes !== undefined) {
+    if (!Array.isArray(raw.sizes) || !raw.sizes.every((s: any) => isObj(s) && isStr(s.name) && isStr(s.expr))) invalid('the named sizes are damaged')
+  }
+  for (const b of raw.boards) if (!formulasOk(b.formulas)) invalid(`board "${b.name}" has damaged formulas`)
+  for (const j of raw.joints) if (isObj(j) && !formulasOk(j.formulas)) invalid('a joint has damaged formulas')
+  if (raw.rules !== undefined) {
+    const ax = (v: unknown) => oneOf(v, AXES3)
+    const ids = (v: unknown) => Array.isArray(v) && v.every(isStr)
+    const ruleOk = (r: any) => isObj(r) && isStr(r.id) && (
+      r.kind === 'spacing' ? ax(r.axis) && isStr(r.from) && isStr(r.to) && ids(r.parts)
+        : r.kind === 'center' ? Array.isArray(r.axes) && r.axes.every(ax) && isStr(r.part) && isStr(r.on)
+          : r.kind === 'gap' ? ax(r.axis) && isStr(r.part) && isStr(r.to) && oneOf(r.side, ['min', 'max']) && isNum(r.gap) && (r.gapExpr === undefined || isStr(r.gapExpr))
+            : r.kind === 'count' ? isStr(r.expr) && isStr(r.first) && ids(r.copies) && ax(r.axis) && isStr(r.from) && isStr(r.to)
+              : false)
+    if (!Array.isArray(raw.rules) || !raw.rules.every(ruleOk)) invalid('a layout rule is damaged')
   }
   for (const j of raw.joints) {
     if (!isObj(j) || typeof j.type !== 'string' || !isObj(j.params)) invalid('a joint is damaged')

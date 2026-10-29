@@ -18,9 +18,9 @@ test('every template default round-trips', () => {
   }
 })
 
-test('serialize is pretty JSON with formatVersion 3', () => {
+test('serialize is pretty JSON with formatVersion 4', () => {
   const text = serialize(emptyProject('X'))
-  expect(text).toContain('\n  "formatVersion": 3')
+  expect(text).toContain('\n  "formatVersion": 4')
 })
 
 test('truncated JSON → corrupt', () => {
@@ -30,7 +30,7 @@ test('truncated JSON → corrupt', () => {
 
 test('newer format → newerVersion with a plain message', () => {
   const raw = JSON.parse(serialize(emptyProject('X')))
-  raw.formatVersion = 4
+  raw.formatVersion = 5
   let msg = ''
   try { deserialize(JSON.stringify(raw)) } catch (e) { msg = (e as Error).message }
   expect(codeOf(() => deserialize(JSON.stringify(raw)))).toBe('newerVersion')
@@ -63,9 +63,10 @@ test('migrate upgrades an older object with injected migrations', () => {
   const up = migrate(v0, {
     0: r => ({ ...r, formatVersion: 1, boards: r.boards.map((b: any) => ({ ...b, holes: [], endCuts: { start: { miter: 0, bevel: 0 }, end: { miter: 0, bevel: 0 } }, edgeBevels: { left: 0, right: 0 } })) }),
     1: r => ({ ...r, formatVersion: 2, sketches: [] }),
-    2: r => ({ ...r, formatVersion: 3 })
+    2: r => ({ ...r, formatVersion: 3 }),
+    3: r => ({ ...r, formatVersion: 4 })
   })
-  expect(up.formatVersion).toBe(3)
+  expect(up.formatVersion).toBe(4)
   expect(up.sketches).toEqual([])
   expect(up.boards[0].holes).toEqual([])
   expect(up.boards[0].edgeBevels).toEqual({ left: 0, right: 0 })
