@@ -1,5 +1,4 @@
 // Square-to-round turned legs: the profile drawing, its checks, the caliper stations and the cut-list note.
-import { localAxes } from '../model/geometry'
 import { newId } from '../model/ids'
 import type { OpError } from '../model/ops'
 import { addSketch, sketchOf } from '../model/shaped'
@@ -16,11 +15,7 @@ export const MSG_TAPERED = 'This leg is tapered — remove the taper first'
 
 const TOL = 1 / 64
 
-/** Which end of the board is its top: the higher end when it stands upright, else the start (y = 0) end. */
-export function topEnd(b: Board): 'start' | 'end' {
-  const l = localAxes(b).length
-  return l.axis === 'z' && l.sign > 0 ? 'end' : 'start'
-}
+export { topEnd } from './topEnd'
 
 export const isSquareBlank = (b: Board) => Math.abs(b.width - b.thickness) <= TOL
 

@@ -4,7 +4,7 @@ import type { PlaneCut } from '../model/joints'
 import type { OpError } from '../model/ops'
 import type { Board, Project } from '../model/types'
 import { formatInches, snap64 } from '../model/units'
-import { topEnd } from './turning'
+import { topEnd } from './topEnd'
 import type { Face, Taper } from './types'
 
 export const MSG_FOOT_BIG = "The foot can't be bigger than the leg"
