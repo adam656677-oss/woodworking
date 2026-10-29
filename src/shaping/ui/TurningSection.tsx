@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import type { Board } from '../../model/types'
 import { formatInches } from '../../model/units'
-import { InchInput } from '../../ui/designer/InchInput'
+import { FormulaInput } from '../../formulas/ui/FormulaInput'
+import { setBoardFormula } from '../../formulas/ops'
 import { studio, useStudio } from '../../ui/store'
 import { editTurning } from '../../sketch/ui/session'
 import { blankOf, isSquareBlank, MSG_SQUARE, profileRadii, turnBoard, turningProblem, unturnBoard, type TurnOptions } from '../turning'
@@ -11,6 +12,7 @@ export const STYLE_NAMES: Record<TurnStyle, string> = { taper: 'Straight taper',
 
 export function TurningSection({ board, onSheet }: { board: Board; onSheet(): void }) {
   const project = useStudio(s => s.project)
+  const errors = useStudio(s => s.formulaErrors)
   const [error, setError] = useState<string | null>(null)
   const t = board.turning
   const radii = t ? profileRadii(project, board) : null
@@ -45,10 +47,13 @@ export function TurningSection({ board, onSheet }: { board: Board; onSheet(): vo
             {t.style === 'custom' && <p className="text-xs text-stone-600">Drawn by hand — change it with Edit profile. Picking a style starts the profile over.</p>}
             {t.style !== 'custom' && (
               <div className="grid grid-cols-2 gap-2">
-                <InchInput label="Top pommel" allowZero value={t.top} onChange={v => run({ top: v })} />
-                <InchInput label="Square foot" allowZero value={t.bottom} onChange={v => run({ bottom: v })} />
-                <InchInput label="Biggest diameter" value={maxD} onChange={v => run({ maxD: v })} />
-                <InchInput label="Smallest diameter" value={minD} onChange={v => run({ minD: v })} />
+                {([['top', 'Top pommel', t.top], ['bottom', 'Square foot', t.bottom], ['maxD', 'Biggest diameter', maxD], ['minD', 'Smallest diameter', minD]] as const).map(([k, label, v]) => (
+                  <FormulaInput key={k} label={label} allowZero={k === 'top' || k === 'bottom'} value={v}
+                    formula={board.formulas?.[`turning.${k}`]} error={errors[`board:${board.id}:turning.${k}`]}
+                    onSet={s => ('formula' in s
+                      ? studio.getState().apply(p => setBoardFormula(p, board.id, `turning.${k}`, s.formula))
+                      : (studio.getState().apply(p => setBoardFormula(p, board.id, `turning.${k}`, null)), run({ [k]: s.value })))} />
+                ))}
                 <label className="col-span-2 flex flex-col text-xs text-stone-600">Shoulder
                   <select aria-label="Shoulder" value={t.shoulder} onChange={e => run({ shoulder: e.target.value as 'crisp' | 'lambsTongue' })} className="rounded border border-stone-300 px-1 py-1 text-sm">
                     <option value="crisp">Crisp shoulder</option>

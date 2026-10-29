@@ -7,6 +7,11 @@ import { studio, useStudio } from '../store'
 import { NumberInput } from '../common/NumberInput'
 import { KID_WOODS, round8 } from '../../kids/kidWords'
 import { InchInput } from './InchInput'
+import { FormulaInput, type FormulaSet } from '../../formulas/ui/FormulaInput'
+import { RulesOnPart } from '../../formulas/ui/RuleDialog'
+import { setBoardFormula } from '../../formulas/ops'
+import { controlledBy, removeRule, ruleLabel } from '../../formulas/rules'
+import type { Project } from '../../model/types'
 import { useState } from 'react'
 import { TurningSection } from '../../shaping/ui/TurningSection'
 import { TaperSection } from '../../shaping/ui/TaperSection'
@@ -43,6 +48,8 @@ export function PropertiesPanel() {
   const live = useStudio(s => s.project.template !== undefined)
   const kidsMode = useStudio(s => s.kidsMode)
   const [sheet, setSheet] = useState<'turning' | 'taper' | null>(null)
+  const formulaErrors = useStudio(s => s.formulaErrors)
+  const project = useStudio(s => s.project)
   if (selection.length === 0) return <p className="text-sm text-stone-500">Select a part to edit it. Ctrl-click two touching parts to join them.</p>
   if (!board) return <p className="text-sm text-stone-600">{selection.length} parts selected. Use Align, Mirror or Duplicate in the toolbar.</p>
 
@@ -56,6 +63,29 @@ export function PropertiesPanel() {
     const v = pos(raw)
     const delta = v - wb.min[axis]
     apply(p => moveBoard(p, board.id, { ...board.position, [axis]: board.position[axis] + delta }))
+  }
+
+  /** A size or position box that also takes formulas (Master Shop). */
+  const formulaBox = (path: 'width' | 'length' | 'x' | 'y' | 'z', label: string, value: number) => {
+    const rule = path === 'x' || path === 'y' || path === 'z' ? controlledBy(project, board.id, path) : null
+    const plain = (q: Project, v: number): Project => {
+      if (path === 'width' || path === 'length') return updateBoard(q, board.id, { [path]: size(v) })
+      const b = q.boards.find(x => x.id === board.id)!
+      const min = worldBox(b).min[path]
+      return moveBoard(q, board.id, { ...b.position, [path]: b.position[path] + v - min })
+    }
+    const onSet = (s: FormulaSet) => apply(p => {
+      if ('formula' in s) return setBoardFormula(p, board.id, path, s.formula)
+      let q = setBoardFormula(p, board.id, path, null)
+      if (rule) q = removeRule(q, rule.id)
+      return plain(q, s.value)
+    })
+    return (
+      <FormulaInput key={path} label={label} value={value} allowZero={path !== 'width' && path !== 'length'}
+        disabled={(path === 'width' || path === 'length') && !!board.outline}
+        formula={board.formulas?.[path]} error={formulaErrors[`board:${board.id}:${path}`]}
+        ruleNote={rule ? `This part is placed by a rule (${ruleLabel(project, rule)}).` : undefined} onSet={onSet} />
+    )
   }
 
   return (
@@ -82,8 +112,17 @@ export function PropertiesPanel() {
           <span className="text-xs text-stone-600">Thickness</span>
           <span className="rounded bg-stone-100 px-2 py-1 text-sm" title="Set by the wood">{formatInches(board.thickness)}</span>
         </div>
-        <InchInput label="Width" disabled={!!board.outline} value={board.width} onChange={v => apply(p => updateBoard(p, board.id, { width: size(v) }))} />
-        <InchInput label="Length" disabled={!!board.outline} value={board.length} onChange={v => apply(p => updateBoard(p, board.id, { length: size(v) }))} />
+        {kidsMode ? (
+          <>
+            <InchInput label="Width" disabled={!!board.outline} value={board.width} onChange={v => apply(p => updateBoard(p, board.id, { width: size(v) }))} />
+            <InchInput label="Length" disabled={!!board.outline} value={board.length} onChange={v => apply(p => updateBoard(p, board.id, { length: size(v) }))} />
+          </>
+        ) : (
+          <>
+            {formulaBox('width', 'Width', board.width)}
+            {formulaBox('length', 'Length', board.length)}
+          </>
+        )}
       </div>
       {board.outline && (
         <div className="flex flex-col gap-1 text-xs text-stone-600">
@@ -92,9 +131,19 @@ export function PropertiesPanel() {
         </div>
       )}
       <div className="grid grid-cols-3 gap-2">
-        <InchInput label="X" allowZero value={wb.min.x} onChange={v => moveTo('x', v)} />
-        <InchInput label="Y" allowZero value={wb.min.y} onChange={v => moveTo('y', v)} />
-        <InchInput label="Z" allowZero value={wb.min.z} onChange={v => moveTo('z', v)} />
+        {kidsMode ? (
+          <>
+            <InchInput label="X" allowZero value={wb.min.x} onChange={v => moveTo('x', v)} />
+            <InchInput label="Y" allowZero value={wb.min.y} onChange={v => moveTo('y', v)} />
+            <InchInput label="Z" allowZero value={wb.min.z} onChange={v => moveTo('z', v)} />
+          </>
+        ) : (
+          <>
+            {formulaBox('x', 'X', wb.min.x)}
+            {formulaBox('y', 'Y', wb.min.y)}
+            {formulaBox('z', 'Z', wb.min.z)}
+          </>
+        )}
       </div>
       {!kidsMode && <div className="grid grid-cols-3 gap-2" aria-label="Rotation">
         {(['x', 'y', 'z'] as const).map(axis => (
@@ -122,6 +171,7 @@ export function PropertiesPanel() {
           <option value="width">width</option>
         </select>
       </label>
+      {!kidsMode && <RulesOnPart key={`r${board.id}`} board={board} />}
       {!kidsMode && <TurningSection key={`t${board.id}`} board={board} onSheet={() => setSheet('turning')} />}
       {!kidsMode && <TaperSection key={`p${board.id}`} board={board} onSheet={() => setSheet('taper')} />}
       <EdgesSection key={`e${board.id}`} board={board} kids={kidsMode} />

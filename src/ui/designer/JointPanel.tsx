@@ -4,11 +4,22 @@ import type { ButtParams, GrooveParams, Joint, JointType, MiterParams, PocketPar
 import { studio, useStudio } from '../store'
 import { NumberInput } from '../common/NumberInput'
 import { InchInput } from './InchInput'
+import { FormulaInput, type FormulaSet } from '../../formulas/ui/FormulaInput'
+import { setJointFormula } from '../../formulas/ops'
 
 const NAMES: Record<JointType, string> = { butt: 'Butt', dado: 'Dado', rabbet: 'Rabbet', pocketScrew: 'Pocket screws', miter: 'Miter' }
 
 function NumberField({ label, value, onChange, min = 0, max }: { label: string; value: number; onChange(v: number): void; min?: number; max?: number }) {
   return <NumberInput label={label} value={value} onChange={onChange} min={min} max={max} />
+}
+
+function GrooveBox({ joint, field, label, value }: { joint: Joint; field: 'width' | 'depth' | 'offset'; label: string; value: number }) {
+  const errors = useStudio(s => s.formulaErrors)
+  const kids = useStudio(s => s.kidsMode)
+  const apply = studio.getState().apply
+  if (kids) return <InchInput label={label} allowZero={field === 'offset'} value={value} onChange={v => apply(p => updateJoint(p, joint.id, { [field]: v }))} />
+  const onSet = (s: FormulaSet) => apply(p => ('formula' in s ? setJointFormula(p, joint.id, field, s.formula) : updateJoint(setJointFormula(p, joint.id, field, null), joint.id, { [field]: s.value })))
+  return <FormulaInput label={label} allowZero={field === 'offset'} value={value} formula={joint.formulas?.[field]} error={errors[`joint:${joint.id}:${field}`]} onSet={onSet} />
 }
 
 function JointSettings({ joint }: { joint: Joint }) {
@@ -18,9 +29,9 @@ function JointSettings({ joint }: { joint: Joint }) {
     const g = joint.params as GrooveParams
     return (
       <div className="grid grid-cols-2 gap-2">
-        <InchInput label={`${NAMES[joint.type]} width`} value={g.width} onChange={v => set({ width: v })} />
-        <InchInput label={`${NAMES[joint.type]} depth`} value={g.depth} onChange={v => set({ depth: v })} />
-        <InchInput label="Offset" allowZero value={g.offset} onChange={v => set({ offset: v })} />
+        {(['width', 'depth', 'offset'] as const).map(k => (
+          <GrooveBox key={k} joint={joint} field={k} label={k === 'offset' ? 'Offset' : `${NAMES[joint.type]} ${k}`} value={g[k]} />
+        ))}
       </div>
     )
   }

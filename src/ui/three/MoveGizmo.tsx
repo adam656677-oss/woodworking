@@ -4,6 +4,7 @@ import type * as THREE from 'three'
 import { moveBoard } from '../../model/ops'
 import { snapPosition } from '../../model/snap'
 import { studio } from '../store'
+import { controlledBy, ruleLabel } from '../../formulas/rules'
 
 const SNAP = { tolerance: 0.25, grid: 1 / 16 }
 const KIDS_SNAP = { tolerance: 0.25, grid: 1 / 8 }
@@ -32,7 +33,15 @@ export function MoveGizmo({ object, boardId }: { object: THREE.Object3D; boardId
           dragging.current = false
           setLabel(null)
           const p = { x: object.position.x, y: object.position.y, z: object.position.z }
-          studio.getState().apply(pr => moveBoard(pr, boardId, p))
+          const st = studio.getState()
+          const b = st.project.boards.find(x => x.id === boardId)
+          // A direction held by a formula or rule snaps back; say why.
+          const held = b ? (['x', 'y', 'z'] as const).filter(a => Math.abs(p[a] - b.position[a]) > 1e-6).map(a => {
+            const r = controlledBy(st.project, boardId, a)
+            return r ? `a rule (${ruleLabel(st.project, r)})` : b.formulas?.[a] ? `its ${a.toUpperCase()} formula (=${b.formulas[a]})` : null
+          }).filter(Boolean) : []
+          st.apply(pr => moveBoard(pr, boardId, p))
+          if (held.length) st.setError(`This part is placed by ${held.join(' and ')} — change or remove that to move it this way.`)
         }}
       />
       {label && (

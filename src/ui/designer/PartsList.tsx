@@ -2,8 +2,26 @@ import { useMemo, useState } from 'react'
 import { renameBoard } from '../../model/ops'
 import { formatInches } from '../../model/units'
 import { studio, useStudio } from '../store'
+import { SizesTab } from '../../formulas/ui/SizesTab'
 
+/** The left panel: Parts and (in the Master Shop) Sizes. */
 export function PartsList() {
+  const kids = useStudio(s => s.kidsMode)
+  const [tab, setTab] = useState<'parts' | 'sizes'>('parts')
+  if (kids) return <PartsTab />
+  return (
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div role="tablist" className="flex border-b border-stone-200 bg-stone-50 text-xs font-bold uppercase">
+        {(['parts', 'sizes'] as const).map(t => (
+          <button key={t} role="tab" aria-selected={tab === t} onClick={() => setTab(t)} className={`flex-1 px-3 py-1.5 ${tab === t ? 'border-b-2 border-amber-700 text-stone-800' : 'text-stone-500'}`}>{t === 'parts' ? 'Parts' : 'Sizes'}</button>
+        ))}
+      </div>
+      {tab === 'parts' ? <PartsTab /> : <SizesTab />}
+    </div>
+  )
+}
+
+function PartsTab() {
   const boards = useStudio(s => s.project.boards)
   const selection = useStudio(s => s.selection)
   const warnings = useStudio(s => s.warnings)

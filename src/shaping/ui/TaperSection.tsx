@@ -1,13 +1,15 @@
 import { useState } from 'react'
 import type { Board } from '../../model/types'
 import { formatInches, snap64 } from '../../model/units'
-import { InchInput } from '../../ui/designer/InchInput'
+import { FormulaInput } from '../../formulas/ui/FormulaInput'
+import { setBoardFormula } from '../../formulas/ops'
 import { studio, useStudio } from '../../ui/store'
 import { defaultStart, FACE_NAMES, insideFaces, MSG_TURNED, removedPerFace, taperAngle, taperBoard, untaperBoard } from '../taper'
 import type { Face, Taper } from '../types'
 
 export function TaperSection({ board, onSheet }: { board: Board; onSheet(): void }) {
   const project = useStudio(s => s.project)
+  const errors = useStudio(s => s.formulaErrors)
   const [error, setError] = useState<string | null>(null)
   const t = board.taper
   const set = (next: Taper) => {
@@ -54,8 +56,15 @@ export function TaperSection({ board, onSheet }: { board: Board; onSheet(): void
               <p className="text-xs text-stone-600">Click the faces to taper. Looking at the leg&apos;s end.</p>
             </div>
             <div className="grid grid-cols-2 gap-2">
-              <InchInput label="Starts from the top" allowZero value={t.start} onChange={v => set({ ...t, start: v })} />
-              <InchInput label="Size at the foot" value={t.foot} onChange={v => set({ ...t, foot: v })} />
+              {([['start', 'Starts from the top', t.start], ['foot', 'Size at the foot', t.foot]] as const).map(([k, label, v]) => (
+                <FormulaInput key={k} label={label} allowZero={k === 'start'} value={v}
+                  formula={board.formulas?.[`taper.${k}`]} error={errors[`board:${board.id}:taper.${k}`]}
+                  onSet={s => {
+                    if ('formula' in s) return studio.getState().apply(p => setBoardFormula(p, board.id, `taper.${k}`, s.formula))
+                    if (board.formulas?.[`taper.${k}`]) studio.getState().apply(p => setBoardFormula(p, board.id, `taper.${k}`, null))
+                    set({ ...t, [k]: s.value })
+                  }} />
+              ))}
             </div>
             {removed && t.faces.length > 0 && (
               <p className="text-xs text-stone-600">{formatInches(removed[t.faces[0]], { sixtyFourths: true })} off each face at the foot · {taperAngle(board, t).toFixed(1)}°</p>
