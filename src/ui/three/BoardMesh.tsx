@@ -5,10 +5,11 @@ import { Brush, Evaluator, SUBTRACTION } from 'three-bvh-csg'
 import type { Cut, PlaneCut } from '../../model/joints'
 import type { Board, WoodKind } from '../../model/types'
 import type { Pt } from '../../sketch/types'
-import { extrudeOutline } from './shapeGeometry'
+import { extrudeOutline, type OutlineProfile } from './shapeGeometry'
+import { profileBrush } from './profileCutter'
 import { turnedLeg, type TurnedLeg } from './turnedGeometry'
 
-export type BoardShape = { outer: Pt[]; holes: Pt[][] }
+export type BoardShape = { outer: Pt[]; holes: Pt[][]; profiles?: OutlineProfile[] }
 
 const COLORS: Record<WoodKind, string> = { lumber: '#e9cf9f', hardwood: '#b07246', sheet: '#d8b98c' }
 const evaluator = new Evaluator()
@@ -24,6 +25,7 @@ function brushFor(cut: Cut, board: Board): Brush | null {
     b.updateMatrixWorld()
     return b
   }
+  if (cut.kind === 'profile') return profileBrush(cut, board)
   if (cut.kind === 'hole') {
     const b = new Brush(new THREE.CylinderGeometry(cut.diameter / 2, cut.diameter / 2, cut.depth + 0.2, 32))
     b.rotation.x = Math.PI / 2
@@ -43,27 +45,29 @@ function brushFor(cut: Cut, board: Board): Brush | null {
 }
 
 /** Board geometry in local coordinates (origin at the board's corner), with its cuts subtracted. */
+export function buildBoardGeometry(board: Board, cuts: Cut[], shape?: BoardShape | null, turned?: TurnedLeg | null): THREE.BufferGeometry {
+  let box: THREE.BufferGeometry
+  if (turned) box = turnedLeg(turned)
+  else if (shape) box = extrudeOutline(shape, board.thickness, shape.profiles)
+  else {
+    box = new THREE.BoxGeometry(board.width, board.length, board.thickness)
+    box.translate(board.width / 2, board.length / 2, board.thickness / 2)
+  }
+  if (cuts.length === 0) return box
+  let result = new Brush(box)
+  result.updateMatrixWorld()
+  for (const c of cuts) {
+    const b = brushFor(c, board)
+    if (!b) continue
+    result = evaluator.evaluate(result, b, SUBTRACTION) as Brush
+  }
+  return result.geometry
+}
+
 export function useBoardGeometry(board: Board, cuts: Cut[], shape?: BoardShape | null, turned?: TurnedLeg | null): THREE.BufferGeometry {
   const key = JSON.stringify([board.width, board.length, board.thickness, cuts, shape ?? null, turned ?? null])
-  return useMemo(() => {
-    let box: THREE.BufferGeometry
-    if (turned) box = turnedLeg(turned)
-    else if (shape) box = extrudeOutline(shape, board.thickness)
-    else {
-      box = new THREE.BoxGeometry(board.width, board.length, board.thickness)
-      box.translate(board.width / 2, board.length / 2, board.thickness / 2)
-    }
-    if (cuts.length === 0) return box
-    let result = new Brush(box)
-    result.updateMatrixWorld()
-    for (const c of cuts) {
-      const b = brushFor(c, board)
-      if (!b) continue
-      result = evaluator.evaluate(result, b, SUBTRACTION) as Brush
-    }
-    return result.geometry
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  return useMemo(() => buildBoardGeometry(board, cuts, shape, turned), [key])
 }
 
 type Props = {
@@ -87,7 +91,7 @@ export const BoardMesh = forwardRef<THREE.Group, Props>(function BoardMesh({ boa
   const shapeKey = JSON.stringify([shape ?? null, turned ?? null])
   const outline = useMemo(() => {
     if (turned) return new THREE.EdgesGeometry(turnedLeg(turned), 25)
-    if (shape) return new THREE.EdgesGeometry(extrudeOutline(shape, board.thickness), 25)
+    if (shape) return new THREE.EdgesGeometry(extrudeOutline(shape, board.thickness, shape.profiles), 25)
     const box = new THREE.BoxGeometry(board.width, board.length, board.thickness)
     box.translate(board.width / 2, board.length / 2, board.thickness / 2)
     return new THREE.EdgesGeometry(box)
