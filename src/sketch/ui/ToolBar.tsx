@@ -47,6 +47,7 @@ function ToolButton({ t, icon, label, keyName }: { t: Tool; icon: string; label:
   return (
     <button
       aria-pressed={tool === t}
+      aria-label={label}
       title={keyName ? `${label} (${keyName})` : label}
       onClick={() => draw.getState().setTool(t)}
       className={`flex w-full items-center gap-2 rounded px-2 py-1 text-left text-sm ${tool === t ? 'bg-amber-700 text-white' : 'hover:bg-stone-200'}`}
@@ -67,10 +68,10 @@ export function ToolBar({ onOffset }: { onOffset(): void }) {
       {DRAW.map(([t, i, l, k]) => <ToolButton key={t} t={t} icon={i} label={l} keyName={k} />)}
       <h2 className="mt-2 px-1 text-xs font-semibold uppercase text-stone-500">Change</h2>
       {MODIFY.map(([t, i, l, k]) => <ToolButton key={t} t={t} icon={i} label={l} keyName={k} />)}
-      <button title="Offset" onClick={onOffset} className="flex w-full items-center gap-2 rounded px-2 py-1 text-left text-sm hover:bg-stone-200">
+      <button title="Offset" aria-label="Offset" onClick={onOffset} className="flex w-full items-center gap-2 rounded px-2 py-1 text-left text-sm hover:bg-stone-200">
         <span className="w-5 text-center text-base leading-none">⧉</span>Offset
       </button>
-      <button disabled={!selection.length} onClick={() => s.remove(selection)} className="flex w-full items-center gap-2 rounded px-2 py-1 text-left text-sm hover:bg-stone-200 disabled:opacity-40">
+      <button aria-label="Delete" disabled={!selection.length} onClick={() => s.remove(selection)} className="flex w-full items-center gap-2 rounded px-2 py-1 text-left text-sm hover:bg-stone-200 disabled:opacity-40">
         <span className="w-5 text-center">🗑</span>Delete
       </button>
       <div className="mt-2 flex gap-1">

@@ -74,9 +74,10 @@ export function PropertiesPanel() {
           <span className="text-xs text-stone-600">Thickness</span>
           <span className="rounded bg-stone-100 px-2 py-1 text-sm" title="Set by the wood">{formatInches(board.thickness)}</span>
         </div>
-        <InchInput label="Width" value={board.width} onChange={v => apply(p => updateBoard(p, board.id, { width: size(v) }))} />
-        <InchInput label="Length" value={board.length} onChange={v => apply(p => updateBoard(p, board.id, { length: size(v) }))} />
+        <InchInput label="Width" disabled={!!board.outline} value={board.width} onChange={v => apply(p => updateBoard(p, board.id, { width: size(v) }))} />
+        <InchInput label="Length" disabled={!!board.outline} value={board.length} onChange={v => apply(p => updateBoard(p, board.id, { length: size(v) }))} />
       </div>
+      {board.outline && <p className="text-xs text-stone-600">Shaped part — its size comes from its drawing. Use <strong>Edit shape</strong> to change it.</p>}
       <div className="grid grid-cols-3 gap-2">
         <InchInput label="X" allowZero value={wb.min.x} onChange={v => moveTo('x', v)} />
         <InchInput label="Y" allowZero value={wb.min.y} onChange={v => moveTo('y', v)} />

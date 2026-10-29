@@ -129,7 +129,7 @@ export function Canvas({ onAsk, view, setView }: { onAsk(a: Ask): void; view: Vi
     const end = { x: last.x + len * Math.cos(ang), y: last.y + len * Math.sin(ang) }
     if (tool === 'line' || tool === 'construction') {
       d.addLine(last, end, tool === 'construction')
-      const pts = d.sketch.points
+      const pts = draw.getState().sketch.points
       setPending([{ ...end, ref: pts[pts.length - 1]?.id }])
     }
   }
