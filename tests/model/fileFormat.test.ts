@@ -18,9 +18,9 @@ test('every template default round-trips', () => {
   }
 })
 
-test('serialize is pretty JSON with formatVersion 1', () => {
+test('serialize is pretty JSON with formatVersion 2', () => {
   const text = serialize(emptyProject('X'))
-  expect(text).toContain('\n  "formatVersion": 1')
+  expect(text).toContain('\n  "formatVersion": 2')
 })
 
 test('truncated JSON → corrupt', () => {
@@ -30,7 +30,7 @@ test('truncated JSON → corrupt', () => {
 
 test('newer format → newerVersion with a plain message', () => {
   const raw = JSON.parse(serialize(emptyProject('X')))
-  raw.formatVersion = 2
+  raw.formatVersion = 3
   let msg = ''
   try { deserialize(JSON.stringify(raw)) } catch (e) { msg = (e as Error).message }
   expect(codeOf(() => deserialize(JSON.stringify(raw)))).toBe('newerVersion')
@@ -61,9 +61,11 @@ test('joints pointing at missing boards → invalid', () => {
 test('migrate upgrades an older object with injected migrations', () => {
   const v0 = { formatVersion: 0, name: 'Old', units: 'in', boards: [{ id: 'b1', name: 'A' }], joints: [], woods: [] }
   const up = migrate(v0, {
-    0: r => ({ ...r, formatVersion: 1, boards: r.boards.map((b: any) => ({ ...b, holes: [], endCuts: { start: { miter: 0, bevel: 0 }, end: { miter: 0, bevel: 0 } }, edgeBevels: { left: 0, right: 0 } })) })
+    0: r => ({ ...r, formatVersion: 1, boards: r.boards.map((b: any) => ({ ...b, holes: [], endCuts: { start: { miter: 0, bevel: 0 }, end: { miter: 0, bevel: 0 } }, edgeBevels: { left: 0, right: 0 } })) }),
+    1: r => ({ ...r, formatVersion: 2, sketches: [] })
   })
-  expect(up.formatVersion).toBe(1)
+  expect(up.formatVersion).toBe(2)
+  expect(up.sketches).toEqual([])
   expect(up.boards[0].holes).toEqual([])
   expect(up.boards[0].edgeBevels).toEqual({ left: 0, right: 0 })
 })

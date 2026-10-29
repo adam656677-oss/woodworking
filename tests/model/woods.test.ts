@@ -40,7 +40,7 @@ test('board feet = T x W x L / 144', () => {
 
 test('emptyProject deep-copies the wood library', () => {
   const p = emptyProject('X')
-  expect(p).toMatchObject({ formatVersion: 1, name: 'X', units: 'in', boards: [], joints: [] })
+  expect(p).toMatchObject({ formatVersion: 2, sketches: [], name: 'X', units: 'in', boards: [], joints: [] })
   p.woods[0].width = 999
   expect(BUILTIN_WOODS[0].width).not.toBe(999)
   expect(findWood(p, '1x4')?.width).toBe(3.5)

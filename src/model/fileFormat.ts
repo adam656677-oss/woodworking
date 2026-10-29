@@ -1,7 +1,8 @@
 // .aaw project files: versioned JSON with structural checks, so a damaged file gives a plain message, not a crash.
+import { CONSTRAINT_KINDS } from '../sketch/types'
 import type { Project } from './types'
 
-export const FORMAT_VERSION = 1
+export const FORMAT_VERSION = 2
 
 export class ProjectFileError extends Error {
   constructor(public code: 'corrupt' | 'newerVersion' | 'invalid', message: string) {
@@ -12,7 +13,10 @@ export class ProjectFileError extends Error {
 
 type Migration = (raw: any) => any
 /** Step-by-step upgrades: MIGRATIONS[n] turns a version-n object into version n+1. */
-const MIGRATIONS: Record<number, Migration> = {}
+const MIGRATIONS: Record<number, Migration> = {
+  // Version 2 adds drawings.
+  1: raw => ({ ...raw, formatVersion: 2, sketches: [] })
+}
 
 export function serialize(p: Project): string {
   return JSON.stringify(p, null, 2)
@@ -38,6 +42,37 @@ function invalid(msg: string): never {
 }
 
 const oneOf = (v: unknown, options: string[]) => typeof v === 'string' && options.includes(v)
+const isStr = (v: unknown): v is string => typeof v === 'string'
+
+/** A drawing must be complete: numeric points, shapes that point at real points, known rule kinds. */
+function checkSketch(s: any): void {
+  if (!isObj(s) || !isStr(s.id) || !isStr(s.name) || !oneOf(s.mode, ['precise', 'freehand'])) invalid('a drawing is damaged')
+  if (!Array.isArray(s.points) || !Array.isArray(s.entities) || !Array.isArray(s.constraints)) invalid(`drawing "${s.name}" is damaged`)
+  const pts = new Set<string>()
+  for (const p of s.points) {
+    if (!isObj(p) || !isStr(p.id) || !isNum(p.x) || !isNum(p.y)) invalid(`drawing "${s.name}" has a damaged point`)
+    pts.add(p.id)
+  }
+  const ids = new Set<string>(pts)
+  const pt = (id: unknown) => isStr(id) && pts.has(id)
+  for (const e of s.entities) {
+    if (!isObj(e) || !isStr(e.id)) invalid(`drawing "${s.name}" has a damaged shape`)
+    const ok =
+      e.kind === 'line' ? pt(e.a) && pt(e.b)
+        : e.kind === 'arc' ? pt(e.center) && pt(e.start) && pt(e.end)
+          : e.kind === 'circle' ? pt(e.center) && isNum(e.r) && e.r > 0
+            : e.kind === 'spline' ? Array.isArray(e.points) && e.points.length >= 2 && e.points.every(pt)
+              : e.kind === 'text' ? pt(e.at) && isStr(e.text) && isNum(e.height) && e.height > 0
+                : false
+    if (!ok) invalid(`drawing "${s.name}" has a damaged shape`)
+    ids.add(e.id)
+  }
+  for (const c of s.constraints) {
+    if (!isObj(c) || !isStr(c.id) || !CONSTRAINT_KINDS.includes(c.kind) || !Array.isArray(c.refs) || !c.refs.every((r: unknown) => isStr(r) && ids.has(r)) || (c.value !== undefined && !isNum(c.value))) {
+      invalid(`drawing "${s.name}" has a damaged dimension or rule`)
+    }
+  }
+}
 
 /** Each joint type's settings must be complete and numeric, or the app would show ?" sizes or worse. */
 function jointParamsOk(type: string, p: Record<string, any>): boolean {
@@ -80,6 +115,23 @@ function check(raw: any): Project {
     if (b.grain !== 'length' && b.grain !== 'width') invalid(`board "${name}" has an unknown grain direction`)
     if (!woodIds.has(b.woodId)) invalid(`board "${name}" uses a wood that isn't in the file`)
     boardIds.add(b.id)
+  }
+  const sketches = new Map<string, Set<string>>()
+  if (raw.sketches !== undefined) {
+    if (!Array.isArray(raw.sketches)) invalid('the drawings are damaged')
+    for (const s of raw.sketches) {
+      checkSketch(s)
+      sketches.set(s.id, new Set(s.entities.map((e: { id: string }) => e.id)))
+    }
+  }
+  for (const b of raw.boards) {
+    if (b.outline === undefined) continue
+    const o = b.outline
+    const ents = isObj(o) && isStr(o.sketchId) ? sketches.get(o.sketchId) : undefined
+    const list = (v: unknown) => Array.isArray(v) && v.every(x => isStr(x) && ents!.has(x))
+    if (!ents || !list(o.outer) || !Array.isArray(o.holes) || !o.holes.every(list) || !list(o.circles)) {
+      invalid(`board "${b.name}" is shaped from a drawing that is missing or damaged`)
+    }
   }
   for (const j of raw.joints) {
     if (!isObj(j) || typeof j.type !== 'string' || !isObj(j.params)) invalid('a joint is damaged')
