@@ -3,6 +3,7 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { useMemo, useRef } from 'react'
 import { worldBox } from '../../model/geometry'
 import { cutGeometry, type Cut } from '../../model/joints'
+import { outlinePolygons } from '../../model/shaped'
 import type { Project } from '../../model/types'
 import { SceneBoundary } from '../../ui/three/SceneBoundary'
 import { BoardMesh } from '../../ui/three/BoardMesh'
@@ -46,7 +47,7 @@ export function ProjectViewer({ project, onSnapshot, className }: { project: Pro
           <directionalLight position={[-40, -60, 90]} intensity={1.6} />
           <directionalLight position={[50, 40, 30]} intensity={0.5} />
           {project.boards.map(b => (
-            <BoardMesh key={b.id} board={b} cuts={cuts.get(b.id) ?? []} kind={kind(b.woodId)} selected={false} warned={false} onSelect={() => {}} />
+            <BoardMesh key={b.id} board={b} cuts={cuts.get(b.id) ?? []} kind={kind(b.woodId)} shape={outlinePolygons(project, b)} selected={false} warned={false} onSelect={() => {}} />
           ))}
           {onSnapshot && <Snapshot onSnapshot={onSnapshot} />}
         </Canvas>

@@ -5,6 +5,7 @@ import { validateBoard, validateJoint } from './joints'
 import type { GrooveParams, Joint, Project } from './types'
 import { formatInches } from './units'
 import { findWood } from './woods'
+import { shapeReaches } from './shaped'
 
 export type Warning = { kind: 'overlap' | 'exceedsStock' | 'badJoint'; boardIds: string[]; message: string }
 
@@ -60,6 +61,15 @@ export function validate(project: Project): Warning[] {
         boardIds: [j.hostBoardId, j.partnerBoardId],
         message: `The ${NAMES[j.type]} joint between ${name(j.hostBoardId)} and ${name(j.partnerBoardId)} no longer lines up — move them back together or remove the joint`
       })
+      continue
+    }
+    // A shaped part may have been cut away right where the joint is.
+    const host = project.boards.find(b => b.id === j.hostBoardId)!
+    const partner = project.boards.find(b => b.id === j.partnerBoardId)!
+    for (const [s, o] of [[host, partner], [partner, host]]) {
+      if (s.outline && !shapeReaches(project, s, o)) {
+        warnings.push({ kind: 'badJoint', boardIds: [s.id, o.id], message: `The shape of ${s.name} doesn't reach where it joins ${o.name}` })
+      }
     }
   }
   return warnings

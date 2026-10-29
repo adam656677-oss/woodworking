@@ -31,7 +31,11 @@ export type Sketch = {
 }
 
 /** A board's shape: the outer loop and inner loops (cutouts) as entity ids, plus circles that are holes. */
-export type Outline = { sketchId: string; outer: string[]; holes: string[][]; circles: string[] }
+export type Outline = {
+  sketchId: string; outer: string[]; holes: string[][]; circles: string[]
+  /** 90 = the drawing is turned a quarter turn so its long direction runs along the board's length (with the grain). */
+  turn?: 0 | 90
+}
 
 export const CONSTRAINT_KINDS: ConstraintKind[] = [
   'horizontal', 'vertical', 'perpendicular', 'parallel', 'equal', 'tangent', 'concentric', 'coincident', 'fixed', 'symmetric',
