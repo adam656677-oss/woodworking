@@ -1,8 +1,9 @@
 // .aaw project files: versioned JSON with structural checks, so a damaged file gives a plain message, not a crash.
 import { CONSTRAINT_KINDS } from '../sketch/types'
+import { EDGE_SIDES, FACES, PROFILE_KINDS, TURN_STYLES } from '../shaping/types'
 import type { Project } from './types'
 
-export const FORMAT_VERSION = 2
+export const FORMAT_VERSION = 3
 
 export class ProjectFileError extends Error {
   constructor(public code: 'corrupt' | 'newerVersion' | 'invalid', message: string) {
@@ -15,7 +16,9 @@ type Migration = (raw: any) => any
 /** Step-by-step upgrades: MIGRATIONS[n] turns a version-n object into version n+1. */
 const MIGRATIONS: Record<number, Migration> = {
   // Version 2 adds drawings.
-  1: raw => ({ ...raw, formatVersion: 2, sketches: [] })
+  1: raw => ({ ...raw, formatVersion: 2, sketches: [] }),
+  // Version 3 adds turned legs, tapers and edge profiles (all optional on boards).
+  2: raw => ({ ...raw, formatVersion: 3 })
 }
 
 export function serialize(p: Project): string {
@@ -134,6 +137,32 @@ function check(raw: any): Project {
     // A shaped part whose drawing is gone is simply a rectangle again (its size is its bounding rectangle).
     // One whose drawing no longer makes a closed shape keeps its link and shows as a rectangle until it does.
     if (!sketches.has(o.sketchId)) delete b.outline
+  }
+  const pos = (v: unknown) => isNum(v) && v >= 0
+  for (const b of raw.boards) {
+    if (b.turning !== undefined) {
+      const t = b.turning
+      if (!isObj(t) || !isStr(t.sketchId) || !oneOf(t.style, TURN_STYLES) || !pos(t.top) || !pos(t.bottom) || !oneOf(t.shoulder, ['crisp', 'lambsTongue'])) {
+        invalid(`board "${b.name}" has a damaged turning`)
+      }
+      // A turning whose drawing is gone is just its square blank again.
+      if (!sketches.has(t.sketchId)) delete b.turning
+    }
+    if (b.taper !== undefined) {
+      const t = b.taper
+      if (!isObj(t) || !Array.isArray(t.faces) || !t.faces.every((f: unknown) => oneOf(f, FACES)) || !pos(t.start) || !isNum(t.foot) || t.foot <= 0) {
+        invalid(`board "${b.name}" has a damaged taper`)
+      }
+    }
+    if (b.edges !== undefined) {
+      if (!Array.isArray(b.edges)) invalid(`board "${b.name}" has damaged edge profiles`)
+      for (const e of b.edges) {
+        if (!isObj(e) || !isStr(e.id) || !oneOf(e.profile, PROFILE_KINDS) || !isNum(e.size) || e.size <= 0 || !oneOf(e.face, ['top', 'bottom']) ||
+          !Array.isArray(e.sides) || !e.sides.every((x: unknown) => oneOf(x, EDGE_SIDES))) {
+          invalid(`board "${b.name}" has a damaged edge profile`)
+        }
+      }
+    }
   }
   for (const j of raw.joints) {
     if (!isObj(j) || typeof j.type !== 'string' || !isObj(j.params)) invalid('a joint is damaged')

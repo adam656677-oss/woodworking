@@ -12,9 +12,9 @@ const rect: Sketch = {
   constraints: [{ id: 'k_w', kind: 'distance', refs: ['a', 'b'], value: 30 }]
 }
 
-test('the file format is now version 2', () => {
-  expect(FORMAT_VERSION).toBe(2)
-  expect(emptyProject('P').formatVersion).toBe(2)
+test('the file format is now version 3 (drawings came in 2)', () => {
+  expect(FORMAT_VERSION).toBe(3)
+  expect(emptyProject('P').formatVersion).toBe(3)
   expect(emptyProject('P').sketches).toEqual([])
 })
 
@@ -22,7 +22,7 @@ test('a version 1 file opens, gains an empty drawings list, and keeps everything
   const v1 = { ...emptyProject('Old'), formatVersion: 1 } as Record<string, unknown>
   delete v1.sketches
   const p = deserialize(JSON.stringify(v1))
-  expect(p.formatVersion).toBe(2)
+  expect(p.formatVersion).toBe(3)
   expect(p.sketches).toEqual([])
   expect(p.name).toBe('Old')
   expect(p.woods.length).toBe(emptyProject('x').woods.length)

@@ -1,4 +1,5 @@
 import type { Outline, Sketch } from '../sketch/types'
+import type { EdgeProfile, Taper, Turning } from '../shaping/types'
 // The project model: plain data shared by every part of the app. Sizes are inches.
 
 export type Vec3 = { x: number; y: number; z: number }
@@ -49,6 +50,11 @@ export type Board = {
   edgeBevels: { left: number; right: number }
   /** A shaped part: cut to this outline from a drawing (width × length are its bounding rectangle). */
   outline?: Outline
+  /** A square-to-round turned leg. */
+  turning?: Turning
+  taper?: Taper
+  /** Router edge profiles. */
+  edges?: EdgeProfile[]
 }
 
 export type JointType = 'butt' | 'dado' | 'rabbet' | 'pocketScrew' | 'miter'
@@ -86,7 +92,7 @@ export type TemplateState = { templateId: string; params: Record<string, number 
 
 export type Project = {
   /** 2 adds drawings; version 1 files are upgraded when opened. */
-  formatVersion: 1 | 2
+  formatVersion: 1 | 2 | 3
   name: string
   units: 'in'
   boards: Board[]
