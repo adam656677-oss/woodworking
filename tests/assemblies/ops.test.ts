@@ -190,3 +190,10 @@ test('files: v4 opens as v5; groups round-trip; damaged group references are cle
   raw.groups[0].name = 7
   expect(() => deserialize(JSON.stringify(raw))).toThrow('a group is damaged')
 })
+
+test('linked copies are numbered: Drawer, Drawer 2, Drawer 3', () => {
+  const t = linkedPair()
+  expect(t.p.groups!.find(g => g.id === t.b)!.name).toBe('Drawer 2')
+  const r = ok(copyGroup(t.p, t.b, true))
+  expect(r.project.groups!.find(g => g.id === r.id)!.name).toBe('Drawer 3')
+})

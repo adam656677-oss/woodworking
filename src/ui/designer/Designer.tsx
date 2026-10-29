@@ -11,6 +11,8 @@ import { Toolbar } from './Toolbar'
 import { WarningsList } from './WarningsList'
 import { WoodLibraryDialog } from './WoodLibraryDialog'
 import { SceneBoundary } from '../three/SceneBoundary'
+import { wholeGroup } from '../../assemblies/ops'
+import { GroupPanel } from '../../assemblies/ui/GroupPanel'
 
 const Scene = lazy(() => import('../three/Scene'))
 
@@ -27,6 +29,8 @@ export function Designer() {
   const cutListOpen = useStudio(s => s.cutListOpen)
   const woodsOpen = useStudio(s => s.woodsOpen)
   const kidsMode = useStudio(s => s.kidsMode)
+  const project = useStudio(s => s.project)
+  const whole = kidsMode ? null : wholeGroup(project, selection)
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -100,7 +104,8 @@ export function Designer() {
         </section>
         <aside className="w-72 overflow-y-auto border-l border-stone-300 bg-white p-3">
           {!kidsMode && <TemplatePanel />}
-          {selection.length === 2 ? <JointPanel /> : <PropertiesPanel />}
+          {whole && <GroupPanel group={whole} />}
+          {selection.length === 2 ? <JointPanel /> : whole && selection.length > 1 ? null : <PropertiesPanel />}
         </aside>
       </div>
       {cutListOpen && <CutListView />}

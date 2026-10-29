@@ -10,6 +10,7 @@ import { cloneWoods, emptyProject } from '../model/woods'
 import { applyTemplate, findTemplate, freeze } from '../templates'
 import { recalc, type FormulaError } from '../formulas/recalc'
 import { exactText, releaseEdited } from '../formulas/ops'
+import { pruneGroups, syncLinks } from '../assemblies/ops'
 
 export type Screen = 'home' | 'kids' | 'master' | 'plans' | 'draw'
 export type View = '3d' | 'front' | 'side' | 'top'
@@ -41,6 +42,10 @@ export type StudioState = {
   formulaErrors: Record<string, string>
   /** The designer is the kids' Simple Designer (fewer tools, 1/8" sizes, butt joints, kid woods). */
   kidsMode: boolean
+  /** Parts hidden in the 3D view (not saved, not an undo step). */
+  hidden: string[]
+  /** When set, only these parts show in the 3D view. */
+  isolated: string[] | null
 
   goto(screen: Screen): void
   /** Open the kids' Simple Designer: back to the kid's design if there is one, else a blank one. */
@@ -68,6 +73,10 @@ export type StudioState = {
   removeUserWood(id: string): Promise<void>
   setError(msg: string | null): void
   set(patch: Partial<Pick<StudioState, 'view' | 'measuring' | 'cutListOpen' | 'woodsOpen'>>): void
+  /** Hide or show parts in the 3D view. */
+  setHidden(ids: string[], hidden: boolean): void
+  isolate(ids: string[] | null): void
+  showAll(): void
 }
 
 export const APP_NAME = 'A&A Woodworking Studio'
@@ -100,7 +109,7 @@ export function createStudioStore() {
     }
     const start = (project: Project, filePath: string | null, dirty: boolean) => {
       history = new History<Snapshot>({ project, selection: [] })
-      set({ filePath, screen: 'master', error: null, recovery: null, projectKey: get().projectKey + 1 })
+      set({ filePath, screen: 'master', error: null, recovery: null, projectKey: get().projectKey + 1, hidden: [], isolated: null })
       sync(dirty)
     }
     const loadText = (text: string, path: string | null, backupPath: string | null, dirty: boolean) => {
@@ -154,6 +163,8 @@ export function createStudioStore() {
       projectKey: 0,
       pendingReplace: false,
       kidsMode: false,
+      hidden: [],
+      isolated: null,
       formulaErrors: {},
 
       goto: screen => set({ screen }),
@@ -191,7 +202,9 @@ export function createStudioStore() {
         }
         // Sizes, formulas and rules are worked out again after every change (one undo step with it).
         // In the kids' designer a typed size or move simply wins: the formula or rule behind it is dropped.
-        const done = recalc(get().kidsMode ? releaseEdited(prev, result) : keepNudges(prev, result)).project
+        const edited = get().kidsMode ? releaseEdited(prev, result) : keepNudges(prev, result)
+        // Linked copies follow, empty groups go, then sizes, formulas and rules are worked out again.
+        const done = recalc(pruneGroups(syncLinks(prev, edited))).project
         const ids = new Set(done.boards.map(b => b.id))
         history.push({ project: done, selection: get().selection.filter(id => ids.has(id)) })
         set({ error: null })
@@ -327,6 +340,13 @@ export function createStudioStore() {
       },
 
       setError: msg => set({ error: msg }),
+      setHidden: (ids, hide) => {
+        const cur = new Set(get().hidden)
+        for (const id of ids) { if (hide) cur.add(id); else cur.delete(id) }
+        set({ hidden: [...cur] })
+      },
+      isolate: ids => set({ isolated: ids && ids.length ? [...ids] : null }),
+      showAll: () => set({ hidden: [], isolated: null }),
       set: patch => set(patch)
     }
   })

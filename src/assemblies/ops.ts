@@ -175,6 +175,7 @@ export function copyGroup(p: Project, gid: string, linked: boolean): { project: 
   const bmap = new Map<string, string>()
   for (const id of ids) bmap.set(id, newId('b'))
   const link = linked ? g.link ?? newId('k') : undefined
+  const instances = link ? Math.max(1, groupsOf(p).filter(x => x.link === link).length) : 0
   // Linked parts share a key; the original's parts get theirs now if they had none.
   const keys = new Map<string, string>()
   for (const b of p.boards) if (ids.has(b.id)) keys.set(b.id, b.link ?? newId('k'))
@@ -201,7 +202,7 @@ export function copyGroup(p: Project, gid: string, linked: boolean): { project: 
   }))
   const newGroups: Group[] = [g, ...subgroups(p, gid)].map(x => {
     const c: Group = { ...x, id: gmap.get(x.id)! }
-    if (x.id === gid) c.name = linked ? x.name : `${x.name} (copy)`
+    if (x.id === gid) c.name = linked ? `${x.name.replace(/ \d+$/, '')} ${instances + 1}` : `${x.name} (copy)`
     if (x.parentId && gmap.has(x.parentId)) c.parentId = gmap.get(x.parentId)
     if (x.id === gid) { if (link) c.link = link; else delete c.link }
     return c

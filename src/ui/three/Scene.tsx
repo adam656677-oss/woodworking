@@ -17,6 +17,12 @@ export default function Scene() {
   const view = useStudio(s => s.view)
   const measuring = useStudio(s => s.measuring)
   const projectKey = useStudio(s => s.projectKey)
+  const hidden = useStudio(s => s.hidden)
+  const isolated = useStudio(s => s.isolated)
+  const shown = useMemo(() => {
+    const h = new Set(hidden), iso = isolated ? new Set(isolated) : null
+    return project.boards.filter(b => !h.has(b.id) && (!iso || iso.has(b.id)))
+  }, [project.boards, hidden, isolated])
   const [points, setPoints] = useState<THREE.Vector3[]>([])
   const groups = useRef(new Map<string, THREE.Group>())
   const [selectedGroup, setSelectedGroup] = useState<THREE.Group | null>(null)
@@ -69,7 +75,7 @@ export default function Scene() {
       <directionalLight position={[-40, -60, 90]} intensity={1.6} />
       <directionalLight position={[50, 40, 30]} intensity={0.5} />
       <gridHelper args={[gridSize, gridSize, '#c8bba8', '#e3dacd']} rotation={[Math.PI / 2, 0, 0]} position={[gridSize / 2 - 12, gridSize / 2 - 12, -0.01]} />
-      {project.boards.map(b => (
+      {shown.map(b => (
         <BoardMesh
           key={b.id}
           ref={g => {

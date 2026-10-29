@@ -5,6 +5,8 @@ import { plans } from '../../plans/plansStore'
 import { editShape, newDrawing, openDrawing } from '../../sketch/ui/session'
 import { TEMPLATES } from '../../templates'
 import { studio, useStudio, type View } from '../store'
+import { groupBoardIds, groupBoards, rotateGroup, ungroup, wholeGroup } from '../../assemblies/ops'
+import { GroupNameDialog } from '../../assemblies/ui/GroupPanel'
 
 function Btn(props: React.ButtonHTMLAttributes<HTMLButtonElement> & { active?: boolean }) {
   const { active, className, ...rest } = props
@@ -44,6 +46,18 @@ export function Toolbar() {
   const s = studio.getState()
   const one = selection.length === 1 ? boards.find(b => b.id === selection[0]) : undefined
   const sel = selection.length > 0
+  const project = useStudio(st => st.project)
+  const isolated = useStudio(st => st.isolated)
+  const hidden = useStudio(st => st.hidden)
+  const whole = kidsMode ? null : wholeGroup(project, selection)
+  const [naming, setNaming] = useState(false)
+  const makeGroup = (name: string | null) => {
+    setNaming(false)
+    if (!name) return
+    let id = ''
+    s.apply(p => { const r = groupBoards(p, selection, name); if ('error' in r) return r; id = r.id; return r.project })
+    if (id) s.select(groupBoardIds(studio.getState().project, id))
+  }
 
   const add = () =>
     s.apply(p => {
@@ -98,12 +112,22 @@ export function Toolbar() {
       </Menu>}
       <Menu label="Rotate 90°">
         {close => (['x', 'y', 'z'] as const).map(ax => (
-          <button key={ax} role="menuitem" disabled={!sel} className={item} onClick={() => { s.apply(p => selection.reduce((q, id) => rotateBoard(q, id, ax, 90), p)); close() }}>
+          <button key={ax} role="menuitem" disabled={!sel} className={item} onClick={() => { s.apply(p => (whole ? rotateGroup(p, whole.id, ax, 90) : selection.reduce((q, id) => rotateBoard(q, id, ax, 90), p))); close() }}>
             About {ax.toUpperCase()}
           </button>
         ))}
       </Menu>
       <Btn disabled={!sel} onClick={() => { s.apply(p => deleteBoards(p, selection)); s.select([]) }}>Delete</Btn>
+      {!kidsMode && (
+        <>
+          <span className="mx-1 h-5 w-px bg-stone-300" />
+          <Btn disabled={selection.length < 2 || !!whole} onClick={() => setNaming(true)} title="Make the selected parts one assembly">Group</Btn>
+          <Btn disabled={!whole} onClick={() => whole && s.apply(p => ungroup(p, whole.id))}>Ungroup</Btn>
+          <Btn disabled={!sel} active={!!isolated} onClick={() => s.isolate(isolated ? null : selection)} title="Show only the selected parts">Isolate</Btn>
+          <Btn disabled={!isolated && hidden.length === 0} onClick={() => s.showAll()}>Show all</Btn>
+          {naming && <GroupNameDialog onDone={makeGroup} />}
+        </>
+      )}
       {!kidsMode && (
         <>
           <span className="mx-1 h-5 w-px bg-stone-300" />
