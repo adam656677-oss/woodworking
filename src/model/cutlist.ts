@@ -2,6 +2,7 @@
 import { jointNotes } from './joints'
 import { SHAPED_NOTE } from './shaped'
 import { TURN_NOTE } from '../shaping/turning'
+import { TAPER_NOTE } from '../shaping/taper'
 import type { Board, GrooveParams, Project } from './types'
 import { formatInches } from './units'
 import { boardFeet, findWood } from './woods'
@@ -118,7 +119,7 @@ export function cutList(project: Project): { rows: CutListRow[]; totals: CutList
       const wood = findWood(project, b.woodId)
       groups.set(key, {
         qty: 1, part: '', thickness: b.thickness, width: b.width, length: b.length,
-        woodName: wood?.name ?? 'Unknown wood', grain: b.grain, notes: [...(b.outline ? [SHAPED_NOTE] : []), ...(b.turning ? [TURN_NOTE(b.turning)] : []), ...jointNotes(project, b.id)], woodId: b.woodId, names: [b.name],
+        woodName: wood?.name ?? 'Unknown wood', grain: b.grain, notes: [...(b.outline ? [SHAPED_NOTE] : []), ...(b.turning ? [TURN_NOTE(b.turning)] : []), ...(b.taper && !b.turning ? [TAPER_NOTE(b, b.taper)] : []), ...jointNotes(project, b.id)], woodId: b.woodId, names: [b.name],
         base, canon, mirror: canonical(reflect(f, 'z', b), b)
       })
     }
