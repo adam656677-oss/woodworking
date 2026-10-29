@@ -131,12 +131,13 @@ export function applyRules(p0: Project, sizes: Map<string, number>): { project: 
 
   // Placement, checking that no two rules place the same part along the same axis.
   const owner = new Map<string, Rule>()
-  for (const r of (p.rules ?? []).filter(x => x.kind === 'count').concat((p.rules ?? []).filter(x => x.kind !== 'count'))) {
+  const ordered: Rule[] = [...(p.rules ?? []).filter(x => x.kind === 'count'), ...(p.rules ?? []).filter(x => x.kind !== 'count')]
+  for (const r of ordered) {
     const clash = claims(r).map(c => owner.get(`${c.part}:${c.axis}`)).find(Boolean)
     if (clash) { err(r, `These rules disagree: ${ruleLabel(p, clash)} and ${ruleLabel(p, r)} — remove one`); continue }
     for (const c of claims(r)) owner.set(`${c.part}:${c.axis}`, r)
     if (r.kind === 'count' || r.kind === 'spacing') {
-      const parts = r.kind === 'count' ? [r.first, ...r.copies] : r.parts
+      const parts = r.kind === 'count' ? [r.first, ...r.copies] : (r as Extract<Rule, { kind: 'spacing' }>).parts
       const s = spaceBetween(p, r.axis, r.from, r.to, parts)
       if (s.error) err(r, s.error)
       else p = s.project
