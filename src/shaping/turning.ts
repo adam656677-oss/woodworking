@@ -152,15 +152,15 @@ export function turnBoard(p: Project, boardId: string, o: TurnOptions): { projec
   const top = o.top ?? b.turning?.top ?? Math.min(5, b.length / 4)
   const bottom = o.bottom ?? b.turning?.bottom ?? 0
   const shoulder = o.shoulder ?? b.turning?.shoulder ?? 'crisp'
-  const maxD = o.maxD ?? blank - 1 / 16
-  const minD = o.minD ?? Math.max(0.25, snap64(blank * 0.4))
+  const maxD = o.maxD ?? b.turning?.maxD ?? blank - 1 / 16
+  const minD = o.minD ?? b.turning?.minD ?? Math.max(0.25, snap64(blank * 0.4))
   if (maxD > blank + 1e-9) return { error: msgWider(blank) }
   if (!(minD > 0) || minD > maxD) return { error: 'The smallest diameter must be more than 0 and no bigger than the biggest' }
   if (top < 0 || bottom < 0 || top + bottom > b.length - 2) return { error: 'Leave at least 2" between the pommel and the foot to turn' }
   const sketchId = b.turning?.sketchId ?? newId('k')
   const sk = styleProfile({ style: o.style, length: b.length, blank, top, bottom, shoulder, maxD, minD }, sketchId, `${b.name} profile`)
   const others = (p.sketches ?? []).filter(s => s.id !== sketchId)
-  const turning: Turning = { sketchId, style: o.style, top: snap64(top), bottom: snap64(bottom), shoulder }
+  const turning: Turning = { sketchId, style: o.style, top: snap64(top), bottom: snap64(bottom), shoulder, maxD, minD }
   const withSketch = { ...p, sketches: others }
   const project = addSketch({ ...withSketch, boards: p.boards.map(x => (x.id === boardId || x.turning?.sketchId === sketchId ? { ...x, turning: { ...turning } } : x)) }, sk)
   return { project, sketchId }

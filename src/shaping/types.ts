@@ -4,7 +4,11 @@ export type TurnStyle = 'taper' | 'beadCove' | 'vase' | 'ballFoot' | 'custom'
 export const TURN_STYLES: TurnStyle[] = ['taper', 'beadCove', 'vase', 'ballFoot', 'custom']
 
 /** A square-to-round leg: square for `top` inches from its top end and `bottom` inches at its foot, turned to a profile between. */
-export type Turning = { sketchId: string; style: TurnStyle; top: number; bottom: number; shoulder: 'crisp' | 'lambsTongue' }
+export type Turning = {
+  sketchId: string; style: TurnStyle; top: number; bottom: number; shoulder: 'crisp' | 'lambsTongue'
+  /** The diameters the style was drawn with (kept so changing another setting doesn't drift them). */
+  maxD?: number; minD?: number
+}
 
 /** A board's long faces: left/right are its edges (across the width), top/bottom its faces (across the thickness). */
 export type Face = 'left' | 'right' | 'top' | 'bottom'

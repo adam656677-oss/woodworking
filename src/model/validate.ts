@@ -7,6 +7,8 @@ import { formatInches } from './units'
 import { findWood } from './woods'
 import { outlinePolygons, shapeReaches } from './shaped'
 import { MSG_GAPS, MSG_SQUARE, turningProblem } from '../shaping/turning'
+import { taperProblem } from '../shaping/taper'
+import { edgeProblemFor, PROFILE_NAMES } from '../shaping/edges'
 
 export type Warning = { kind: 'overlap' | 'exceedsStock' | 'badJoint' | 'badShape'; boardIds: string[]; message: string }
 
@@ -52,6 +54,14 @@ export function validate(project: Project): Warning[] {
         : turn === MSG_GAPS ? `${b.name}'s turning profile must run from the pommel to the foot without gaps`
           : `${b.name}: ${turn}`
       warnings.push({ kind: 'badShape', boardIds: [b.id], message: msg })
+    }
+    if (b.taper && !b.turning) {
+      const tp = taperProblem(b, b.taper)
+      if (tp) warnings.push({ kind: 'badShape', boardIds: [b.id], message: `${b.name}'s taper doesn't fit any more — ${tp}. It isn't shown until it fits.` })
+    }
+    for (const e of b.edges ?? []) {
+      const ep = edgeProblemFor(b, b.edges!, e)
+      if (ep) warnings.push({ kind: 'badShape', boardIds: [b.id], message: `${b.name}: the ${formatInches(e.size)} ${PROFILE_NAMES[e.profile]} doesn't fit any more — ${ep}. It isn't shown until it fits.` })
     }
     const angleProblem = validateBoard(b)
     if (angleProblem) warnings.push({ kind: 'badJoint', boardIds: [b.id], message: angleProblem })

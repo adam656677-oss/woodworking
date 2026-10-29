@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import { ADDITION, Brush, Evaluator } from 'three-bvh-csg'
+import { simplify } from '../../sketch/freehand'
 
 export type TurnedLeg = { blank: number; length: number; top: number; bottom: number; radii: { x: number; r: number }[]; fromStart: boolean }
 
@@ -19,7 +20,9 @@ const box = (blank: number, y0: number, y1: number) => {
 export function turnedLeg(o: TurnedLeg): THREE.BufferGeometry {
   const B = o.blank / 2
   const yOf = (x: number) => (o.fromStart ? x : o.length - x)
-  const prof = o.radii.map(q => ({ y: yOf(q.x), r: q.r })).sort((u, v) => u.y - v.y)
+  // The profile is read every 1/32"; keep only the points needed to stay within 1/256" of it.
+  const keep = simplify(o.radii.map(q => ({ x: q.x, y: q.r })), 1 / 256)
+  const prof = keep.map(i => o.radii[i]).map(q => ({ y: yOf(q.x), r: q.r })).sort((u, v) => u.y - v.y)
   // Close the solid at both ends of the round part, overlapping the square parts a hair so they join.
   const e0 = prof[0].y > 1e-6 ? 0.002 : 0
   const e1 = prof[prof.length - 1].y < o.length - 1e-6 ? 0.002 : 0

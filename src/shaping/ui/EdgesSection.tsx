@@ -3,7 +3,7 @@ import type { Board, Project } from '../../model/types'
 import { formatInches } from '../../model/units'
 import { InchInput } from '../../ui/designer/InchInput'
 import { studio } from '../../ui/store'
-import { addEdgeProfile, edgeNotes, KID_PROFILES, KID_SIZES, PROFILE_NAMES, removeEdgeProfile, SIZES, STRAIGHT_SIDES } from '../edges'
+import { addEdgeProfile, edgeNote, edgeProblemFor, KID_PROFILES, KID_SIZES, PROFILE_NAMES, removeEdgeProfile, SIZES, STRAIGHT_SIDES } from '../edges'
 import { PROFILE_KINDS, type EdgeSide, type ProfileKind } from '../types'
 
 const cap = (s: string) => s[0].toUpperCase() + s.slice(1)
@@ -17,7 +17,7 @@ export function EdgesSection({ board, kids }: { board: Board; kids: boolean }) {
   const [error, setError] = useState<string | null>(null)
   const kinds = kids ? KID_PROFILES : PROFILE_KINDS
   const sizes = kids ? KID_SIZES : SIZES
-  const notes = edgeNotes(board)
+  const notes = (board.edges ?? []).map(e => edgeNote(e) + (edgeProblemFor(board, board.edges!, e) ? ' (doesn\u2019t fit — not shown)' : ''))
   const add = (both = false, chosen?: EdgeSide[]) => {
     let p: Project | { error: string } = studio.getState().project
     for (const f of both ? (['top', 'bottom'] as const) : [face]) {

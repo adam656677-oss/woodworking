@@ -2,7 +2,8 @@
 import { jointNotes } from './joints'
 import { SHAPED_NOTE } from './shaped'
 import { TURN_NOTE } from '../shaping/turning'
-import { TAPER_NOTE } from '../shaping/taper'
+import { TAPER_NOTE, taperProblem } from '../shaping/taper'
+import { profileRadii } from '../shaping/turning'
 import { edgeNotes, edgeSignature } from '../shaping/edges'
 import type { Board, GrooveParams, Project } from './types'
 import { formatInches } from './units'
@@ -105,11 +106,30 @@ function fastenersOn(project: Project, b: Board): string[] {
     .sort()
 }
 
+/** A turned leg as the shop sees it: its pommel, foot and the shape of its profile (not which drawing holds it). */
+function turningSignature(project: Project, b: Board): unknown {
+  const t = b.turning
+  if (!t) return null
+  const radii = profileRadii(project, b)
+  const shape = radii ? radii.filter((_, i) => i % 8 === 0 || i === radii.length - 1).map(q => [r6(Math.round(q.x * 64) / 64), Math.round(q.r * 128) / 128]) : t.sketchId
+  return [t.top, t.bottom, t.shoulder, shape]
+}
+
+/** A taper as the shop sees it: how many faces on each axis (on a square leg the axes are the same), start and foot. */
+function taperSignature(b: Board): unknown {
+  const t = b.taper
+  if (!t) return null
+  const w = t.faces.filter(f => f === 'left' || f === 'right').length
+  const th = t.faces.length - w
+  const axes = Math.abs(b.width - b.thickness) < 1e-9 ? [w, th].sort() : [w, th]
+  return [axes, t.start, t.foot]
+}
+
 export function cutList(project: Project): { rows: CutListRow[]; totals: CutListTotals } {
   const groups = new Map<string, Group>()
   for (const b of project.boards) {
     const f = featuresOf(project, b)
-    const base = JSON.stringify([b.woodId, b.thickness, b.width, b.length, b.grain, fastenersOn(project, b), b.outline ?? null, b.turning ?? null, b.taper ?? null, edgeSignature(b)])
+    const base = JSON.stringify([b.woodId, b.thickness, b.width, b.length, b.grain, fastenersOn(project, b), b.outline ?? null, turningSignature(project, b), taperSignature(b), edgeSignature(b)])
     const canon = canonical(f, b)
     const key = JSON.stringify([base, canon])
     const g = groups.get(key)
@@ -120,7 +140,7 @@ export function cutList(project: Project): { rows: CutListRow[]; totals: CutList
       const wood = findWood(project, b.woodId)
       groups.set(key, {
         qty: 1, part: '', thickness: b.thickness, width: b.width, length: b.length,
-        woodName: wood?.name ?? 'Unknown wood', grain: b.grain, notes: [...(b.outline ? [SHAPED_NOTE] : []), ...(b.turning ? [TURN_NOTE(b.turning)] : []), ...(b.taper && !b.turning ? [TAPER_NOTE(b, b.taper)] : []), ...edgeNotes(b), ...jointNotes(project, b.id)], woodId: b.woodId, names: [b.name],
+        woodName: wood?.name ?? 'Unknown wood', grain: b.grain, notes: [...(b.outline ? [SHAPED_NOTE] : []), ...(b.turning ? [TURN_NOTE(b.turning)] : []), ...(b.taper && !b.turning && !taperProblem(b, b.taper) ? [TAPER_NOTE(b, b.taper)] : []), ...edgeNotes(b), ...jointNotes(project, b.id)], woodId: b.woodId, names: [b.name],
         base, canon, mirror: canonical(reflect(f, 'z', b), b)
       })
     }

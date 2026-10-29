@@ -14,11 +14,11 @@ export function TurningSection({ board, onSheet }: { board: Board; onSheet(): vo
   const [error, setError] = useState<string | null>(null)
   const t = board.turning
   const radii = t ? profileRadii(project, board) : null
-  const maxD = radii ? Math.max(...radii.map(q => q.r)) * 2 : blankOf(board) - 1 / 16
-  const minD = radii ? Math.min(...radii.map(q => q.r)) * 2 : blankOf(board) * 0.4
+  const maxD = t?.maxD ?? (radii ? Math.max(...radii.map(q => q.r)) * 2 : blankOf(board) - 1 / 16)
+  const minD = t?.minD ?? (radii ? Math.min(...radii.map(q => q.r)) * 2 : blankOf(board) * 0.4)
   const run = (o: Partial<TurnOptions>) => {
     const style = (o.style ?? (t && t.style !== 'custom' ? t.style : 'vase')) as TurnOptions['style']
-    const r = turnBoard(studio.getState().project, board.id, { style, top: t?.top, bottom: t?.bottom, shoulder: t?.shoulder, maxD: t ? maxD : undefined, minD: t ? minD : undefined, ...o })
+    const r = turnBoard(studio.getState().project, board.id, { style, top: t?.top, bottom: t?.bottom, shoulder: t?.shoulder, ...o })
     if ('error' in r) return setError(r.error)
     setError(null)
     studio.getState().apply(() => r.project)
@@ -37,7 +37,7 @@ export function TurningSection({ board, onSheet }: { board: Board; onSheet(): vo
         {t && (
           <>
             <label className="flex flex-col text-xs text-stone-600">Style
-              <select aria-label="Turning style" value={t.style} onChange={e => run({ style: e.target.value as TurnOptions['style'], maxD: undefined, minD: undefined })} className="rounded border border-stone-300 px-1 py-1 text-sm">
+              <select aria-label="Turning style" value={t.style} onChange={e => run({ style: e.target.value as TurnOptions['style'] })} className="rounded border border-stone-300 px-1 py-1 text-sm">
                 {(['taper', 'beadCove', 'vase', 'ballFoot'] as const).map(s => <option key={s} value={s}>{STYLE_NAMES[s]}</option>)}
                 {t.style === 'custom' && <option value="custom" disabled>{STYLE_NAMES.custom}</option>}
               </select>

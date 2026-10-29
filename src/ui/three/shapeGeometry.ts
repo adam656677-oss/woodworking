@@ -32,6 +32,9 @@ export function insetPolygon(poly: Pt[], d: number): Pt[] {
     return { x: p.x + (m.x * d) / cos, y: p.y + (m.y * d) / cos }
   })
 }
+/** A cutout seen by the same bit: the hole grows by d. */
+export const holeInset = (h: Pt[], d: number) => insetPolygon(h, -d)
+
 function norm(v: Pt): Pt { const l = Math.hypot(v.x, v.y) || 1; return { x: v.x / l, y: v.y / l } }
 
 /**
@@ -47,7 +50,7 @@ export function extrudeOutline(shape: { outer: Pt[]; holes: Pt[][] }, thickness:
     const t = p.size / LAYERS
     const depth = (i + 0.5) * t
     const d = reachAt(p.section, depth)
-    const inset = { outer: insetPolygon(shape.outer, d), holes: shape.holes.map(h => insetPolygon(h, d)) }
+    const inset = { outer: insetPolygon(shape.outer, d), holes: shape.holes.map(h => holeInset(h, d)) }
     return p.face === 'top' ? slab(inset, thickness - (i + 1) * t, thickness - i * t) : slab(inset, i * t, (i + 1) * t)
   }
   for (const p of [top, bottom]) if (p) for (let i = 0; i < LAYERS; i++) parts.push(layer(p, i))

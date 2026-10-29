@@ -32,10 +32,18 @@ export function profileSection(kind: ProfileKind, s: number): Pt[] {
 
 const sideLength = (b: Board, side: EdgeSide) => (side === 'left' || side === 'right' ? b.length : b.width)
 
-/** Why these profiles can't be cut on this board, or null. */
+/** Why these profiles can't be cut on this board, or null (the newest is named first: it's the one just asked for). */
 export function edgeProblem(b: Board, list: EdgeProfile[]): string | null {
-  // The newest profile is named first: it's the one just asked for.
   for (const e of [...list].reverse()) {
+    const p = edgeProblemFor(b, list, e)
+    if (p) return p
+  }
+  return null
+}
+
+/** Why this one profile can't be cut (alone, or with the others on the same edge), or null. */
+export function edgeProblemFor(b: Board, list: EdgeProfile[], e: EdgeProfile): string | null {
+  {
     if (b.turning && e.sides.some(s => s === 'left' || s === 'right')) return MSG_TURNED_EDGE
     if (!e.sides.length) return 'Pick the edges to shape'
     if (e.sides.includes('outline') !== !!b.outline) return b.outline ? 'A shaped part is profiled around its outline' : 'Pick the edges to shape'
@@ -54,7 +62,7 @@ export function addEdgeProfile(p: Project, id: string, e: Omit<EdgeProfile, 'id'
   if (!b) return { error: 'That part is missing' }
   const next: EdgeProfile = { ...e, sides: (['left', 'right', 'start', 'end', 'outline'] as EdgeSide[]).filter(s => e.sides.includes(s)), id: newId('p') }
   const list = [...(b.edges ?? []), next]
-  const problem = edgeProblem(b, list)
+  const problem = edgeProblemFor(b, list, next)
   if (problem) return { error: problem }
   return { ...p, boards: p.boards.map(x => (x.id === id ? { ...x, edges: list } : x)) }
 }
@@ -71,12 +79,17 @@ export function removeEdgeProfile(p: Project, id: string, edgeId: string): Proje
 
 /** Cut-list notes: `1/4" roundover — top edges (all 4)`, `1/4" chamfer — top: left, right`. */
 export function edgeNotes(b: Board): string[] {
-  return (b.edges ?? []).map(e => {
+  const list = b.edges ?? []
+  return list.filter(e => !edgeProblemFor(b, list, e)).map(edgeNote)
+}
+
+export function edgeNote(e: EdgeProfile): string {
+  {
     const what = `${formatInches(e.size)} ${PROFILE_NAMES[e.profile]}`
     if (e.sides.includes('outline')) return `${what} — ${e.face} outline`
     if (STRAIGHT_SIDES.every(s => e.sides.includes(s))) return `${what} — ${e.face} edges (all 4)`
     return `${what} — ${e.face}: ${e.sides.join(', ')}`
-  })
+  }
 }
 
 /** The profiles without their ids: what makes two parts the same in the shop. */
@@ -86,8 +99,8 @@ export const edgeSignature = (b: Board) => (b.edges ?? []).map(({ id: _i, ...res
 export type ProfileCut = { boardId: string; kind: 'profile'; face: 'top' | 'bottom'; side: Exclude<EdgeSide, 'outline'>; section: Pt[]; length: number }
 
 export function profileCuts(b: Board): ProfileCut[] {
-  if (!b.edges?.length || edgeProblem(b, b.edges)) return []
-  return b.edges.flatMap(e => e.sides.filter((s): s is ProfileCut['side'] => s !== 'outline')
+  const list = b.edges ?? []
+  return list.filter(e => !edgeProblemFor(b, list, e)).flatMap(e => e.sides.filter((s): s is ProfileCut['side'] => s !== 'outline')
     .map(side => ({ boardId: b.id, kind: 'profile' as const, face: e.face, side, section: profileSection(e.profile, e.size), length: sideLength(b, side) })))
 }
 

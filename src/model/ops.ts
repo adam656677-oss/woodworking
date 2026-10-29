@@ -143,8 +143,15 @@ export function mirrorBoards(p: Project, ids: string[], axis: Axis): Project {
       const w = worldBox(b)
       const shift = 2 * c - w.max[axis] - w.min[axis]
       const flip = (e: EndCut): EndCut => ({ ...e, miter: e.miter === 0 ? 0 : -e.miter })
+      // Tapers and edge profiles on the faces that look along the mirror axis swap sides.
+      const ax = localAxes(b)
+      const swap: Record<string, string> = ax.width.axis === axis ? { left: 'right', right: 'left' }
+        : ax.thickness.axis === axis ? { top: 'bottom', bottom: 'top' } : { start: 'end', end: 'start' }
+      const sw = <T extends string>(v: T): T => (swap[v] ?? v) as T
       return {
         ...b,
+        ...(b.taper ? { taper: { ...b.taper, faces: b.taper.faces.map(sw) } } : {}),
+        ...(b.edges ? { edges: b.edges.map(e => ({ ...e, face: sw(e.face), sides: e.sides.map(sw) })) } : {}),
         position: { ...b.position, [axis]: clean(b.position[axis] + shift) },
         endCuts: { start: flip(b.endCuts.start), end: flip(b.endCuts.end) }
       }

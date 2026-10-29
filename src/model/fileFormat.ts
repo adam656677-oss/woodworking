@@ -142,7 +142,8 @@ function check(raw: any): Project {
   for (const b of raw.boards) {
     if (b.turning !== undefined) {
       const t = b.turning
-      if (!isObj(t) || !isStr(t.sketchId) || !oneOf(t.style, TURN_STYLES) || !pos(t.top) || !pos(t.bottom) || !oneOf(t.shoulder, ['crisp', 'lambsTongue'])) {
+      if (!isObj(t) || !isStr(t.sketchId) || !oneOf(t.style, TURN_STYLES) || !pos(t.top) || !pos(t.bottom) || !oneOf(t.shoulder, ['crisp', 'lambsTongue']) ||
+        (t.maxD !== undefined && !(isNum(t.maxD) && t.maxD > 0)) || (t.minD !== undefined && !(isNum(t.minD) && t.minD > 0))) {
         invalid(`board "${b.name}" has a damaged turning`)
       }
       // A turning whose drawing is gone is just its square blank again.
