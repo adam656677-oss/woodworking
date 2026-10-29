@@ -1,3 +1,4 @@
+import { formatInches } from '../model/units'
 // Templates: recipes that turn a few numbers into boards and joints. A template stays live until Unlock.
 import type { Board, Joint, Project, Wood } from '../model/types'
 import type { NewRule, SizeDef } from '../formulas/types'
@@ -37,7 +38,8 @@ export type IndexRule = { kind: NewRule['kind'] } & Record<string, unknown>
 export type UnlockForm = { sizes: SizeDef[]; boards: Record<number, Record<string, string>>; joints?: Record<number, Record<string, string>>; rules?: IndexRule[] }
 
 /** A number as a formula writes it. */
-export const num = (v: number) => String(Math.round(v * 1e6) / 1e6)
+/** A size as a woodworker writes it in a formula (30-3/4, 3/4); off the 1/64" grid, a decimal. */
+export const num = (v: number) => (Math.abs(v * 64 - Math.round(v * 64)) < 1e-9 ? formatInches(v).replace(/"$/, '') : String(Math.round(v * 1e6) / 1e6))
 /** The formula name for a wood's thickness. */
 export const woodT = (id: string) => `Wood.${formulaName(id)}.T`
 

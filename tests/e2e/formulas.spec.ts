@@ -7,6 +7,8 @@ const inches = (t: string) => {
   if (!r.ok) throw new Error(`not inches: ${t}`)
   return r.value
 }
+const SHOTS = process.env.AA_SHOTS
+const shot = async (win: Page, name: string) => { if (SHOTS) await win.screenshot({ path: `${SHOTS}/${name}.png` }) }
 const sizesTab = (win: Page) => win.getByRole('tab', { name: 'Sizes' }).click()
 const partsTab = (win: Page) => win.getByRole('tab', { name: 'Parts' }).click()
 
@@ -52,6 +54,7 @@ test('1. bookshelf: unlock, H 36 → 48 in Sizes; sides follow, shelves re-space
     await expect(win.getByTestId('result-H')).toHaveText('36"')
     await setSize(win, 'H', '48')
     await expect(win.getByTestId('result-H')).toHaveText('48"')
+    await shot(win, 'sizes-tab')
     await partsTab(win)
 
     const rows = await cutListRows(win)
@@ -83,6 +86,7 @@ test('2. =W/2 in a length follows W; typing a number asks to replace the formula
     await win.getByLabel('Width', { exact: true }).focus()
     await expect(win.getByLabel('Length', { exact: true })).toHaveValue('15"')
     await expect(win.getByLabel('has a formula')).toBeVisible()
+    await shot(win, 'formula-box')
 
     await sizesTab(win)
     await setSize(win, 'W', '40')
@@ -93,6 +97,7 @@ test('2. =W/2 in a length follows W; typing a number asks to replace the formula
     await typeInches(win, 'Length', '12')
     const ask = win.getByRole('dialog', { name: 'Replace' })
     await expect(ask).toContainText('Replace the formula =W/2 with 12"?')
+    await shot(win, 'replace-ask')
     await ask.getByRole('button', { name: 'Keep formula' }).click()
     await expect(win.getByLabel('Length', { exact: true })).toHaveValue('=W/2')
     await typeInches(win, 'Length', '12')
@@ -136,6 +141,8 @@ test('3. a slat count =floor(W/4) adds slats when W grows', async () => {
     await setSize(win, 'W', '40')
     await partsTab(win)
     await expect(win.getByRole('list', { name: 'Parts' }).getByRole('listitem').filter({ hasText: /^(⚠ )?Slat/ })).toHaveCount(10)
+    await part(win, 'Slat', 3).click()
+    await shot(win, 'count-rule')
     await expect(win.getByRole('region', { name: 'Warnings' })).toHaveCount(0)
     const rows = await cutListRows(win)
     expect(rows.find(r => r[1] === 'Slat')?.[0]).toBe('10')
@@ -154,6 +161,7 @@ test('4. a bad formula shows its message and keeps the last good value', async (
     await typeInches(win, 'Length', '=Hight - 2')
     await expect(win.getByRole('alert').filter({ hasText: "Unknown size 'Hight'" }).first()).toBeVisible()
     await expect(win.getByRole('region', { name: 'Warnings' })).toContainText("Unknown size 'Hight'")
+    await shot(win, 'bad-formula')
     const rows = await cutListRows(win)
     expect(rows.find(r => r[1] === 'Rail')?.[4]).toBe('20"')
     // A formula that can't be read at all is caught in the box, before it's kept.

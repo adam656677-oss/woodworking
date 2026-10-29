@@ -73,11 +73,13 @@ export function FormulaInput({ label, value, formula, error, ruleNote, allowZero
       />
       {message && <span role="alert" className="text-xs text-red-600">{message}</span>}
       {asking !== null && (
-        <div role="dialog" aria-label="Replace" className="mt-1 flex flex-col gap-1 rounded border border-amber-300 bg-amber-50 p-2 text-xs">
-          <span>{formula ? `Replace the formula =${formula} with ${formatInches(asking)}?` : `${ruleNote} Remove the rule and move it?`}</span>
-          <div className="flex gap-1">
-            <button onClick={() => { const v = asking; setAsking(null); onSet({ value: v }) }} className="rounded bg-amber-700 px-2 py-0.5 font-semibold text-white">{formula ? 'Replace' : 'Remove the rule'}</button>
-            <button onClick={() => { setAsking(null); setText(shown()) }} className="rounded px-2 py-0.5 hover:bg-amber-100">{formula ? 'Keep formula' : 'Keep the rule'}</button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/20">
+          <div role="dialog" aria-label="Replace" className="flex w-80 flex-col gap-3 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm shadow-xl">
+            <span>{formula ? `Replace the formula =${formula} with ${formatInches(asking)}?` : `${ruleNote} Remove the rule and move it?`}</span>
+            <div className="flex justify-end gap-2">
+              <button onClick={() => { setAsking(null); setText(shown()) }} className="rounded px-3 py-1 hover:bg-amber-100">{formula ? 'Keep formula' : 'Keep the rule'}</button>
+              <button onClick={() => { const v = asking; setAsking(null); onSet({ value: v }) }} className="rounded bg-amber-700 px-3 py-1 font-semibold text-white">{formula ? 'Replace' : 'Remove the rule'}</button>
+            </div>
           </div>
         </div>
       )}

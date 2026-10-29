@@ -14,7 +14,7 @@ function apply(fn: (p: Project) => Project | { error: string }, setError: (m: st
   studio.getState().apply(() => r)
 }
 
-function SizeRow({ name, expr, result, error }: { name: string; expr: string; result: number | undefined; error?: string }) {
+function SizeRow({ name, expr, result, error, plain }: { name: string; expr: string; result: number | undefined; error?: string; plain?: boolean }) {
   const [n, setN] = useState(name)
   const [e, setE] = useState(expr)
   const [msg, setMsg] = useState<string | null>(null)
@@ -24,14 +24,16 @@ function SizeRow({ name, expr, result, error }: { name: string; expr: string; re
         <input aria-label={`Name of ${name}`} value={n} onChange={x => setN(x.target.value)}
           onBlur={() => { if (n.trim() && n.trim() !== name) apply(p => renameSize(p, name, n.trim()), setMsg); else setN(name) }}
           onKeyDown={x => { if (x.key === 'Enter') (x.target as HTMLInputElement).blur() }}
-          className="w-20 rounded border border-transparent px-1 font-semibold hover:border-stone-300" />
-        <span>=</span>
+          className="min-w-0 flex-1 rounded border border-transparent px-1 font-semibold hover:border-stone-300" />
+        <span className="shrink-0 text-right text-xs text-stone-600" data-testid={`result-${name}`}>{result === undefined ? '—' : plain ? String(Math.round(result * 1000) / 1000) : formatInches(result)}</span>
+        <button aria-label={`Delete ${name}`} onClick={() => apply(p => deleteSize(p, name), setMsg)} className="px-1 text-stone-400 hover:text-red-700">✕</button>
+      </div>
+      <div className="flex items-center gap-1 pl-1">
+        <span className="text-stone-500">=</span>
         <input aria-label={`Value of ${name}`} value={e} onChange={x => setE(x.target.value)}
           onBlur={() => { if (e.trim() !== expr) apply(p => setSize(p, name, e), setMsg) }}
           onKeyDown={x => { if (x.key === 'Enter') (x.target as HTMLInputElement).blur() }}
-          className="min-w-0 flex-1 rounded border border-stone-300 px-1" />
-        <span className="w-16 shrink-0 text-right text-xs text-stone-600" data-testid={`result-${name}`}>{result === undefined ? '—' : formatInches(result)}</span>
-        <button aria-label={`Delete ${name}`} onClick={() => apply(p => deleteSize(p, name), setMsg)} className="px-1 text-stone-400 hover:text-red-700">✕</button>
+          className="min-w-0 flex-1 rounded border border-stone-300 px-1 font-mono text-xs" />
       </div>
       {(msg ?? error) && <span role="alert" className="text-xs text-red-700">{msg ?? error}</span>}
     </li>
@@ -47,11 +49,13 @@ export function SizesTab() {
   const [msg, setMsg] = useState<string | null>(null)
   const sizes = project.sizes ?? []
   const rules = project.rules ?? []
+  // Sizes that only count things (used by a count rule) show as plain numbers, not inches.
+  const counts = useMemo(() => new Set(rules.flatMap(r => (r.kind === 'count' ? (r.expr.toLowerCase().match(/[a-z_][a-z0-9_]*/g) ?? []) : []))), [rules])
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-3 py-2 text-sm" aria-label="Sizes">
       <p className="mb-1 text-xs text-stone-500">Name a size, then type =Name (or a formula like =H - 2*T) in any size box.</p>
       <ul aria-label="Named sizes">
-        {sizes.map(s => <SizeRow key={s.name} name={s.name} expr={s.expr} result={values.get(s.name.toLowerCase())} error={errors[`size:${s.name.toLowerCase()}`]} />)}
+        {sizes.map(s => <SizeRow key={s.name} name={s.name} expr={s.expr} result={values.get(s.name.toLowerCase())} error={errors[`size:${s.name.toLowerCase()}`]} plain={counts.has(s.name.toLowerCase())} />)}
       </ul>
       <form className="mt-2 flex items-center gap-1" onSubmit={e => {
         e.preventDefault()

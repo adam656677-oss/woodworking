@@ -65,3 +65,11 @@ test('unlocked formulas are stored without their leading =', () => {
     for (const f of all) expect(f.startsWith('=')).toBe(false)
   }
 })
+
+test('unlocked sizes are written the way a woodworker writes them', () => {
+  const p = unlock(live('bookshelf', { W: 30.75 }))
+  const expr = (n: string) => p.sizes!.find(s => s.name === n)!.expr
+  expect(expr('W')).toBe('30-3/4')
+  expect(expr('Inset')).toBe('3/4')
+  expect(expr('DadoDepth')).toBe('min(1/4, floor(T*32)/64)')
+})

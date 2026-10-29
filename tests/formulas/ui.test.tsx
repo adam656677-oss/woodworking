@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { addBoard } from '../../src/model/ops'
 import type { Project } from '../../src/model/types'
 import { emptyProject } from '../../src/model/woods'
@@ -133,4 +133,17 @@ test('in the Simple Designer: no Sizes tab, plain size boxes', () => {
   expect(screen.queryByLabelText('has a formula')).toBeNull()
   type(screen.getByLabelText('Width'), '=3')
   expect(screen.getByRole('alert').textContent).toMatch(/Enter a size/)
+})
+
+test('a size used by a count rule shows as a plain number', () => {
+  const { a, b } = start()
+  studio.getState().apply(p => ok(setSize(p, 'N', '2')))
+  render(<PartsList />)
+  fireEvent.click(screen.getByRole('tab', { name: 'Sizes' }))
+  expect(screen.getByTestId('result-N').textContent).toBe('2"')
+  const extra = ok(addBoard(studio.getState().project, { woodId: '1x6', name: 'End', width: 5.5, length: 20, position: { x: 60, y: 0, z: 0 } }).project as Project)
+  const end = extra.boards[extra.boards.length - 1].id
+  act(() => studio.getState().apply(() => ok(addRule(extra, { kind: 'count', expr: 'N', first: b, copies: [], axis: 'x', from: a, to: end }))))
+  expect(studio.getState().error).toBe(null); expect(studio.getState().project.rules?.length).toBe(1)
+  expect(screen.getByTestId('result-N').textContent).toBe('2')
 })
