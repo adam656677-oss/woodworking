@@ -182,7 +182,21 @@ export function deleteBoards(p: Project, ids: string[]): Project {
   for (const j of p.joints) {
     if (ids.includes(j.hostBoardId) || ids.includes(j.partnerBoardId)) next = removeJoint(next, j.id)
   }
-  return { ...next, boards: next.boards.filter(b => !ids.includes(b.id)) }
+  const out: Project = { ...next, boards: next.boards.filter(b => !ids.includes(b.id)) }
+  return p.rules ? { ...out, rules: pruneRules(p.rules, new Set(ids)) } : out
+}
+
+/** Layout rules after parts are deleted: a rule loses parts it spaces; it goes if a part it hangs on is gone. */
+function pruneRules(rules: NonNullable<Project['rules']>, gone: Set<string>): NonNullable<Project['rules']> {
+  return rules.flatMap(r => {
+    if (r.kind === 'spacing') {
+      const parts = r.parts.filter(id => !gone.has(id))
+      return gone.has(r.from) || gone.has(r.to) || !parts.length ? [] : [{ ...r, parts }]
+    }
+    if (r.kind === 'count') return gone.has(r.first) || gone.has(r.from) || gone.has(r.to) ? [] : [{ ...r, copies: r.copies.filter(id => !gone.has(id)) }]
+    if (r.kind === 'center') return gone.has(r.part) || gone.has(r.on) ? [] : [r]
+    return gone.has(r.part) || gone.has(r.to) ? [] : [r]
+  })
 }
 
 export function setEndCut(p: Project, id: string, end: 'start' | 'end', cut: Partial<EndCut>): Project | OpError {
