@@ -5,7 +5,7 @@ import { studio, useStudio } from '../store'
 import { NumberInput } from '../common/NumberInput'
 import { InchInput } from './InchInput'
 import { FormulaInput, type FormulaSet } from '../../formulas/ui/FormulaInput'
-import { setJointFormula } from '../../formulas/ops'
+import { setGrooveValue, setJointFormula } from '../../formulas/ops'
 
 const NAMES: Record<JointType, string> = { butt: 'Butt', dado: 'Dado', rabbet: 'Rabbet', pocketScrew: 'Pocket screws', miter: 'Miter' }
 
@@ -18,7 +18,7 @@ function GrooveBox({ joint, field, label, value }: { joint: Joint; field: 'width
   const kids = useStudio(s => s.kidsMode)
   const apply = studio.getState().apply
   if (kids) return <InchInput label={label} allowZero={field === 'offset'} value={value} onChange={v => apply(p => updateJoint(p, joint.id, { [field]: v }))} />
-  const onSet = (s: FormulaSet) => apply(p => ('formula' in s ? setJointFormula(p, joint.id, field, s.formula) : updateJoint(setJointFormula(p, joint.id, field, null), joint.id, { [field]: s.value })))
+  const onSet = (s: FormulaSet) => apply(p => ('formula' in s ? setJointFormula(p, joint.id, field, s.formula) : setGrooveValue(p, joint.id, field, s.value)))
   return <FormulaInput label={label} allowZero={field === 'offset'} value={value} formula={joint.formulas?.[field]} error={errors[`joint:${joint.id}:${field}`]} onSet={onSet} />
 }
 

@@ -90,6 +90,12 @@ export function updateTemplateParams(project: Project, patch: Record<string, Par
  * Unlock a live template: its settings become named sizes and its parts formulas and rules, so it still resizes
  * but every part can now be edited freely.
  */
+/** The kids' unlock: the parts as they are, no sizes, formulas or rules (the Simple Designer has none). */
+export function freeze(project: Project): Project {
+  const { template: _t, ...rest } = project
+  return rest
+}
+
 export function unlock(project: Project): Project {
   const { template, ...rest } = project
   const def = template && findTemplate(template.templateId)

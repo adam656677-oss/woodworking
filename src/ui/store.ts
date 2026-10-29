@@ -7,8 +7,9 @@ import type { OpError } from '../model/ops'
 import type { Project, Wood } from '../model/types'
 import { validate, type Warning } from '../model/validate'
 import { cloneWoods, emptyProject } from '../model/woods'
-import { applyTemplate, findTemplate, unlock } from '../templates'
+import { applyTemplate, findTemplate, freeze } from '../templates'
 import { recalc, type FormulaError } from '../formulas/recalc'
+import { exactText, releaseEdited } from '../formulas/ops'
 
 export type Screen = 'home' | 'kids' | 'master' | 'plans' | 'draw'
 export type View = '3d' | 'front' | 'side' | 'top'
@@ -107,7 +108,7 @@ export function createStudioStore() {
         const project = deserialize(text)
         // The file name is the project's name (a file renamed in Explorer shows its new name).
         // The Simple Designer has no template panel, so a template project opens unlocked there.
-        const opened = get().kidsMode ? unlock(project) : project
+        const opened = get().kidsMode ? freeze(project) : project
         start(path ? { ...opened, name: nameFromPath(path) } : opened, path, dirty)
       } catch (e) {
         const msg = e instanceof ProjectFileError ? e.message : 'This project file could not be opened.'
@@ -189,7 +190,8 @@ export function createStudioStore() {
           return
         }
         // Sizes, formulas and rules are worked out again after every change (one undo step with it).
-        const done = recalc(keepNudges(prev, result)).project
+        // In the kids' designer a typed size or move simply wins: the formula or rule behind it is dropped.
+        const done = recalc(get().kidsMode ? releaseEdited(prev, result) : keepNudges(prev, result)).project
         const ids = new Set(done.boards.map(b => b.id))
         history.push({ project: done, selection: get().selection.filter(id => ids.has(id)) })
         set({ error: null })
@@ -336,13 +338,6 @@ export function useStudio<T>(selector: (s: StudioState) => T): T {
 }
 export { APP_NAME as appName }
 
-/** A fraction formulas can read, on the 1/64" grid (5/16, 3/2). */
-function fractionText(v: number): string {
-  let n = Math.round(Math.abs(v) * 64), d = 64
-  while (n % 2 === 0 && d > 1) { n /= 2; d /= 2 }
-  return d === 1 ? `${n}` : `${n}/${d}`
-}
-
 /**
  * A width or length changed by another tool (a joint shortening a shelf, a resize) while its formula stayed the
  * same would be undone by the recalculation — so the change is kept as a nudge on the formula: (W - 2) - 1/16.
@@ -360,7 +355,7 @@ export function keepNudges(prev: Project, next: Project): Project {
       if (!f || f !== old.formulas?.[k]) continue
       const delta = Math.round((b[k] - old[k]) * 64) / 64
       if (delta === 0) continue
-      formulas = { ...formulas, [k]: `(${f}) ${delta < 0 ? '-' : '+'} ${fractionText(delta)}` }
+      formulas = { ...formulas, [k]: `(${f}) ${delta < 0 ? '-' : '+'} ${exactText(Math.abs(delta))}` }
     }
     if (formulas === b.formulas) return b
     changed = true

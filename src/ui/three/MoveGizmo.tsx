@@ -41,7 +41,7 @@ export function MoveGizmo({ object, boardId }: { object: THREE.Object3D; boardId
             return r ? `a rule (${ruleLabel(st.project, r)})` : b.formulas?.[a] ? `its ${a.toUpperCase()} formula (=${b.formulas[a]})` : null
           }).filter(Boolean) : []
           st.apply(pr => moveBoard(pr, boardId, p))
-          if (held.length) st.setError(`This part is placed by ${held.join(' and ')} — change or remove that to move it this way.`)
+          if (held.length && !st.kidsMode) st.setError(`This part is placed by ${held.join(' and ')} — change or remove that to move it this way.`)
         }}
       />
       {label && (

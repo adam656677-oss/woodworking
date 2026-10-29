@@ -53,7 +53,8 @@ export const bookshelf: TemplateDef = {
     return {
       sizes: [
         { name: 'W', expr: num(params.W as number) }, { name: 'H', expr: num(params.H as number) }, { name: 'D', expr: num(params.D as number) },
-        { name: 'Shelves', expr: num(n) }, { name: 'T', expr: woodT(params.wood as string) },
+        // A count needs at least one part, so with no shelves there is no Shelves size (it would do nothing).
+        ...(n >= 1 ? [{ name: 'Shelves', expr: num(n) }] : []), { name: 'T', expr: woodT(params.wood as string) },
         { name: 'TB', expr: back ? woodT(params.backWood as string) : '0' },
         { name: 'DadoDepth', expr: `min(${num(DADO_DEPTH_MAX)}, floor(T*32)/64)` },
         { name: 'BackRabbet', expr: `min(${num(BACK_RABBET_DEPTH_MAX)}, floor(T*32)/64)` },

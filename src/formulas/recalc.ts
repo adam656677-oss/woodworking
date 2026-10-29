@@ -4,6 +4,7 @@ import { worldBox } from '../model/geometry'
 import type { Board, Joint, Project } from '../model/types'
 import { formatInches, snap64 } from '../model/units'
 import { turnBoard } from '../shaping/turning'
+import { updateJoint } from '../model/ops'
 import { evalFormula, namesIn, parseFormula, type Expr } from './expr'
 import { applyRules } from './rules'
 import { reseatGrooves } from './reseat'
@@ -108,7 +109,10 @@ export function recalcFormulas(p0: Project): { project: Project; errors: Formula
     const r = parseFormula(n.expr)
     if (!r.ok) { errors.push({ key: n.key, message: r.error, boardIds: n.boardIds }); continue }
     n.parsed = r.expr
-    n.deps = namesIn(r.expr).flatMap(nodeFor).filter(d => d !== n.key || true)
+    n.deps = namesIn(r.expr).flatMap(nodeFor)
+    // A position is the box's low corner, which moves when the part's own size changes (a turned part).
+    const own = /^board:(.+):(x|y|z)$/.exec(n.key)
+    if (own) for (const f of ['width', 'length']) if (nodes.has(`board:${own[1]}:${f}`)) n.deps.push(`board:${own[1]}:${f}`)
   }
   // Order, finding loops.
   const order: Node[] = []
@@ -155,7 +159,7 @@ export function recalcFormulas(p0: Project): { project: Project; errors: Formula
       p = { ...p, boards: p.boards.map(b => (b.id === id ? applyBoardValue(b, path, v) : b)) }
       touched.add(id)
     } else {
-      p = { ...p, joints: p.joints.map(j => (j.id === id ? { ...j, params: setPath(j.params, path, v) } as Joint : j)) }
+      p = setJointValue(p, id, path, v)
     }
   }
   // A ready-made turning is redrawn for its new sizes.
@@ -168,6 +172,24 @@ export function recalcFormulas(p0: Project): { project: Project; errors: Formula
     else p = r.project
   }
   return { project: p, errors, sizes: sizeVals }
+}
+
+/**
+ * A joint value from a formula. A dado/rabbet depth moves the partner in or out of the groove, as typing it does —
+ * unless the partner's own size formula sets that size (it already counts the depth).
+ */
+function setJointValue(p: Project, id: string, path: string, v: number): Project {
+  const j = p.joints.find(x => x.id === id)
+  if (!j) return p
+  if (path !== 'depth' || (j.type !== 'dado' && j.type !== 'rabbet') || getPath(j.params, 'depth') === v) {
+    return { ...p, joints: p.joints.map(x => (x.id === id ? { ...x, params: setPath(x.params, path, v) } as Joint : x)) }
+  }
+  const before = p.boards.find(b => b.id === j.partnerBoardId)
+  const next = updateJoint(p, id, { depth: v })
+  const after = next.boards.find(b => b.id === j.partnerBoardId)
+  if (!before || !after) return next
+  const held = (['width', 'length'] as const).some(k => before[k] !== after[k] && before.formulas?.[k])
+  return held ? { ...next, boards: next.boards.map(b => (b.id === before.id ? before : b)) } : next
 }
 
 function applyBoardValue(b: Board, path: string, v: number): Board {

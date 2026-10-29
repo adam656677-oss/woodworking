@@ -59,3 +59,32 @@ test('a change made by another tool (a joint shortening a part) is kept as a nud
   s.getState().apply(p => ok(setSize(p, 'W', '40')))
   expect(rail(s, id).length).toBe(38 - 1 / 16)
 })
+
+test("in the kids' designer a typed size or move wins over a formula or rule (it replaces it)", async () => {
+  const { moveBoard } = await import('../../src/model/ops')
+  const { worldBox } = await import('../../src/model/geometry')
+  const { addRule } = await import('../../src/formulas/rules')
+  const { s, id } = store()
+  let post = ''
+  s.getState().apply(p => { const r = addBoard(p, { woodId: '1x6', name: 'Post', width: 5.5, length: 20, position: { x: 40, y: 0, z: 0 } }); post = r.id; return r.project })
+  s.getState().apply(p => setBoardFormula(ok(setSize(p, 'W', '30')), id, 'length', '=W - 2'))
+  s.getState().apply(p => ok(addRule(p, { kind: 'gap', axis: 'x', part: post, to: id, side: 'max', gap: 1 })))
+  s.setState({ kidsMode: true })
+  s.getState().apply(p => ({ ...p, boards: p.boards.map(b => (b.id === id ? { ...b, length: 12 } : b)) }))
+  expect(rail(s, id).length).toBe(12)
+  expect(rail(s, id).formulas?.length).toBeUndefined()
+  s.getState().apply(p => { const b = p.boards.find(x => x.id === post)!; return moveBoard(p, post, { ...b.position, x: b.position.x + 30 }) })
+  expect(s.getState().project.rules ?? []).toEqual([])
+  expect(worldBox(rail(s, post)).min.x).toBeGreaterThan(30)
+})
+
+test("a template opened in the kids' designer opens as plain parts, without formulas", async () => {
+  const { freeze } = await import('../../src/templates')
+  const { applyTemplate } = await import('../../src/templates')
+  const { emptyProject } = await import('../../src/model/woods')
+  const p = freeze(applyTemplate(emptyProject('T'), 'bookshelf', {}))
+  expect(p.template).toBeUndefined()
+  expect(p.sizes).toBeUndefined()
+  expect(p.rules).toBeUndefined()
+  expect(p.boards.some(b => b.formulas)).toBe(false)
+})

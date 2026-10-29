@@ -1,5 +1,5 @@
 // The Sizes tab: named sizes (name, value or formula, result) and the design's layout rules.
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { Project } from '../../model/types'
 import { formatInches } from '../../model/units'
 import { studio, useStudio } from '../../ui/store'
@@ -18,11 +18,15 @@ function SizeRow({ name, expr, result, error, plain }: { name: string; expr: str
   const [n, setN] = useState(name)
   const [e, setE] = useState(expr)
   const [msg, setMsg] = useState<string | null>(null)
+  const [editing, setEditing] = useState<'name' | 'expr' | null>(null)
+  // Follow changes made elsewhere (a rename, an undo) unless that box is being typed in.
+  useEffect(() => { if (editing !== 'name') setN(name) }, [name, editing])
+  useEffect(() => { if (editing !== 'expr') setE(expr) }, [expr, editing])
   return (
     <li className="flex flex-col gap-0.5 border-b border-stone-100 py-1">
       <div className="flex items-center gap-1">
-        <input aria-label={`Name of ${name}`} value={n} onChange={x => setN(x.target.value)}
-          onBlur={() => { if (n.trim() && n.trim() !== name) apply(p => renameSize(p, name, n.trim()), setMsg); else setN(name) }}
+        <input aria-label={`Name of ${name}`} value={n} onChange={x => setN(x.target.value)} onFocus={() => setEditing('name')}
+          onBlur={() => { setEditing(null); if (n.trim() && n.trim() !== name) apply(p => renameSize(p, name, n.trim()), setMsg); else setN(name) }}
           onKeyDown={x => { if (x.key === 'Enter') (x.target as HTMLInputElement).blur() }}
           className="min-w-0 flex-1 rounded border border-transparent px-1 font-semibold hover:border-stone-300" />
         <span className="shrink-0 text-right text-xs text-stone-600" data-testid={`result-${name}`}>{result === undefined ? '—' : plain ? String(Math.round(result * 1000) / 1000) : formatInches(result)}</span>
@@ -30,8 +34,8 @@ function SizeRow({ name, expr, result, error, plain }: { name: string; expr: str
       </div>
       <div className="flex items-center gap-1 pl-1">
         <span className="text-stone-500">=</span>
-        <input aria-label={`Value of ${name}`} value={e} onChange={x => setE(x.target.value)}
-          onBlur={() => { if (e.trim() !== expr) apply(p => setSize(p, name, e), setMsg) }}
+        <input aria-label={`Value of ${name}`} value={e} onChange={x => setE(x.target.value)} onFocus={() => setEditing('expr')}
+          onBlur={() => { setEditing(null); if (e.trim() !== expr) apply(p => setSize(p, name, e), setMsg) }}
           onKeyDown={x => { if (x.key === 'Enter') (x.target as HTMLInputElement).blur() }}
           className="min-w-0 flex-1 rounded border border-stone-300 px-1 font-mono text-xs" />
       </div>

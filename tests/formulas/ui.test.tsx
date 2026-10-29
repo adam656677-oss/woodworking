@@ -147,3 +147,19 @@ test('a size used by a count rule shows as a plain number', () => {
   expect(studio.getState().error).toBe(null); expect(studio.getState().project.rules?.length).toBe(1)
   expect(screen.getByTestId('result-N').textContent).toBe('2')
 })
+
+test('a size row shows changes made elsewhere (a rename, an undo) and leaving it untouched writes nothing back', () => {
+  start()
+  studio.getState().apply(p => ok(setSize(ok(setSize(p, 'H', '30')), 'Inner', 'H - 2')))
+  render(<PartsList />)
+  fireEvent.click(screen.getByRole('tab', { name: 'Sizes' }))
+  const n = screen.getByLabelText('Name of H')
+  fireEvent.change(n, { target: { value: 'Height' } }); fireEvent.blur(n)
+  const inner = screen.getByLabelText('Value of Inner') as HTMLInputElement
+  expect(inner.value).toBe('Height - 2')
+  fireEvent.focus(inner); fireEvent.blur(inner)
+  expect(studio.getState().project.sizes!.find(s => s.name === 'Inner')!.expr).toBe('Height - 2')
+  act(() => studio.getState().apply(p => ok(setSize(p, 'Inner', '5'))))
+  act(() => studio.getState().undo())
+  expect((screen.getByLabelText('Value of Inner') as HTMLInputElement).value).toBe('Height - 2')
+})

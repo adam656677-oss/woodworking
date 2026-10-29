@@ -1,8 +1,11 @@
 // Editing named sizes and formulas. All pure: each returns a new project (or a plain error).
-import type { OpError } from '../model/ops'
+import { updateJoint, type OpError } from '../model/ops'
 import type { Project } from '../model/types'
 import { FUNCTIONS } from './expr'
-import { fieldLabel, partNameOf } from './recalc'
+import { worldBox } from '../model/geometry'
+import { controlledBy, removeRule } from './rules'
+import { AXES3 } from './types'
+import { fieldLabel, hasFormulas, partNameOf } from './recalc'
 
 const NAME = /^[A-Za-z][A-Za-z0-9_]*$/
 const strip = (expr: string) => expr.trim().replace(/^=\s*/, '')
@@ -100,3 +103,54 @@ export function setJointFormula(p: Project, id: string, path: string, expr: stri
     })
   }
 }
+
+/**
+ * A dado/rabbet size typed as a plain number. Where formulas re-seat grooves, a typed width or offset is kept as a
+ * fixed formula so the next recalculation doesn't measure it again from the partner.
+ */
+export function setGrooveValue(p: Project, jointId: string, field: 'width' | 'depth' | 'offset', v: number): Project | OpError {
+  let q = setJointFormula(p, jointId, field, null)
+  const r = updateJoint(q, jointId, { [field]: v })
+  if ('error' in r) return r
+  q = r
+  if (field !== 'depth' && hasFormulas(p)) q = setJointFormula(q, jointId, field, exactText(v))
+  return q
+}
+
+/** A number as formulas read it, exact on the 1/64" grid (49/64, 10, 3/2); otherwise a decimal. */
+export function exactText(v: number): string {
+  if (Math.abs(v * 64 - Math.round(v * 64)) > 1e-9) return String(Math.round(v * 1e6) / 1e6)
+  let n = Math.round(Math.abs(v) * 64), d = 64
+  while (n % 2 === 0 && d > 1) { n /= 2; d /= 2 }
+  return `${v < 0 ? '-' : ''}${d === 1 ? n : `${n}/${d}`}`
+}
+
+/**
+ * Drops the formulas and rules behind any size or place that changed from prev to next (the kids' designer, where an
+ * edit always wins, as answering "Replace" does in the Master Shop).
+ */
+export function releaseEdited(prev: Project, next: Project): Project {
+  if (!hasFormulas(next)) return next
+  let q = next
+  const before = new Map(prev.boards.map(b => [b.id, b]))
+  for (const b of next.boards) {
+    const old = before.get(b.id)
+    if (!old) continue
+    const ob = worldBox(old), nb = worldBox(b)
+    for (const k of ['width', 'length'] as const) if (old[k] !== b[k] && b.formulas?.[k]) q = setBoardFormula(q, b.id, k, null)
+    for (const a of AXES3) {
+      if (Math.abs(ob.min[a] - nb.min[a]) < 1e-9) continue
+      if (b.formulas?.[a]) q = setBoardFormula(q, b.id, a, null)
+      const r = controlledBy(q, b.id, a)
+      if (r) q = removeRule(q, r.id)
+    }
+  }
+  const jBefore = new Map(prev.joints.map(j => [j.id, j]))
+  for (const j of next.joints) {
+    const old = jBefore.get(j.id)
+    if (!old || !j.formulas) continue
+    for (const k of Object.keys(j.formulas)) if (getNum(old.params, k) !== getNum(j.params, k)) q = setJointFormula(q, j.id, k, null)
+  }
+  return q
+}
+const getNum = (o: unknown, k: string) => (o as Record<string, unknown>)[k]
