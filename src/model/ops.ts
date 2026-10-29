@@ -188,7 +188,7 @@ export function deleteBoards(p: Project, ids: string[]): Project {
 
 /** Layout rules after parts are deleted: a rule loses parts it spaces; it goes if a part it hangs on is gone. */
 function pruneRules(rules: NonNullable<Project['rules']>, gone: Set<string>): NonNullable<Project['rules']> {
-  return rules.flatMap(r => {
+  return rules.flatMap((r): NonNullable<Project['rules']> => {
     if (r.kind === 'spacing') {
       const parts = r.parts.filter(id => !gone.has(id))
       return gone.has(r.from) || gone.has(r.to) || !parts.length ? [] : [{ ...r, parts }]
