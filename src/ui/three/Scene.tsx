@@ -47,8 +47,9 @@ export default function Scene() {
     if (!measuring) setPoints([])
   }, [measuring])
   useEffect(() => {
-    setSelectedGroup(selection.length === 1 ? groups.current.get(selection[0]) ?? null : null)
-  }, [selection, project])
+    // No move arrows on a hidden part.
+    setSelectedGroup(selection.length === 1 && shown.some(b => b.id === selection[0]) ? groups.current.get(selection[0]) ?? null : null)
+  }, [selection, project, shown])
 
   const onSelect = (id: string) => (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation()

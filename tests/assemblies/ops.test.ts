@@ -197,3 +197,95 @@ test('linked copies are numbered: Drawer, Drawer 2, Drawer 3', () => {
   const r = ok(copyGroup(t.p, t.b, true))
   expect(r.project.groups!.find(g => g.id === r.id)!.name).toBe('Drawer 3')
 })
+
+// ── final review ──────────────────────────────────────────────────────────
+import { alignBoards, duplicateBoards, mirrorBoards } from '../../src/model/ops'
+
+test('a duplicated linked part is a plain part (no link), so it drags nothing with it', () => {
+  const t = linkedPair()
+  const r = duplicateBoards(t.p, [t.bottom])
+  const p = syncLinks(t.p, r.project)
+  expect(board(p, r.ids[0]).link).toBeUndefined()
+  const b2 = t.twin(t.bottom)
+  const q = syncLinks(p, updateBoard(p, r.ids[0], { width: 3 }))
+  expect(board(q, b2).width).toBe(5.5)
+})
+
+test('one edit that moves a part in both copies moves each once, not twice', () => {
+  const t = linkedPair()
+  const b2 = t.twin(t.bottom)
+  const z = (p: Project, id: string) => board(p, id).position.z
+  const edited = { ...t.p, boards: t.p.boards.map(b => (b.id === t.bottom || b.id === b2 ? { ...b, position: { ...b.position, z: b.position.z + 1 } } : b)) }
+  const p = syncLinks(t.p, edited)
+  expect(z(p, t.bottom)).toBe(z(t.p, t.bottom) + 1)
+  expect(z(p, b2)).toBe(z(t.p, b2) + 1)
+  // Moving one part inside a copy moves it in the other (the copies share their layout).
+  const q = syncLinks(t.p, moveBoard(t.p, t.bottom, { ...board(t.p, t.bottom).position, z: 2 }))
+  expect(z(q, b2)).toBe(2)
+})
+
+test('mirroring a whole copy changes only that copy', () => {
+  const t = linkedPair()
+  const p = { ...t.p, boards: t.p.boards.map(b => ({ ...b, endCuts: { start: { miter: 30, bevel: 0 }, end: { miter: 0, bevel: 0 } } })) }
+  const after = syncLinks(p, mirrorBoards(p, groupBoardIds(p, t.b), 'x'))
+  expect(groupBoardIds(after, t.a).map(id => board(after, id).endCuts.start.miter)).toEqual([30, 30, 30])
+})
+
+test('deleting a joint host in one copy moves the partner once in the other', () => {
+  const t = linkedPair()
+  const j = ok(addJoint(t.p, 'dado', t.left, t.bottom) as unknown as { project: Project } | { error: string })
+  const p = pruneGroups(syncLinks(t.p, j.project))
+  const l2 = t.twin(t.left)
+  const q = pruneGroups(syncLinks(p, deleteBoards(p, [t.bottom])))
+  const rel = (pr: Project, id: string, other: string) => [board(pr, id).position.z, board(pr, id).width, board(pr, other).position.z]
+  expect(rel(q, l2, l2)[0] - rel(p, l2, l2)[0]).toBeCloseTo(board(q, t.left).position.z - board(p, t.left).position.z)
+  expect(board(q, l2).width).toBe(board(q, t.left).width)
+})
+
+test('a turned copy follows a resize in its own frame (a dado seats both sides)', () => {
+  const t = linkedPair()
+  let p = syncLinks(t.p, rotateGroup(t.p, t.b, 'x', 90))
+  const b2 = t.twin(t.bottom), l2 = t.twin(t.left)
+  const j = ok(addJoint(p, 'dado', t.left, t.bottom) as unknown as { project: Project } | { error: string })
+  p = syncLinks(p, j.project)
+  const shared = (a: string, b: string) => {
+    const A = worldBox(board(p, a)), C = worldBox(board(p, b))
+    return (['x', 'y', 'z'] as const).map(k => Math.max(0, Math.min(A.max[k], C.max[k]) - Math.max(A.min[k], C.min[k])))
+  }
+  const s1 = shared(t.bottom, t.left).filter(v => v > 0).length, s2 = shared(b2, l2).filter(v => v > 0).length
+  expect(s2).toBe(s1)
+})
+
+test('a linked copy inside (or around) a linked copy is refused with a plain message', () => {
+  const d = drawer()
+  let p = ok(groupBoards(d.p, [d.left, d.right], 'Sides')).project
+  p = ok(groupBoards(p, [d.left, d.right, d.bottom], 'Drawer')).project
+  const drawerId = p.groups!.find(g => g.name === 'Drawer')!.id
+  const sidesId = p.groups!.find(g => g.name === 'Sides')!.id
+  p = ok(copyGroup(p, drawerId, true)).project
+  expect(copyGroup(p, sidesId, true)).toEqual({ error: "Linked copies inside a linked copy aren't supported yet" })
+  expect('error' in copyGroup(p, sidesId, false)).toBe(false)
+})
+
+test('linked-copy names count up from the highest; a lone instance loses its link', () => {
+  const t = linkedPair()
+  let p = pruneGroups(deleteBoards(t.p, groupBoardIds(t.p, t.b)))
+  expect(p.groups!.every(g => !g.link)).toBe(true)
+  expect(p.boards.every(b => !b.link)).toBe(true)
+  const r1 = ok(copyGroup(p, t.a, true)); p = r1.project
+  const r2 = ok(copyGroup(p, t.a, true)); p = r2.project
+  p = pruneGroups(deleteBoards(p, groupBoardIds(p, r1.id)))
+  const r3 = ok(copyGroup(p, t.a, true))
+  expect(r3.project.groups!.map(g => g.name).sort()).toEqual(['Drawer', 'Drawer 3', 'Drawer 4'])
+})
+
+test('Duplicate on a whole group copies the group; on parts copies the parts', async () => {
+  const { duplicateSelection } = await import('../../src/assemblies/ops')
+  const t = linkedPair()
+  const all = groupBoardIds(t.p, t.a)
+  const r = duplicateSelection(t.p, all)
+  expect(r.ids).toHaveLength(3)
+  expect(r.project.groups!.map(g => g.name)).toContain('Drawer (copy)')
+  expect(r.ids.every(id => !board(r.project, id).link)).toBe(true)
+  expect(duplicateSelection(t.p, all, false).project.groups).toHaveLength(2)
+})

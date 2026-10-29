@@ -1,5 +1,5 @@
-import { lazy, Suspense, useEffect } from 'react'
-import { deleteBoards, duplicateBoards } from '../../model/ops'
+import { lazy, Suspense, useEffect, useMemo } from 'react'
+import { deleteBoards } from '../../model/ops'
 import { studio, useStudio } from '../store'
 import { CutListView } from './CutListView'
 import { JointPanel } from './JointPanel'
@@ -11,7 +11,7 @@ import { Toolbar } from './Toolbar'
 import { WarningsList } from './WarningsList'
 import { WoodLibraryDialog } from './WoodLibraryDialog'
 import { SceneBoundary } from '../three/SceneBoundary'
-import { wholeGroup } from '../../assemblies/ops'
+import { duplicateSelection, wholeGroup } from '../../assemblies/ops'
 import { GroupPanel } from '../../assemblies/ui/GroupPanel'
 
 const Scene = lazy(() => import('../three/Scene'))
@@ -30,7 +30,7 @@ export function Designer() {
   const woodsOpen = useStudio(s => s.woodsOpen)
   const kidsMode = useStudio(s => s.kidsMode)
   const project = useStudio(s => s.project)
-  const whole = kidsMode ? null : wholeGroup(project, selection)
+  const whole = useMemo(() => (kidsMode ? null : wholeGroup(project, selection)), [kidsMode, project, selection])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -52,7 +52,7 @@ export function Designer() {
         e.preventDefault()
         let ids: string[] = []
         s.apply(p => {
-          const r = duplicateBoards(p, s.selection)
+          const r = duplicateSelection(p, s.selection, !s.kidsMode)
           ids = r.ids
           return r.project
         })

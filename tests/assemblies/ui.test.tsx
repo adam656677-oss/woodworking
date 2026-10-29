@@ -113,3 +113,11 @@ test("the kids' designer shows a flat list with no group controls", () => {
   expect(within(screen.getByRole('list', { name: 'Parts' })).getAllByRole('listitem')).toHaveLength(3)
   act(() => studio.setState({ kidsMode: false }))
 })
+
+test('a part selected while others are isolated joins the isolated view', () => {
+  const [a, b] = start()
+  act(() => studio.getState().isolate([a]))
+  act(() => studio.getState().select([b]))
+  expect(studio.getState().isolated!.sort()).toEqual([a, b].sort())
+  act(() => studio.getState().showAll())
+})

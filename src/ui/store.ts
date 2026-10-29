@@ -222,7 +222,9 @@ export function createStudioStore() {
         // Selection is part of the current snapshot so undo brings it back, but selecting is not an undo step.
         const cur = history.current
         ;(cur as Snapshot).selection = ids
-        set({ selection: ids })
+        // Parts selected while others are isolated (a new copy, say) join the isolated view.
+        const iso = get().isolated
+        set({ selection: ids, ...(iso && ids.some(id => !iso.includes(id)) ? { isolated: [...new Set([...iso, ...ids])] } : {}) })
       },
 
       newFromTemplate: id => {

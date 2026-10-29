@@ -112,7 +112,7 @@ function PartsTab() {
         />
       ) : (
         <div className="flex justify-between gap-2">
-          <span className="truncate">{warned.has(b.id) && <span className="text-red-600" title="Has a warning">⚠ </span>}{b.name}{b.link && <span title="Linked copy" className="text-amber-700"> 🔗</span>}</span>
+          <span className="truncate">{warned.has(b.id) && <span className="text-red-600" title="Has a warning">⚠ </span>}{b.name}{b.link && !kids && <span title="Linked copy" className="text-amber-700"> 🔗</span>}</span>
           <span className="flex shrink-0 items-center gap-1 text-xs text-stone-500">{formatInches(b.width)} × {formatInches(b.length)}{!kids && eye([b.id], b.name)}</span>
         </div>
       )}

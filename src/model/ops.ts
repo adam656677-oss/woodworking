@@ -116,7 +116,9 @@ export function duplicateBoards(p: Project, ids: string[]): { project: Project; 
     .map(b => {
       const id = newId('b')
       map.set(b.id, id)
-      return { ...structuredClone(b), id, name: `${b.name} (copy)`, position: { ...b.position, x: snap64(b.position.x + 1) } }
+      // A copy is a part of its own: not linked to anything.
+      const { link: _l, ...rest } = structuredClone(b)
+      return { ...rest, id, name: `${b.name} (copy)`, position: { ...b.position, x: snap64(b.position.x + 1) } }
     })
   const joints = p.joints
     .filter(j => map.has(j.hostBoardId) && map.has(j.partnerBoardId))

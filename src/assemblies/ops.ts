@@ -1,7 +1,7 @@
 // Groups (assemblies) and linked copies. All pure: each returns a new project (or a plain error).
-import { type Axis, rotateVec, worldBox, type Box } from '../model/geometry'
+import { type Axis, rotateVec, toLocal, toWorld, worldBox, type Box } from '../model/geometry'
 import { newId } from '../model/ids'
-import { deleteBoards, rotateBoard, type OpError } from '../model/ops'
+import { deleteBoards, duplicateBoards, rotateBoard, type OpError } from '../model/ops'
 import type { Board, Group, Joint, Project } from '../model/types'
 import { snap64 } from '../model/units'
 
@@ -79,6 +79,16 @@ export function pruneGroups(p: Project): Project {
   const used = new Set(boards.flatMap(b => ancestry(q, b.groupId).map(g => g.id)))
   groups = groups.filter(g => used.has(g.id))
   boards = boards.map(b => (b.groupId && !used.has(b.groupId) ? stripGroup(b) : b))
+  // A linked copy left on its own is no longer linked to anything.
+  const counts = new Map<string, number>()
+  for (const g of groups) if (g.link) counts.set(g.link, (counts.get(g.link) ?? 0) + 1)
+  const lone = new Set(groups.filter(g => g.link && counts.get(g.link) === 1).map(g => g.id))
+  if (lone.size) {
+    const q2 = withGroups({ ...p, boards }, groups)
+    const inLone = new Set(boards.filter(b => ancestry(q2, b.groupId).some(g => lone.has(g.id))).map(b => b.id))
+    groups = groups.map(g => (lone.has(g.id) ? stripLink(g) : g))
+    boards = boards.map(b => (inLone.has(b.id) && b.link ? stripBoardLink(b) : b))
+  }
   const changed = groups.length !== groupsOf(p).length || boards.some((b, i) => b !== p.boards[i]) || groups.some((g, i) => g !== groupsOf(p)[i])
   return changed ? withGroups({ ...p, boards }, groups) : p
 }
@@ -168,6 +178,9 @@ export function copyGroup(p: Project, gid: string, linked: boolean): { project: 
   const g = byId(p, gid)
   const box = groupBox(p, gid)
   if (!g || !box) return { error: 'That group has no parts' }
+  if (linked && (ancestry(p, g.parentId).some(x => x.link) || subgroups(p, gid).some(x => x.link))) {
+    return { error: "Linked copies inside a linked copy aren't supported yet" }
+  }
   const shift = snap64(box.max.x - box.min.x + 2)
   const gmap = new Map<string, string>([[gid, newId('g')]])
   for (const s of subgroups(p, gid)) gmap.set(s.id, newId('g'))
@@ -175,7 +188,10 @@ export function copyGroup(p: Project, gid: string, linked: boolean): { project: 
   const bmap = new Map<string, string>()
   for (const id of ids) bmap.set(id, newId('b'))
   const link = linked ? g.link ?? newId('k') : undefined
-  const instances = link ? Math.max(1, groupsOf(p).filter(x => x.link === link).length) : 0
+  // Linked copies are numbered on from the highest: Drawer, Drawer 2, Drawer 3.
+  const family = link ? groupsOf(p).filter(x => x.link === link) : []
+  const base = (family.length ? family[0] : g).name
+  const top = Math.max(1, ...family.map(x => (x.name.startsWith(`${base} `) ? Number(x.name.slice(base.length + 1)) : 1)).filter(Number.isFinite))
   // Linked parts share a key; the original's parts get theirs now if they had none.
   const keys = new Map<string, string>()
   for (const b of p.boards) if (ids.has(b.id)) keys.set(b.id, b.link ?? newId('k'))
@@ -202,7 +218,8 @@ export function copyGroup(p: Project, gid: string, linked: boolean): { project: 
   }))
   const newGroups: Group[] = [g, ...subgroups(p, gid)].map(x => {
     const c: Group = { ...x, id: gmap.get(x.id)! }
-    if (x.id === gid) c.name = linked ? `${x.name.replace(/ \d+$/, '')} ${instances + 1}` : `${x.name} (copy)`
+    if (x.id === gid) c.name = linked ? `${base} ${top + 1}` : `${x.name} (copy)`
+    else if (!linked) delete c.link
     if (x.parentId && gmap.has(x.parentId)) c.parentId = gmap.get(x.parentId)
     if (x.id === gid) { if (link) c.link = link; else delete c.link }
     return c
@@ -253,50 +270,61 @@ export function instanceOf(p: Project, b: Board): Group | undefined {
 
 /**
  * After a change, makes every linked copy match: sizes, wood, features and size formulas of the parts changed in
- * one instance; moves of single parts inside an instance; parts deleted from one; joints added, removed or changed.
- * Moving or turning a whole instance is that instance's own.
+ * one instance; moves of single parts inside an instance (turned into each copy's own frame); parts deleted from
+ * one; joints added, removed or changed. Moving, turning or mirroring a whole instance is that instance's own.
+ * A part that was itself changed by the same edit is left as the edit made it.
  */
 export function syncLinks(prev: Project, next: Project): Project {
   if (!next.boards.some(b => b.link) && !prev.boards.some(b => b.link)) return next
-  let q = next
+  // Lookups built once: part → instance, (instance, key) → part.
+  const index = (from: Project) => {
+    const inst = new Map<string, Group>()
+    const byKey = new Map<string, Board>()
+    for (const b of from.boards) {
+      if (!b.link) continue
+      const i = instanceOf(from, b)
+      if (!i) continue
+      inst.set(b.id, i)
+      byKey.set(`${i.id}|${b.link}`, b)
+    }
+    return { inst, byKey }
+  }
+  const P = index(prev), N = index(next)
   const before = new Map(prev.boards.map(b => [b.id, b]))
-  const partner = (inst: Group, key: string, from: Project) =>
-    from.boards.find(b => b.link === key && instanceOf(from, b)?.id === inst.id)
-  const others = (from: Project, inst: Group) => groupsOf(from).filter(g => g.link === inst.link && g.id !== inst.id)
+  const changedByEdit = (b: Board) => { const o = before.get(b.id); return !o || JSON.stringify(o) !== JSON.stringify(b) }
+  const siblings = (inst: Group) => groupsOf(next).filter(g => g.link === inst.link && g.id !== inst.id)
+  let boards = new Map(next.boards.map(b => [b.id, b]))
+  let joints = next.joints
 
-  // Parts deleted from part of an instance go from the others too.
-  const gone = prev.boards.filter(b => b.link && !next.boards.some(x => x.id === b.id))
-  const goneBy = new Map<string, Board[]>()
-  for (const b of gone) { const i = instanceOf(prev, b); if (i) goneBy.set(i.id, [...(goneBy.get(i.id) ?? []), b]) }
-  for (const [iid, list] of goneBy) {
-    const inst = byId(prev, iid)!
-    const all = prev.boards.filter(b => instanceOf(prev, b)?.id === iid)
-    if (list.length === all.length) continue
-    const del: string[] = []
-    for (const o of others(prev, inst)) for (const b of list) { const m = partner(o, b.link!, q); if (m) del.push(m.id) }
-    if (del.length) q = deleteBoards(q, del)
+  // Which instances were moved, turned or mirrored as a whole (nothing of theirs is copied).
+  const members = new Map<string, Board[]>()
+  for (const b of next.boards) { const i = N.inst.get(b.id); if (i) members.set(i.id, [...(members.get(i.id) ?? []), b]) }
+  const whole = new Set<string>()
+  for (const [iid, list] of members) {
+    // Every part touched by one edit, and something moved: a mirror, align, turn or move of the whole copy.
+    const moved = (b: Board) => { const o = before.get(b.id); return !!o && (!same(o.position, b.position) || !same(o.rotation, b.rotation)) }
+    if (list.every(changedByEdit) && list.some(moved)) whole.add(iid)
   }
 
-  // Board changes, instance by instance.
-  const insts = new Map<string, Board[]>()
-  for (const b of next.boards) { const i = instanceOf(next, b); if (i && b.link) insts.set(i.id, [...(insts.get(i.id) ?? []), b]) }
-  for (const [iid, list] of insts) {
+  // Board changes.
+  for (const [iid, list] of members) {
+    if (whole.has(iid)) continue
     const inst = byId(next, iid)!
-    const moved = list.filter(b => { const o = before.get(b.id); return o && (!same(o.position, b.position) || !same(o.rotation, b.rotation)) })
-    const wholeMove = moved.length === list.length
     for (const b of list) {
       const o = before.get(b.id)
-      if (!o) continue
+      if (!o || !changedByEdit(b)) continue
       const patch: Partial<Board> = {}
       for (const k of SYNCED) if (!same(o[k], b[k])) (patch as Record<string, unknown>)[k] = structuredClone(b[k])
       const f = sizeFormulas(b)
       const fChanged = !same(sizeFormulas(o), f)
-      const d = { x: b.position.x - o.position.x, y: b.position.y - o.position.y, z: b.position.z - o.position.z }
-      const shift = !wholeMove && same(o.rotation, b.rotation) && (d.x || d.y || d.z)
-      if (!Object.keys(patch).length && !fChanged && !shift) continue
-      for (const og of others(q, inst)) {
-        const m = partner(og, b.link!, q)
-        if (!m) continue
+      const moved = same(o.rotation, b.rotation) && !same(o.position, b.position)
+      // The move in the part's own frame, so a turned copy moves the matching way.
+      const local = moved ? toLocal(o, b.position) : null
+      if (!Object.keys(patch).length && !fChanged && !local) continue
+      for (const og of siblings(inst)) {
+        const m0 = N.byKey.get(`${og.id}|${b.link}`)
+        if (!m0 || changedByEdit(m0)) continue
+        const m = boards.get(m0.id)!
         let nb: Board = { ...m, ...patch }
         if (fChanged) {
           const xyz = Object.fromEntries(Object.entries(m.formulas ?? {}).filter(([k]) => k === 'x' || k === 'y' || k === 'z'))
@@ -304,50 +332,85 @@ export function syncLinks(prev: Project, next: Project): Project {
           if (Object.keys(all).length) nb.formulas = all
           else { const { formulas: _f, ...rest } = nb; nb = rest }
         }
-        for (const k of SYNCED) if (patch[k] === undefined && b[k] === undefined && m[k] !== undefined && o[k] !== undefined) delete (nb as Record<string, unknown>)[k]
-        if (shift && same(m.rotation, o.rotation)) nb = { ...nb, position: { x: snap64(m.position.x + d.x), y: snap64(m.position.y + d.y), z: snap64(m.position.z + d.z) } }
-        q = { ...q, boards: q.boards.map(x => (x.id === m.id ? nb : x)) }
+        for (const k of SYNCED) if (k in patch && patch[k] === undefined) delete (nb as Record<string, unknown>)[k]
+        if (local) {
+          const w = toWorld(m, local)
+          nb = { ...nb, position: { x: snap64(w.x), y: snap64(w.y), z: snap64(w.z) } }
+        }
+        boards.set(m.id, nb)
       }
     }
   }
 
-  // Joints between linked parts.
-  const key = (from: Project, j: Joint) => {
+  // Joints between parts of one instance.
+  const jkey = (idx: typeof P, j: Joint, from: Project) => {
     const h = from.boards.find(b => b.id === j.hostBoardId), pa = from.boards.find(b => b.id === j.partnerBoardId)
-    if (!h?.link || !pa?.link) return null
-    const i = instanceOf(from, h)
-    if (!i || instanceOf(from, pa)?.id !== i.id) return null
+    const i = h && idx.inst.get(h.id)
+    if (!h?.link || !pa?.link || !i || idx.inst.get(pa.id)?.id !== i.id) return null
     return { inst: i, host: h.link, partner: pa.link }
   }
-  const match = (from: Project, inst: Group, k: { host: string; partner: string }, type: string) => {
-    const h = partner(inst, k.host, from), pa = partner(inst, k.partner, from)
-    return h && pa ? from.joints.find(j => j.type === type && j.hostBoardId === h.id && j.partnerBoardId === pa.id) ?? null : null
+  const match = (inst: Group, k: { host: string; partner: string }, type: string) => {
+    const h = N.byKey.get(`${inst.id}|${k.host}`), pa = N.byKey.get(`${inst.id}|${k.partner}`)
+    return h && pa ? { h, pa, j: joints.find(j => j.type === type && j.hostBoardId === h.id && j.partnerBoardId === pa.id) ?? null } : null
   }
   const prevJoints = new Map(prev.joints.map(j => [j.id, j]))
   for (const j of next.joints) {
-    const k = key(next, j)
-    if (!k) continue
+    const k = jkey(N, j, next)
+    if (!k || whole.has(k.inst.id)) continue
     const old = prevJoints.get(j.id)
-    for (const og of others(q, k.inst)) {
-      const h = partner(og, k.host, q), pa = partner(og, k.partner, q)
-      if (!h || !pa) continue
-      const m = match(q, og, k, j.type)
-      if (!old && !m) {
-        const map = new Map([[j.hostBoardId, h.id], [j.partnerBoardId, pa.id]])
-        q = { ...q, joints: [...q.joints, { ...structuredClone(j), id: newId('j'), hostBoardId: h.id, partnerBoardId: pa.id, restore: j.restore?.map(r => ({ ...r, boardId: map.get(r.boardId) ?? r.boardId })) }] }
-      } else if (old && m && (!same(old.params, j.params) || !same(old.formulas, j.formulas))) {
-        q = { ...q, joints: q.joints.map(x => (x.id === m.id ? { ...x, params: structuredClone(j.params), ...(j.formulas ? { formulas: { ...j.formulas } } : {}), restore: j.restore?.map(r => ({ ...r, boardId: r.boardId === j.hostBoardId ? h.id : r.boardId === j.partnerBoardId ? pa.id : r.boardId })) } : x)) }
-      }
+    if (old && same(old.params, j.params) && same(old.formulas, j.formulas)) continue
+    for (const og of siblings(k.inst)) {
+      const m = match(og, k, j.type)
+      if (!m) continue
+      const map = new Map([[j.hostBoardId, m.h.id], [j.partnerBoardId, m.pa.id]])
+      const restore = j.restore?.map(r => ({ ...r, boardId: map.get(r.boardId) ?? r.boardId }))
+      if (!old && !m.j) joints = [...joints, { ...structuredClone(j), id: newId('j'), hostBoardId: m.h.id, partnerBoardId: m.pa.id, restore }]
+      else if (old && m.j) joints = joints.map(x => (x.id === m.j!.id ? { ...x, params: structuredClone(j.params), ...(j.formulas ? { formulas: { ...j.formulas } } : {}), restore } : x))
     }
   }
   for (const j of prev.joints) {
     if (next.joints.some(x => x.id === j.id)) continue
-    const k = key(prev, j)
-    if (!k || !next.boards.some(b => b.id === j.hostBoardId) || !next.boards.some(b => b.id === j.partnerBoardId)) continue
-    for (const og of others(q, k.inst)) {
-      const m = match(q, og, k, j.type)
-      if (m) q = { ...q, joints: q.joints.filter(x => x.id !== m.id) }
+    const k = jkey(P, j, prev)
+    if (!k || !boards.has(j.hostBoardId) || !boards.has(j.partnerBoardId)) continue
+    for (const og of siblings(k.inst)) {
+      const m = match(og, k, j.type)
+      if (m?.j) joints = joints.filter(x => x.id !== m.j!.id)
     }
   }
-  return q === next ? next : pruneGroups(q)
+
+  // Parts deleted from part of an instance go from the others too. Their joints go without undoing anything:
+  // the surviving parts already took the sizes the deletion gave the edited instance.
+  const gone = prev.boards.filter(b => b.link && !next.boards.some(x => x.id === b.id))
+  const goneBy = new Map<string, Board[]>()
+  for (const b of gone) { const i = P.inst.get(b.id); if (i) goneBy.set(i.id, [...(goneBy.get(i.id) ?? []), b]) }
+  const del = new Set<string>()
+  for (const [iid, list] of goneBy) {
+    const all = prev.boards.filter(b => P.inst.get(b.id)?.id === iid)
+    if (list.length === all.length) continue
+    const inst = byId(prev, iid)!
+    for (const og of groupsOf(prev).filter(g => g.link === inst.link && g.id !== iid)) {
+      for (const b of list) { const m = N.byKey.get(`${og.id}|${b.link}`); if (m) del.add(m.id) }
+    }
+  }
+  if (del.size) {
+    for (const id of del) boards.delete(id)
+    joints = joints.filter(j => !del.has(j.hostBoardId) && !del.has(j.partnerBoardId))
+  }
+
+  const outBoards = next.boards.filter(b => boards.has(b.id)).map(b => boards.get(b.id)!)
+  const changed = joints !== next.joints || outBoards.length !== next.boards.length || outBoards.some((b, i) => b !== next.boards[i])
+  if (!changed) return next
+  let q: Project = { ...next, boards: outBoards, joints }
+  if (del.size && q.rules) q = { ...q, rules: q.rules }
+  return pruneGroups(q)
+}
+
+/** Duplicate for the toolbar and Ctrl+D: a whole group is copied as a group; otherwise the parts. */
+export function duplicateSelection(p: Project, ids: string[], groups = true): { project: Project; ids: string[] } {
+  const whole = groups && ids.length > 1 ? wholeGroup(p, ids) : null
+  if (whole) {
+    const r = copyGroup(p, whole.id, false)
+    if (!('error' in r)) return { project: r.project, ids: groupBoardIds(r.project, r.id) }
+  }
+  return duplicateBoards(p, ids)
 }

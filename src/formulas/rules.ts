@@ -80,7 +80,8 @@ function spaceBetween(p: Project, axis: Axis3, from: string, to: string, parts: 
 function copyPart(p: Project, firstId: string, run: Set<string>): Project {
   const first = p.boards.find(b => b.id === firstId)!
   const id = newId('b')
-  const copy: Board = { ...structuredClone(first), id }
+  const { link: _l, ...plain } = structuredClone(first)
+  const copy: Board = { ...plain, id }
   const joints: Joint[] = p.joints
     .filter(j => (j.hostBoardId === firstId && !run.has(j.partnerBoardId)) || (j.partnerBoardId === firstId && !run.has(j.hostBoardId)))
     .map(j => ({

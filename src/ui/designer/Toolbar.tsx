@@ -1,11 +1,11 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { worldBox } from '../../model/geometry'
-import { addBoard, alignBoards, deleteBoards, duplicateBoards, mirrorBoards, rotateBoard } from '../../model/ops'
+import { addBoard, alignBoards, deleteBoards, mirrorBoards, rotateBoard } from '../../model/ops'
 import { plans } from '../../plans/plansStore'
 import { editShape, newDrawing, openDrawing } from '../../sketch/ui/session'
 import { TEMPLATES } from '../../templates'
 import { studio, useStudio, type View } from '../store'
-import { groupBoardIds, groupBoards, rotateGroup, ungroup, wholeGroup } from '../../assemblies/ops'
+import { duplicateSelection, groupBoardIds, groupBoards, rotateGroup, ungroup, wholeGroup } from '../../assemblies/ops'
 import { GroupNameDialog } from '../../assemblies/ui/GroupPanel'
 
 function Btn(props: React.ButtonHTMLAttributes<HTMLButtonElement> & { active?: boolean }) {
@@ -49,7 +49,7 @@ export function Toolbar() {
   const project = useStudio(st => st.project)
   const isolated = useStudio(st => st.isolated)
   const hidden = useStudio(st => st.hidden)
-  const whole = kidsMode ? null : wholeGroup(project, selection)
+  const whole = useMemo(() => (kidsMode ? null : wholeGroup(project, selection)), [kidsMode, project, selection])
   const [naming, setNaming] = useState(false)
   const makeGroup = (name: string | null) => {
     setNaming(false)
@@ -95,7 +95,7 @@ export function Toolbar() {
       <Btn onClick={() => void s.saveAs()}>Save As</Btn>
       <span className="mx-1 h-5 w-px bg-stone-300" />
       <Btn onClick={add}>Add board</Btn>
-      <Btn disabled={!sel} onClick={() => { let ids: string[] = []; s.apply(p => { const r = duplicateBoards(p, selection); ids = r.ids; return r.project }); s.select(ids) }}>Duplicate</Btn>
+      <Btn disabled={!sel} onClick={() => { let ids: string[] = []; s.apply(p => { const r = duplicateSelection(p, selection, !kidsMode); ids = r.ids; return r.project }); s.select(ids) }}>Duplicate</Btn>
       {!kidsMode && <Menu label="Mirror">
         {close => (['x', 'y', 'z'] as const).map(ax => (
           <button key={ax} role="menuitem" disabled={!sel} className={item} onClick={() => { s.apply(p => mirrorBoards(p, selection, ax)); close() }}>
@@ -124,7 +124,7 @@ export function Toolbar() {
           <Btn disabled={selection.length < 2 || !!whole} onClick={() => setNaming(true)} title="Make the selected parts one assembly">Group</Btn>
           <Btn disabled={!whole} onClick={() => whole && s.apply(p => ungroup(p, whole.id))}>Ungroup</Btn>
           <Btn disabled={!sel} active={!!isolated} onClick={() => s.isolate(isolated ? null : selection)} title="Show only the selected parts">Isolate</Btn>
-          <Btn disabled={!isolated && hidden.length === 0} onClick={() => s.showAll()}>Show all</Btn>
+          <Btn disabled={!isolated && !hidden.some(id => boards.some(b => b.id === id))} onClick={() => s.showAll()}>Show all</Btn>
           {naming && <GroupNameDialog onDone={makeGroup} />}
         </>
       )}
