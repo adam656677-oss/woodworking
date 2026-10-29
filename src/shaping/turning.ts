@@ -176,7 +176,7 @@ export function unturnBoard(p: Project, boardId: string): Project {
   const b = p.boards.find(x => x.id === boardId)
   if (!b?.turning) return p
   const sid = b.turning.sketchId
-  const boards = p.boards.map(x => {
+  const boards: Board[] = p.boards.map(x => {
     if (x.id !== boardId) return x
     const { turning: _t, ...rest } = x
     return rest
