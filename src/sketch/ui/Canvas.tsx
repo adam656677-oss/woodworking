@@ -59,6 +59,8 @@ export function Canvas({ onAsk, view, setView }: { onAsk(a: Ask): void; view: Vi
   const [typed, setTyped] = useState<string | null>(null)
   const drag = useRef<{ kind: 'pan'; x: number; y: number; ox: number; oy: number } | { kind: 'point'; id: string } | null>(null)
   const [extendFrom, setExtendFrom] = useState<string | null>(null)
+  /** The first point of the line chain being drawn: clicking it again closes the shape. */
+  const chainStart = useRef<string | null>(null)
 
   useEffect(() => {
     const el = svgRef.current
@@ -219,14 +221,16 @@ export function Canvas({ onAsk, view, setView }: { onAsk(a: Ask): void; view: Vi
     switch (tool) {
       case 'line':
       case 'construction': {
-        if (!pending.length) { setPending([at]); return }
+        if (!pending.length) { chainStart.current = null; setPending([at]); return }
         const last = pending[pending.length - 1]
-        s.addLine(last, at, tool === 'construction')
+        const lid = s.addLine(last, at, tool === 'construction')
         // Keep going from the end just drawn (it is now a real point).
         const sk = draw.getState().sketch
+        const made = sk.entities.find(x => x.id === lid)
+        if (!chainStart.current && made?.kind === 'line') chainStart.current = made.a
         const end = at.ref ?? sk.points[sk.points.length - 1]?.id
         // Clicking back on the start closes the shape and stops.
-        if (at.ref && pending[0].ref === at.ref) { setPending([]); return }
+        if (at.ref && at.ref === chainStart.current) { chainStart.current = null; setPending([]); return }
         setPending([{ ...at, ref: end }])
         return
       }

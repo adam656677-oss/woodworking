@@ -67,7 +67,9 @@ export function shapeBoard(p: Project, boardId: string | null, sketchId: string,
   const existing = boardId ? p.boards.find(x => x.id === boardId) : undefined
   const turn: 0 | 90 = existing?.outline?.sketchId === sketchId && existing.outline.turn !== undefined
     ? existing.outline.turn
-    : b.maxX - b.minX > b.maxY - b.minY ? 90 : 0
+    : existing
+      ? 90 // Edit shape draws a board's length across the sheet.
+      : b.maxX - b.minX > b.maxY - b.minY ? 90 : 0
   const outline: Outline = { ...r.outline, turn }
   const size = placedSize(sk, outline)
   if (existing) {

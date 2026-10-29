@@ -7,12 +7,13 @@ import { useDraw } from '../drawStore'
 import { outlineFromSketch } from '../geometry'
 import { toSvg } from '../svg'
 import { FullSizePrint } from './FullSizePrint'
-import { cutBoardFromDrawing, saveDrawing } from './session'
+import { cutBoardFromDrawing, deleteDrawing, saveDrawing } from './session'
 
 export function Outputs({ kids = false }: { kids?: boolean }) {
   const sketch = useDraw(s => s.sketch)
   const boardId = useDraw(s => s.context.boardId)
   const woods = useStudio(s => s.project.woods)
+  const saved = useStudio(s => s.project.sketches?.some(k => k.id === sketch.id) ?? false)
   const target = useStudio(s => (boardId ? s.project.boards.find(b => b.id === boardId) : undefined))
   const [choosing, setChoosing] = useState(false)
   const [printing, setPrinting] = useState(false)
@@ -78,6 +79,9 @@ export function Outputs({ kids = false }: { kids?: boolean }) {
           <button disabled={sketch.entities.length === 0} onClick={() => void exportAs('dxf')} className={`${btn} border border-stone-300 bg-white hover:bg-stone-100`} title="For a CNC router">Export DXF</button>
           <button disabled={sketch.entities.length === 0} onClick={() => void exportAs('svg')} className={`${btn} border border-stone-300 bg-white hover:bg-stone-100`} title="For a laser or vinyl cutter">Export SVG</button>
         </>
+      )}
+      {!kids && saved && (
+        <button onClick={deleteDrawing} className={`${btn} border border-red-300 bg-white text-red-700 hover:bg-red-50`} title="Delete this drawing; parts cut from it become rectangles again (Undo brings it back)">Delete drawing</button>
       )}
       {printing && <FullSizePrint sketch={sketch} onBack={() => setPrinting(false)} />}
     </div>

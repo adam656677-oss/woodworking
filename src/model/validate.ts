@@ -5,9 +5,9 @@ import { validateBoard, validateJoint } from './joints'
 import type { GrooveParams, Joint, Project } from './types'
 import { formatInches } from './units'
 import { findWood } from './woods'
-import { shapeReaches } from './shaped'
+import { outlinePolygons, shapeReaches } from './shaped'
 
-export type Warning = { kind: 'overlap' | 'exceedsStock' | 'badJoint'; boardIds: string[]; message: string }
+export type Warning = { kind: 'overlap' | 'exceedsStock' | 'badJoint' | 'badShape'; boardIds: string[]; message: string }
 
 export function validate(project: Project): Warning[] {
   const warnings: Warning[] = []
@@ -41,6 +41,9 @@ export function validate(project: Project): Warning[] {
     }
     if (b.width > wood.width + 1e-9) {
       warnings.push({ kind: 'exceedsStock', boardIds: [b.id], message: `${b.name} is wider than ${wood.name} (${formatInches(wood.width)})` })
+    }
+    if (b.outline && !outlinePolygons(project, b)) {
+      warnings.push({ kind: 'badShape', boardIds: [b.id], message: `${b.name}'s drawing isn't a closed shape — it shows as a plain rectangle until it is` })
     }
     const angleProblem = validateBoard(b)
     if (angleProblem) warnings.push({ kind: 'badJoint', boardIds: [b.id], message: angleProblem })

@@ -114,12 +114,23 @@ export function currentValue(sk: Sketch, kind: ConstraintKind, refs: string[]): 
       let a = ((d(l2) - d(l1)) * 180) / Math.PI
       while (a < 0) a += 360
       while (a >= 360) a -= 360
-      return a > 180 ? a - 180 : a
+      return a > 180 ? 360 - a : a
     }
   } catch {
     return null
   }
   return null
+}
+
+/** The two lines of an angle, ordered so the counter-clockwise angle from the first to the second is the opening (≤ 180°). */
+export function angleOrder(sk: Sketch, refs: string[]): string[] {
+  const [l1, l2] = refs.map(id => sk.entities.find(e => e.id === id))
+  if (l1?.kind !== 'line' || l2?.kind !== 'line') return refs
+  const d = (l: { a: string; b: string }) => { const a = pointOf(sk, l.a), b = pointOf(sk, l.b); return Math.atan2(b.y - a.y, b.x - a.x) }
+  let a = d(l2) - d(l1)
+  while (a < 0) a += 2 * Math.PI
+  while (a >= 2 * Math.PI) a -= 2 * Math.PI
+  return a > Math.PI ? [refs[1], refs[0]] : refs
 }
 
 const EMPTY: Sketch = { id: 'k_empty', name: 'Drawing', mode: 'precise', points: [], entities: [], constraints: [] }
@@ -287,8 +298,10 @@ export function createDrawStore() {
         if (next !== get().sketch) commit(next)
       },
 
-      addConstraint: (kind, refs, value) => {
+      addConstraint: (kind, refs0, value) => {
         const id = ids().c()
+        // An angle is measured counter-clockwise from the first line to the second: order them so it is the opening (≤ 180°).
+        const refs = kind === 'angle' ? angleOrder(get().sketch, refs0) : refs0
         const v = value ?? (isDimension(kind) ? currentValue(get().sketch, kind, refs) ?? undefined : undefined)
         const c: SketchConstraint = v === undefined ? { id, kind, refs } : { id, kind, refs, value: v }
         const ok = commit({ ...get().sketch, constraints: [...get().sketch.constraints, c] })
@@ -350,7 +363,8 @@ export function createDrawStore() {
         // Hold the dragged point where the pointer is and let everything else follow its rules.
         const hold: SketchConstraint = { id: '__drag', kind: 'fixed', refs: [id] }
         const r = solveSketch({ ...moved, constraints: [...moved.constraints, hold] })
-        if (r.status === 'ok') set({ sketch: r.sketch })
+        // Only the moved geometry comes back: the hold is not a rule of the drawing.
+        if (r.status === 'ok') set({ sketch: { ...r.sketch, constraints: base.constraints } })
         else {
           // It can't go there (it is held by its rules): try once more without holding it, so it settles back.
           const free = solveSketch(moved)

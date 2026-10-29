@@ -52,7 +52,7 @@ test.each([
   expect(() => deserialize(JSON.stringify(p).replace('"x":null', '"x":"oops"'))).toThrow(/isn't a valid A&A project/)
 })
 
-test('a shaped board pointing at a missing drawing is refused', () => {
+test('a shaped board pointing at a missing drawing opens as a rectangle; a damaged shape is refused', () => {
   const p = emptyProject('P')
   p.boards = [{
     id: 'b1', name: 'Apron', woodId: '1x6', thickness: 0.75, width: 4, length: 30,
@@ -60,5 +60,7 @@ test('a shaped board pointing at a missing drawing is refused', () => {
     endCuts: { start: { miter: 0, bevel: 0 }, end: { miter: 0, bevel: 0 } }, edgeBevels: { left: 0, right: 0 },
     outline: { sketchId: 'gone', outer: ['l1'], holes: [], circles: [] }
   }]
-  expect(() => deserialize(JSON.stringify(p))).toThrow(/drawing/)
+  expect(deserialize(JSON.stringify(p)).boards[0].outline).toBeUndefined()
+  ;(p.boards[0] as any).outline = { sketchId: 'gone', outer: 'l1' }
+  expect(() => deserialize(JSON.stringify(p))).toThrow(/damaged shape/)
 })

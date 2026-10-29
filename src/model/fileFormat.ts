@@ -127,11 +127,13 @@ function check(raw: any): Project {
   for (const b of raw.boards) {
     if (b.outline === undefined) continue
     const o = b.outline
-    const ents = isObj(o) && isStr(o.sketchId) ? sketches.get(o.sketchId) : undefined
-    const list = (v: unknown) => Array.isArray(v) && v.every(x => isStr(x) && ents!.has(x))
-    if (!ents || !list(o.outer) || !Array.isArray(o.holes) || !o.holes.every(list) || !list(o.circles)) {
-      invalid(`board "${b.name}" is shaped from a drawing that is missing or damaged`)
+    const list = (v: unknown) => Array.isArray(v) && v.every(isStr)
+    if (!isObj(o) || !isStr(o.sketchId) || !list(o.outer) || !Array.isArray(o.holes) || !o.holes.every(list) || !list(o.circles) || (o.turn !== undefined && o.turn !== 0 && o.turn !== 90)) {
+      invalid(`board "${b.name}" has a damaged shape`)
     }
+    // A shaped part whose drawing is gone is simply a rectangle again (its size is its bounding rectangle).
+    // One whose drawing no longer makes a closed shape keeps its link and shows as a rectangle until it does.
+    if (!sketches.has(o.sketchId)) delete b.outline
   }
   for (const j of raw.joints) {
     if (!isObj(j) || typeof j.type !== 'string' || !isObj(j.params)) invalid('a joint is damaged')

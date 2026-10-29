@@ -278,7 +278,7 @@ export function createStudioStore() {
         }
       },
       autosaveNow: async () => {
-        if (!get().dirty || get().screen !== 'master') return
+        if (!get().dirty || (get().screen !== 'master' && get().screen !== 'draw')) return
         try {
           await api().writeAutosave(get().filePath, serialize(get().project))
         } catch {

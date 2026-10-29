@@ -179,3 +179,25 @@ test('drawing 4. kids: freehand a heart, print it, make it a part from a 1x8', a
     kill(app)
   }
 })
+
+test('drawing 5. clicking back on the first point closes the outline and stops the line tool', async () => {
+  const { app, win } = await launch(newDirs())
+  try {
+    await enterMasterShop(win)
+    await win.getByRole('button', { name: '✏️ Draw a shape ▾' }).click()
+    await win.getByRole('menuitem', { name: 'New drawing' }).click()
+    await win.getByRole('button', { name: 'Line', exact: true }).click()
+    await clickSheet(win, 200, 400)
+    await clickSheet(win, 500, 400)
+    await clickSheet(win, 350, 200)
+    const first = await pointAt(win, (await win.locator('circle[data-point]').first().getAttribute('data-point'))!)
+    await clickSheet(win, first.x, first.y)
+    await expect(win.locator('path[data-kind="line"]')).toHaveCount(3)
+    await expect(win.getByRole('button', { name: 'Cut a board to this shape' })).toBeEnabled()
+    // The tool stopped: the next click starts a new line rather than adding a fourth side.
+    await clickSheet(win, 600, 300)
+    await expect(win.locator('path[data-kind="line"]')).toHaveCount(3)
+  } finally {
+    kill(app)
+  }
+})

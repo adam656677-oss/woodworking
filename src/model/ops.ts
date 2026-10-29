@@ -70,7 +70,8 @@ export function changeWood(p: Project, id: string, woodId: string): Project {
   if (!wood) return p
   return mapBoard(p, id, b => {
     const old = findWood(p, b.woodId)
-    const fullWidth = old?.kind === 'lumber' && wood.kind === 'lumber' && Math.abs(b.width - old.width) < 1e-9
+    // A shaped part's size is its drawing's, whatever wood it is cut from.
+    const fullWidth = !b.outline && old?.kind === 'lumber' && wood.kind === 'lumber' && Math.abs(b.width - old.width) < 1e-9
     return { ...b, woodId, thickness: wood.thickness, width: fullWidth ? snap64(wood.width) : b.width }
   })
 }

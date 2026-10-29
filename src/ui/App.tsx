@@ -5,6 +5,7 @@ import { Home } from './Home'
 import { KidsShell } from '../kids/ui/KidsShell'
 import { PlansShell } from '../plans/ui/PlansShell'
 import { DrawingBoard } from '../sketch/ui/DrawingBoard'
+import { flushDrawing } from '../sketch/ui/session'
 import { APP_NAME, studio, useStudio } from './store'
 
 const AUTOSAVE_MS = 30_000
@@ -18,10 +19,11 @@ export default function App() {
     const s = studio.getState()
     void s.loadUserWoods()
     window.aa?.onSaveRequest(async () => {
+      flushDrawing()
       const ok = await studio.getState().save()
       window.aa.closeAfterSave(ok)
     })
-    const timer = setInterval(() => void studio.getState().autosaveNow(), AUTOSAVE_MS)
+    const timer = setInterval(() => { flushDrawing(); void studio.getState().autosaveNow() }, AUTOSAVE_MS)
     return () => clearInterval(timer)
   }, [])
 

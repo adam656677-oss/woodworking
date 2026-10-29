@@ -1,7 +1,7 @@
 // Opening and leaving the drawing board, and keeping drawings in the project.
 import wasmUrl from '@salusoft89/planegcs/dist/planegcs_dist/planegcs.wasm?url'
 import { newId } from '../../model/ids'
-import { addSketch, shapeBoard, updateSketch } from '../../model/shaped'
+import { addSketch, deleteSketch, shapeBoard, updateSketch } from '../../model/shaped'
 import type { Board } from '../../model/types'
 import { studio } from '../../ui/store'
 import { draw, type DrawContext } from '../drawStore'
@@ -51,13 +51,15 @@ export function editShape(b: Board) {
 }
 
 /** Puts the drawing into the project (one undo step). Returns false if the project refused it. */
-export function saveDrawing(): boolean {
+export function saveDrawing(force = false): boolean {
   const d = draw.getState()
   const sk = d.sketch
   const s = studio.getState()
   const exists = s.project.sketches?.some(x => x.id === sk.id) ?? false
   if (exists && !d.dirty) return true
   if (!exists && sk.entities.length === 0) return true
+  // A drawing opened and left untouched (like Edit shape's starting rectangle) isn't kept.
+  if (!exists && !d.dirty && !force) return true
   s.apply(p => (exists ? updateSketch(p, sk) : addSketch(p, sk)))
   if (studio.getState().error) return false
   draw.setState({ dirty: false, context: { ...d.context, isNew: false } })
@@ -67,7 +69,7 @@ export function saveDrawing(): boolean {
 /** Saves the drawing and cuts a board to it: a new board from `woodId`, or the board being shaped. */
 export function cutBoardFromDrawing(woodId: string | null): string | null {
   const d = draw.getState()
-  if (!saveDrawing()) return null
+  if (!saveDrawing(true)) return null
   let made: string | null = null
   studio.getState().apply(p => {
     const target = d.context.boardId && p.boards.some(b => b.id === d.context.boardId) ? d.context.boardId : null
@@ -81,6 +83,24 @@ export function cutBoardFromDrawing(woodId: string | null): string | null {
     draw.setState({ context: { ...draw.getState().context, boardId: made } })
   }
   return made
+}
+
+/** Before the project is saved or autosaved, a drawing being worked on goes into it. */
+export function flushDrawing() {
+  if (studio.getState().screen === 'draw') saveDrawing()
+}
+
+// Work on the drawing board counts as unsaved work in the window (so closing asks first).
+draw.subscribe((s, prev) => {
+  if (s.dirty && !prev.dirty) window.aa?.setDirty(true)
+})
+
+/** Deletes the open drawing from the project (its parts become rectangles) and leaves the board. */
+export function deleteDrawing() {
+  const id = draw.getState().sketch.id
+  studio.getState().apply(p => deleteSketch(p, id))
+  draw.setState({ dirty: false })
+  studio.getState().goto(returnTo)
 }
 
 export function leaveDrawing() {

@@ -106,7 +106,7 @@ export function endsOf(sk: Sketch, e: SketchEntity): [Pt, Pt] | null {
 const usable = (e: SketchEntity) => !('construction' in e && e.construction)
 
 /** Chains shapes end-to-end. Closed chains are loops (entity ids in order); loose ends are gaps. */
-export function findLoops(sk: Sketch): { closed: string[][]; gaps: Pt[] } {
+export function findLoops(sk: Sketch): { closed: string[][]; gaps: Pt[]; junctions: Pt[] } {
   const edges = sk.entities.filter(usable).flatMap(e => {
     const ends = endsOf(sk, e)
     return ends ? [{ id: e.id, ends }] : []
@@ -123,6 +123,7 @@ export function findLoops(sk: Sketch): { closed: string[][]; gaps: Pt[] } {
   const degree = nodes.map(() => 0)
   for (const e of ed) { degree[e.n[0]]++; degree[e.n[1]]++ }
   const gaps: Pt[] = []
+  const junctions: Pt[] = []
   const closed: string[][] = []
   const seen = new Set<string>()
   // Components.
@@ -139,8 +140,7 @@ export function findLoops(sk: Sketch): { closed: string[][]; gaps: Pt[] } {
     const compNodes = [...new Set(comp.flatMap(e => e.n))]
     const loose = compNodes.filter(n => degree[n] !== 2)
     if (loose.length) {
-      const ends = loose.filter(n => degree[n] === 1)
-      for (const n of ends.length ? ends : loose) gaps.push({ ...nodes[n] })
+      for (const n of loose) (degree[n] === 1 ? gaps : junctions).push({ ...nodes[n] })
       continue
     }
     // Walk the ring.
@@ -156,7 +156,7 @@ export function findLoops(sk: Sketch): { closed: string[][]; gaps: Pt[] } {
     }
     closed.push(order)
   }
-  return { closed, gaps }
+  return { closed, gaps, junctions }
 }
 
 /** A closed loop as one polygon (the last point is not repeated). */
@@ -243,6 +243,7 @@ export function pointInPolygon(p: Pt, poly: Pt[]): boolean {
 }
 
 export const MSG_GAP = 'This outline has a gap — close it to make a part'
+export const MSG_JUNCTION = 'Three or more lines meet here — an outline must be one closed path.'
 export const MSG_CROSS = 'The outline crosses itself here.'
 export const MSG_EMPTY = 'Draw a closed shape first.'
 export const MSG_OUTSIDE = 'Part of the drawing is outside the outline — move it inside or delete it.'
@@ -251,7 +252,8 @@ export type OutlineResult = { outline: Outline; outer: Pt[]; holes: Pt[][] } | {
 
 /** The part a drawing makes: the biggest closed shape is the outline; closed shapes inside it are cutouts, circles holes. */
 export function outlineFromSketch(sk: Sketch): OutlineResult {
-  const { closed, gaps } = findLoops(sk)
+  const { closed, gaps, junctions } = findLoops(sk)
+  if (junctions.length) return { error: MSG_JUNCTION, at: junctions[0] }
   if (gaps.length) return { error: MSG_GAP, at: gaps[0] }
   type Cand = { ids: string[]; circle: boolean; poly: Pt[]; area: number }
   const cands: Cand[] = []

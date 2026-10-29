@@ -1,3 +1,4 @@
+import { unshapeBoard } from '../../model/shaped'
 import { worldBox } from '../../model/geometry'
 import { changeWood, moveBoard, rotateBoard, setEdgeBevel, setEndCut, updateBoard } from '../../model/ops'
 import type { Board, EndCut, Vec3 } from '../../model/types'
@@ -77,7 +78,12 @@ export function PropertiesPanel() {
         <InchInput label="Width" disabled={!!board.outline} value={board.width} onChange={v => apply(p => updateBoard(p, board.id, { width: size(v) }))} />
         <InchInput label="Length" disabled={!!board.outline} value={board.length} onChange={v => apply(p => updateBoard(p, board.id, { length: size(v) }))} />
       </div>
-      {board.outline && <p className="text-xs text-stone-600">Shaped part — its size comes from its drawing. Use <strong>Edit shape</strong> to change it.</p>}
+      {board.outline && (
+        <div className="flex flex-col gap-1 text-xs text-stone-600">
+          <p>Shaped part — its size comes from its drawing. Use <strong>Edit shape</strong> to change it.</p>
+          <button onClick={() => apply(p => unshapeBoard(p, board.id))} className="self-start rounded border border-stone-300 px-2 py-0.5 hover:bg-stone-100">Make it a rectangle again</button>
+        </div>
+      )}
       <div className="grid grid-cols-3 gap-2">
         <InchInput label="X" allowZero value={wb.min.x} onChange={v => moveTo('x', v)} />
         <InchInput label="Y" allowZero value={wb.min.y} onChange={v => moveTo('y', v)} />

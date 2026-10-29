@@ -38,7 +38,7 @@ function entity(sk: Sketch, e: SketchEntity, layer: string): string[] {
     }
     case 'spline': {
       const pts = tessellateEntity(sk, e, 1 / 16)
-      return ['0\nPOLYLINE', pair(8, layer), pair(66, 1), pair(70, 0), ...pts.flatMap(p => ['0\nVERTEX', pair(8, layer), pair(10, p.x), pair(20, p.y), pair(30, 0)]), '0\nSEQEND', pair(8, layer)]
+      return ['0\nPOLYLINE', pair(8, layer), pair(66, 1), pair(10, 0), pair(20, 0), pair(30, 0), pair(70, 0), ...pts.flatMap(p => ['0\nVERTEX', pair(8, layer), pair(10, p.x), pair(20, p.y), pair(30, 0)]), '0\nSEQEND', pair(8, layer)]
     }
     case 'text': {
       const a = P(e.at)
