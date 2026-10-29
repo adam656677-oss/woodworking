@@ -124,6 +124,17 @@ function register(): void {
     await writeFile(r.filePath, text, 'utf8')
     return r.filePath
   })
+  ipcMain.handle('aa:exportShape', async (_e, kind: 'dxf' | 'svg', text: string, suggestedName: string) => {
+    if (kind !== 'dxf' && kind !== 'svg') return null
+    const safe = String(suggestedName).replace(/[<>:"/\\|?*\u0000-\u001f]/g, '').trim() || 'Shape'
+    const r = await dialog.showSaveDialog(win!, {
+      defaultPath: join(defaultFolder(docsDir()), `${safe}.${kind}`),
+      filters: [kind === 'dxf' ? { name: 'DXF drawing (CNC)', extensions: ['dxf'] } : { name: 'SVG picture (laser, vinyl)', extensions: ['svg'] }]
+    })
+    if (r.canceled || !r.filePath) return null
+    await writeFile(r.filePath, String(text), 'utf8')
+    return r.filePath
+  })
   ipcMain.handle('aa:print', async (_e, opts?: { landscape?: boolean }) => {
     const landscape = opts?.landscape ?? true
     await new Promise<void>(resolve => win!.webContents.print({ landscape }, () => resolve()))

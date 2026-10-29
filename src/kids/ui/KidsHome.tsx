@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { plans } from '../../plans/plansStore'
+import { newDrawing } from '../../sketch/ui/session'
 import { studio } from '../../ui/store'
 import { Art } from '../art'
 import { kids, useKids } from '../kidsStore'
@@ -11,7 +12,7 @@ const TILES = [
   { page: 'badges', label: 'My Badges', art: 'first-aid', color: 'border-rose-400 bg-rose-100' }
 ] as const
 
-/** The Kids' Workshop front door: five big tiles and the parent gear. */
+/** The Kids' Workshop front door: big tiles and the parent gear. */
 export function KidsHome() {
   const name = useKids(s => s.progress.childName)
   const notice = useKids(s => s.notice)
@@ -52,6 +53,17 @@ export function KidsHome() {
         >
           <Art name="toolbox" className="block h-20 w-20" />
           <span className="text-2xl font-bold">My Plans</span>
+        </button>
+        <button
+          onClick={() => {
+            // Drawings go into the Simple Designer's project, ready to become parts.
+            if (!studio.getState().enterKidsDesigner()) return setBlocked(true)
+            void newDrawing('freehand', 'kids')
+          }}
+          className="flex h-48 w-60 flex-col items-center justify-center gap-3 rounded-3xl border-4 border-fuchsia-400 bg-fuchsia-100 shadow-lg hover:scale-105"
+        >
+          <Art name="scroll-saw" className="block h-20 w-20" />
+          <span className="text-2xl font-bold">Draw It!</span>
         </button>
       </div>
     </main>

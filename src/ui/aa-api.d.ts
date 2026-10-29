@@ -19,6 +19,8 @@ export type AaApi = {
   /** Remove the autosave for a file (null: the untitled autosave). */
   deleteAutosave(path: string | null): Promise<void>
   exportCsv(text: string, suggestedName: string): Promise<string | null>
+  /** Save a shape for a CNC (DXF) or laser/vinyl cutter (SVG); returns where, or null if cancelled. */
+  exportShape(kind: 'dxf' | 'svg', text: string, suggestedName: string): Promise<string | null>
   /** Print the page; landscape unless told otherwise. */
   print(opts?: { landscape?: boolean }): Promise<void>
   loadUserWoods(): Promise<Wood[]>

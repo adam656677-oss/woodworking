@@ -215,3 +215,54 @@ export function presetShape(kind: PresetKind, size: number, text = 'ABC', id = '
   }
   return scaleSketchTo(s, size)
 }
+
+/** Adds another drawing's shapes (fresh ids), moved so its corner sits at `at`. */
+export function mergeSketch(into: Sketch, add: Sketch, at: Pt = { x: 0, y: 0 }): Sketch {
+  const b = sketchBounds(add)
+  const dx = at.x - (Number.isFinite(b.minX) ? b.minX : 0), dy = at.y - (Number.isFinite(b.minY) ? b.minY : 0)
+  const pid = idMaker(into, 'fp'), eid = idMaker(into, 'fe'), cid = idMaker(into, 'fc')
+  const pm = new Map(add.points.map(p => [p.id, pid()]))
+  const em = new Map(add.entities.map(e => [e.id, eid()]))
+  const P = (id: string) => pm.get(id)!
+  const entities: SketchEntity[] = add.entities.map(e => {
+    const id = em.get(e.id)!
+    switch (e.kind) {
+      case 'line': return { ...e, id, a: P(e.a), b: P(e.b) }
+      case 'arc': return { ...e, id, center: P(e.center), start: P(e.start), end: P(e.end) }
+      case 'circle': return { ...e, id, center: P(e.center) }
+      case 'spline': return { ...e, id, points: e.points.map(P) }
+      case 'text': return { ...e, id, at: P(e.at) }
+    }
+  })
+  return {
+    ...into,
+    points: [...into.points, ...add.points.map(p => ({ ...p, id: P(p.id), x: p.x + dx, y: p.y + dy }))],
+    entities: [...into.entities, ...entities],
+    constraints: [...into.constraints, ...add.constraints.map(c => ({ ...c, id: cid(), refs: c.refs.map(r => pm.get(r) ?? em.get(r) ?? r) }))]
+  }
+}
+
+/** The shapes joined to this one (sharing points), so a tapped shape moves as a whole. */
+export function connectedGroup(sk: Sketch, entityId: string): { entities: string[]; points: string[] } {
+  const ptsOf = (e: SketchEntity) => (e.kind === 'line' ? [e.a, e.b] : e.kind === 'arc' ? [e.center, e.start, e.end] : e.kind === 'circle' ? [e.center] : e.kind === 'spline' ? e.points : [e.at])
+  const ents = new Set([entityId])
+  const pts = new Set<string>()
+  let grew = true
+  while (grew) {
+    grew = false
+    for (const e of sk.entities) {
+      const ps = ptsOf(e)
+      if (ents.has(e.id) || ps.some(p => pts.has(p))) {
+        if (!ents.has(e.id)) { ents.add(e.id); grew = true }
+        for (const p of ps) if (!pts.has(p)) { pts.add(p); grew = true }
+      }
+    }
+  }
+  return { entities: [...ents], points: [...pts] }
+}
+
+/** Moves points by dx, dy. */
+export function movePoints(sk: Sketch, ids: string[], dx: number, dy: number): Sketch {
+  const set = new Set(ids)
+  return { ...sk, points: sk.points.map(p => (set.has(p.id) ? { ...p, x: p.x + dx, y: p.y + dy } : p)) }
+}
