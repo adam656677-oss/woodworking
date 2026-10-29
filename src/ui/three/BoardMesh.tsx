@@ -6,6 +6,7 @@ import type { Cut, PlaneCut } from '../../model/joints'
 import type { Board, WoodKind } from '../../model/types'
 import type { Pt } from '../../sketch/types'
 import { extrudeOutline } from './shapeGeometry'
+import { turnedLeg, type TurnedLeg } from './turnedGeometry'
 
 export type BoardShape = { outer: Pt[]; holes: Pt[][] }
 
@@ -42,11 +43,12 @@ function brushFor(cut: Cut, board: Board): Brush | null {
 }
 
 /** Board geometry in local coordinates (origin at the board's corner), with its cuts subtracted. */
-export function useBoardGeometry(board: Board, cuts: Cut[], shape?: BoardShape | null): THREE.BufferGeometry {
-  const key = JSON.stringify([board.width, board.length, board.thickness, cuts, shape ?? null])
+export function useBoardGeometry(board: Board, cuts: Cut[], shape?: BoardShape | null, turned?: TurnedLeg | null): THREE.BufferGeometry {
+  const key = JSON.stringify([board.width, board.length, board.thickness, cuts, shape ?? null, turned ?? null])
   return useMemo(() => {
     let box: THREE.BufferGeometry
-    if (shape) box = extrudeOutline(shape, board.thickness)
+    if (turned) box = turnedLeg(turned)
+    else if (shape) box = extrudeOutline(shape, board.thickness)
     else {
       box = new THREE.BoxGeometry(board.width, board.length, board.thickness)
       box.translate(board.width / 2, board.length / 2, board.thickness / 2)
@@ -70,6 +72,8 @@ type Props = {
   kind: WoodKind
   /** A shaped part's outline (board coordinates); none for a plain rectangle. */
   shape?: BoardShape | null
+  /** A turned leg's form (board coordinates); none for a square blank. */
+  turned?: TurnedLeg | null
   selected: boolean
   warned: boolean
   onSelect(e: ThreeEvent<MouseEvent>): void
@@ -77,11 +81,12 @@ type Props = {
 
 const deg = (d: number) => (d * Math.PI) / 180
 
-export const BoardMesh = forwardRef<THREE.Group, Props>(function BoardMesh({ board, cuts, kind, shape, selected, warned, onSelect }, ref) {
-  const geometry = useBoardGeometry(board, cuts, shape)
+export const BoardMesh = forwardRef<THREE.Group, Props>(function BoardMesh({ board, cuts, kind, shape, turned, selected, warned, onSelect }, ref) {
+  const geometry = useBoardGeometry(board, cuts, shape, turned)
   // Outline the board's overall shape (cut seams would show triangulation lines across flat faces).
-  const shapeKey = JSON.stringify(shape ?? null)
+  const shapeKey = JSON.stringify([shape ?? null, turned ?? null])
   const outline = useMemo(() => {
+    if (turned) return new THREE.EdgesGeometry(turnedLeg(turned), 25)
     if (shape) return new THREE.EdgesGeometry(extrudeOutline(shape, board.thickness), 25)
     const box = new THREE.BoxGeometry(board.width, board.length, board.thickness)
     box.translate(board.width / 2, board.length / 2, board.thickness / 2)

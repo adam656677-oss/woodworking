@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { worldBox, type Box } from '../../model/geometry'
 import { cutGeometry, type Cut } from '../../model/joints'
-import { outlinePolygons } from '../../model/shaped'
+import { boardForm } from './boardForm'
 import { useStudio, studio } from '../store'
 import { BoardMesh } from './BoardMesh'
 import { MeasureTool } from './MeasureTool'
@@ -26,7 +26,7 @@ export default function Scene() {
     for (const c of cutGeometry(project)) m.set(c.boardId, [...(m.get(c.boardId) ?? []), c])
     return m
   }, [project])
-  const shapes = useMemo(() => new Map(project.boards.map(b => [b.id, outlinePolygons(project, b)])), [project])
+  const forms = useMemo(() => new Map(project.boards.map(b => [b.id, boardForm(project, b)])), [project])
   const warned = useMemo(() => new Set(warnings.flatMap(w => w.boardIds)), [warnings])
   const bounds: Box | null = useMemo(() => {
     if (project.boards.length === 0) return null
@@ -79,7 +79,8 @@ export default function Scene() {
           board={b}
           cuts={cutsByBoard.get(b.id) ?? []}
           kind={kindOf(b.woodId)}
-          shape={shapes.get(b.id)}
+          shape={forms.get(b.id)?.shape}
+          turned={forms.get(b.id)?.turned}
           selected={selection.includes(b.id)}
           warned={warned.has(b.id)}
           onSelect={onSelect(b.id)}
