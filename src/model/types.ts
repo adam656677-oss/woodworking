@@ -58,7 +58,14 @@ export type Board = {
   edges?: EdgeProfile[]
   /** Formulas for this board's sizes and positions, by field path (width, length, x, y, z, turning.top, holes.0.u, …). */
   formulas?: Record<string, string>
+  /** The innermost group (assembly) this part is in. */
+  groupId?: string
+  /** Shared by the corresponding parts of linked copies. */
+  link?: string
 }
+
+/** A group of parts (an assembly such as a drawer or a door); groups nest through parentId. */
+export type Group = { id: string; name: string; parentId?: string; link?: string }
 
 export type JointType = 'butt' | 'dado' | 'rabbet' | 'pocketScrew' | 'miter'
 
@@ -97,7 +104,7 @@ export type TemplateState = { templateId: string; params: Record<string, number 
 
 export type Project = {
   /** 2 adds drawings; version 1 files are upgraded when opened. */
-  formatVersion: 1 | 2 | 3 | 4
+  formatVersion: 1 | 2 | 3 | 4 | 5
   name: string
   units: 'in'
   boards: Board[]
@@ -110,6 +117,8 @@ export type Project = {
   sizes?: SizeDef[]
   /** Layout rules (spacing, centred, gap, count). */
   rules?: Rule[]
+  /** Groups / assemblies (a tree). */
+  groups?: Group[]
 }
 
 export const SQUARE: EndCut = { miter: 0, bevel: 0 }

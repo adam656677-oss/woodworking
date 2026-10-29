@@ -3,8 +3,9 @@ import { CONSTRAINT_KINDS } from '../sketch/types'
 import { EDGE_SIDES, FACES, PROFILE_KINDS, TURN_STYLES } from '../shaping/types'
 import { AXES3 } from '../formulas/types'
 import type { Project } from './types'
+import { pruneGroups } from '../assemblies/ops'
 
-export const FORMAT_VERSION = 4
+export const FORMAT_VERSION = 5
 
 export class ProjectFileError extends Error {
   constructor(public code: 'corrupt' | 'newerVersion' | 'invalid', message: string) {
@@ -21,7 +22,9 @@ const MIGRATIONS: Record<number, Migration> = {
   // Version 3 adds turned legs, tapers and edge profiles (all optional on boards).
   2: raw => ({ ...raw, formatVersion: 3 }),
   // Version 4 adds named sizes, formulas and layout rules (all optional).
-  3: raw => ({ ...raw, formatVersion: 4 })
+  3: raw => ({ ...raw, formatVersion: 4 }),
+  // Version 5 adds groups (assemblies) and linked copies (all optional).
+  4: raw => ({ ...raw, formatVersion: 5 })
 }
 
 export function serialize(p: Project): string {
@@ -191,7 +194,16 @@ function check(raw: any): Project {
     if (!jointParamsOk(j.type, j.params)) invalid(`a ${j.type} joint has damaged settings`)
     if (!boardIds.has(j.hostBoardId) || !boardIds.has(j.partnerBoardId)) invalid('a joint refers to a board that is missing')
   }
-  return raw as Project
+  // Groups: shape is checked; references that point nowhere are cleaned up (the parts stay).
+  if (raw.groups !== undefined) {
+    if (!Array.isArray(raw.groups) || !raw.groups.every((g: any) => isObj(g) && isStr(g.id) && isStr(g.name) && (g.parentId === undefined || isStr(g.parentId)) && (g.link === undefined || isStr(g.link)))) {
+      invalid('a group is damaged')
+    }
+  }
+  for (const b of raw.boards) {
+    if ((b.groupId !== undefined && !isStr(b.groupId)) || (b.link !== undefined && !isStr(b.link))) invalid(`board "${b.name}" has a damaged group`)
+  }
+  return pruneGroups(raw as Project)
 }
 
 export function deserialize(text: string): Project {

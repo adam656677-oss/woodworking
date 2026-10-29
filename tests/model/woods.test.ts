@@ -1,4 +1,5 @@
 import { BUILTIN_WOODS, boardFeet, emptyProject, findWood } from '../../src/model/woods'
+import { FORMAT_VERSION } from '../../src/model/fileFormat'
 import { newId } from '../../src/model/ids'
 
 const byId = (id: string) => BUILTIN_WOODS.find(w => w.id === id)!
@@ -40,7 +41,7 @@ test('board feet = T x W x L / 144', () => {
 
 test('emptyProject deep-copies the wood library', () => {
   const p = emptyProject('X')
-  expect(p).toMatchObject({ formatVersion: 4, sketches: [], name: 'X', units: 'in', boards: [], joints: [] })
+  expect(p).toMatchObject({ formatVersion: FORMAT_VERSION, sketches: [], name: 'X', units: 'in', boards: [], joints: [] })
   p.woods[0].width = 999
   expect(BUILTIN_WOODS[0].width).not.toBe(999)
   expect(findWood(p, '1x4')?.width).toBe(3.5)

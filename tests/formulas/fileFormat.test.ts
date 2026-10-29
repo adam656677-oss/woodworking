@@ -20,16 +20,16 @@ function sample(): Project {
   return p
 }
 
-test('projects are format 4', () => {
-  expect(FORMAT_VERSION).toBe(4)
-  expect(emptyProject('X').formatVersion).toBe(4)
+test('new projects are the current format', () => {
+  expect(FORMAT_VERSION).toBeGreaterThanOrEqual(4)
+  expect(emptyProject('X').formatVersion).toBe(FORMAT_VERSION)
 })
 
 test('a version 3 file opens unchanged', () => {
   const raw = JSON.parse(serialize(emptyProject('Old')))
   raw.formatVersion = 3
   delete raw.sizes
-  expect(deserialize(JSON.stringify(raw)).formatVersion).toBe(4)
+  expect(deserialize(JSON.stringify(raw)).formatVersion).toBe(FORMAT_VERSION)
 })
 
 test('sizes, formulas and every kind of rule round-trip', () => {
