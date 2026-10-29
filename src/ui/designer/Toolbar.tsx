@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { worldBox } from '../../model/geometry'
 import { addBoard, alignBoards, deleteBoards, duplicateBoards, mirrorBoards, rotateBoard } from '../../model/ops'
 import { plans } from '../../plans/plansStore'
+import { editShape, newDrawing, openDrawing } from '../../sketch/ui/session'
 import { TEMPLATES } from '../../templates'
 import { studio, useStudio, type View } from '../store'
 
@@ -38,7 +39,10 @@ export function Toolbar() {
   const canUndo = useStudio(s => s.canUndo)
   const canRedo = useStudio(s => s.canRedo)
   const kidsMode = useStudio(s => s.kidsMode)
+  const sketches = useStudio(s => s.project.sketches) ?? []
+  const boards = useStudio(s => s.project.boards)
   const s = studio.getState()
+  const one = selection.length === 1 ? boards.find(b => b.id === selection[0]) : undefined
   const sel = selection.length > 0
 
   const add = () =>
@@ -100,6 +104,23 @@ export function Toolbar() {
         ))}
       </Menu>
       <Btn disabled={!sel} onClick={() => { s.apply(p => deleteBoards(p, selection)); s.select([]) }}>Delete</Btn>
+      {!kidsMode && (
+        <>
+          <span className="mx-1 h-5 w-px bg-stone-300" />
+          <Menu label="✏️ Draw a shape">
+            {close => (
+              <>
+                <button role="menuitem" className={item} onClick={() => { close(); void newDrawing('precise') }}>New drawing</button>
+                {sketches.length > 0 && <div className="border-t border-stone-200 px-3 pt-1 text-xs text-stone-500">Drawings</div>}
+                {sketches.map(k => (
+                  <button key={k.id} role="menuitem" className={item} onClick={() => { close(); void openDrawing(k, { boardId: boards.find(b => b.outline?.sketchId === k.id)?.id ?? null }) }}>{k.name}</button>
+                ))}
+              </>
+            )}
+          </Menu>
+          <Btn disabled={!one} onClick={() => one && void editShape(one)} title="Give the selected board a shape">Edit shape</Btn>
+        </>
+      )}
       <span className="mx-1 h-5 w-px bg-stone-300" />
       <Btn disabled={!canUndo} onClick={() => s.undo()} title="Ctrl+Z">Undo</Btn>
       <Btn disabled={!canRedo} onClick={() => s.redo()} title="Ctrl+Y">Redo</Btn>

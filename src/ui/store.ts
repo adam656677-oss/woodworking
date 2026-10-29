@@ -9,7 +9,7 @@ import { validate, type Warning } from '../model/validate'
 import { cloneWoods, emptyProject } from '../model/woods'
 import { applyTemplate, findTemplate, unlock } from '../templates'
 
-export type Screen = 'home' | 'kids' | 'master' | 'plans'
+export type Screen = 'home' | 'kids' | 'master' | 'plans' | 'draw'
 export type View = '3d' | 'front' | 'side' | 'top'
 type Snapshot = { project: Project; selection: string[] }
 

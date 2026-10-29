@@ -1,4 +1,5 @@
 import { bounds, extremePoints } from './geometry'
+import { idMaker } from './ids'
 import { newSketch, type Pt, type Sketch, type SketchEntity, type SketchPoint } from './types'
 
 export const SIMPLIFY = 1 / 16
@@ -72,16 +73,6 @@ function fitsArc(raw: Pt[]): { c: Pt; r: number; sweep: number } | null {
   const sweep = turning(raw, f.c)
   if (Math.abs(sweep) < (15 * Math.PI) / 180 || Math.abs(sweep) >= 2 * Math.PI - 1e-6) return null
   return { ...f, sweep }
-}
-
-function idMaker(sk: Sketch, prefix: string) {
-  const used = new Set([...sk.points.map(p => p.id), ...sk.entities.map(e => e.id), ...sk.constraints.map(c => c.id)])
-  let n = 1
-  return () => {
-    while (used.has(`${prefix}${n}`)) n++
-    used.add(`${prefix}${n}`)
-    return `${prefix}${n}`
-  }
 }
 
 /** A finger or mouse stroke becomes straight lines, arcs and smooth curves, added to the drawing. */
