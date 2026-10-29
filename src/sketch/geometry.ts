@@ -71,6 +71,29 @@ export function tessellateEntity(sk: Sketch, e: SketchEntity, step = 1 / 32): Pt
   }
 }
 
+/** Points that bound a shape exactly: arcs and circles use their true extremes, not the drawn polygon. */
+export function extremePoints(sk: Sketch, e: SketchEntity): Pt[] {
+  const P = (id: string) => pointOf(sk, id)
+  if (e.kind === 'circle') {
+    const c = P(e.center)
+    return [{ x: c.x - e.r, y: c.y - e.r }, { x: c.x + e.r, y: c.y + e.r }]
+  }
+  if (e.kind === 'arc') {
+    const c = P(e.center), s = P(e.start), end = P(e.end)
+    const { a0, sweep, r } = arcAngles(c, s, end)
+    const out = [s, end]
+    for (let k = -4; k <= 8; k++) {
+      const a = (k * Math.PI) / 2
+      let d = a - a0
+      while (d < 0) d += 2 * Math.PI
+      while (d >= 2 * Math.PI) d -= 2 * Math.PI
+      if (d <= sweep) out.push({ x: c.x + r * Math.cos(a), y: c.y + r * Math.sin(a) })
+    }
+    return out
+  }
+  return tessellateEntity(sk, e)
+}
+
 /** The two ends of a shape that can be part of an outline (lines, arcs, curves). */
 export function endsOf(sk: Sketch, e: SketchEntity): [Pt, Pt] | null {
   const P = (id: string) => pointOf(sk, id)
