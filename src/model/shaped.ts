@@ -108,6 +108,12 @@ export function updateSketch(p: Project, sk: Sketch): Project {
 export function deleteSketch(p: Project, sketchId: string): Project {
   let next: Project = { ...p, sketches: (p.sketches ?? []).filter(s => s.id !== sketchId) }
   for (const b of p.boards) if (b.outline?.sketchId === sketchId) next = unshapeBoard(next, b.id)
+  // A turned leg whose profile is deleted is its square blank again.
+  next = { ...next, boards: next.boards.map(b => {
+    if (b.turning?.sketchId !== sketchId) return b
+    const { turning: _t, ...rest } = b
+    return rest as Board
+  }) }
   return next
 }
 

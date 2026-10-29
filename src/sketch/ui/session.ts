@@ -50,6 +50,13 @@ export function editShape(b: Board) {
   return openDrawing(sk, { boardId: b.id, isNew: true })
 }
 
+/** Opens a turned leg's profile on the drawing board. */
+export function editTurning(b: Board) {
+  const sk = b.turning && studio.getState().project.sketches?.find(s => s.id === b.turning!.sketchId)
+  if (!sk) return Promise.resolve()
+  return openDrawing(sk, { boardId: b.id, isNew: false })
+}
+
 /** Puts the drawing into the project (one undo step). Returns false if the project refused it. */
 export function saveDrawing(force = false): boolean {
   const d = draw.getState()
@@ -60,7 +67,11 @@ export function saveDrawing(force = false): boolean {
   if (!exists && sk.entities.length === 0) return true
   // A drawing opened and left untouched (like Edit shape's starting rectangle) isn't kept.
   if (!exists && !d.dirty && !force) return true
-  s.apply(p => (exists ? updateSketch(p, sk) : addSketch(p, sk)))
+  s.apply(p => {
+    const q = exists ? updateSketch(p, sk) : addSketch(p, sk)
+    // A turning profile changed by hand is now the leg's own drawn shape.
+    return { ...q, boards: q.boards.map(b => (b.turning?.sketchId === sk.id && b.turning.style !== 'custom' ? { ...b, turning: { ...b.turning, style: 'custom' } } : b)) }
+  })
   if (studio.getState().error) return false
   draw.setState({ dirty: false, context: { ...d.context, isNew: false } })
   return true

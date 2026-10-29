@@ -15,6 +15,7 @@ export function Outputs({ kids = false }: { kids?: boolean }) {
   const woods = useStudio(s => s.project.woods)
   const saved = useStudio(s => s.project.sketches?.some(k => k.id === sketch.id) ?? false)
   const target = useStudio(s => (boardId ? s.project.boards.find(b => b.id === boardId) : undefined))
+  const profileOf = useStudio(s => s.project.boards.find(b => b.turning?.sketchId === sketch.id))
   const [choosing, setChoosing] = useState(false)
   const [printing, setPrinting] = useState(false)
   const [note, setNote] = useState<string | null>(null)
@@ -46,9 +47,10 @@ export function Outputs({ kids = false }: { kids?: boolean }) {
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      {problem && sketch.entities.length > 0 && <span role="note" className="text-sm text-red-700">{problem}</span>}
+      {problem && !profileOf && sketch.entities.length > 0 && <span role="note" className="text-sm text-red-700">{problem}</span>}
       {note && <span role="status" className="text-sm text-stone-600">{note}</span>}
-      <div className="relative">
+      {profileOf && <span className="text-sm text-stone-600">Turning profile for {profileOf.name} — the leg follows it when you go back</span>}
+      <div className={`relative ${profileOf ? 'hidden' : ''}`}>
         <button
           disabled={!!problem}
           title={problem ?? undefined}

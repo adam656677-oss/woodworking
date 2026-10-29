@@ -7,6 +7,12 @@ import { studio, useStudio } from '../store'
 import { NumberInput } from '../common/NumberInput'
 import { KID_WOODS, round8 } from '../../kids/kidWords'
 import { InchInput } from './InchInput'
+import { useState } from 'react'
+import { TurningSection } from '../../shaping/ui/TurningSection'
+import { TaperSection } from '../../shaping/ui/TaperSection'
+import { EdgesSection } from '../../shaping/ui/EdgesSection'
+import { TurningSheet } from '../../shaping/ui/TurningSheet'
+import { TaperSheet } from '../../shaping/ui/TaperSheet'
 
 function AngleInput({ label, value, onChange }: { label: string; value: number; onChange(v: number): void }) {
   return <NumberInput label={label} value={value} onChange={onChange} min={-60} max={60} step={0.5} />
@@ -36,6 +42,7 @@ export function PropertiesPanel() {
   const woods = useStudio(s => s.project.woods)
   const live = useStudio(s => s.project.template !== undefined)
   const kidsMode = useStudio(s => s.kidsMode)
+  const [sheet, setSheet] = useState<'turning' | 'taper' | null>(null)
   if (selection.length === 0) return <p className="text-sm text-stone-500">Select a part to edit it. Ctrl-click two touching parts to join them.</p>
   if (!board) return <p className="text-sm text-stone-600">{selection.length} parts selected. Use Align, Mirror or Duplicate in the toolbar.</p>
 
@@ -115,6 +122,11 @@ export function PropertiesPanel() {
           <option value="width">width</option>
         </select>
       </label>
+      {!kidsMode && <TurningSection key={`t${board.id}`} board={board} onSheet={() => setSheet('turning')} />}
+      {!kidsMode && <TaperSection key={`p${board.id}`} board={board} onSheet={() => setSheet('taper')} />}
+      <EdgesSection key={`e${board.id}`} board={board} kids={kidsMode} />
+      {sheet === 'turning' && board.turning && <TurningSheet board={board} onClose={() => setSheet(null)} />}
+      {sheet === 'taper' && board.taper && <TaperSheet board={board} onClose={() => setSheet(null)} />}
       {!kidsMode && <details open={board.endCuts.start.miter !== 0 || board.endCuts.end.miter !== 0 || undefined}>
         <summary className="cursor-pointer text-sm font-semibold">Ends &amp; edges</summary>
         <div className="mt-2 flex flex-col gap-2">
