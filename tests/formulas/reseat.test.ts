@@ -8,7 +8,7 @@ import { addRule } from '../../src/formulas/rules'
 import { applyTemplate, unlock } from '../../src/templates'
 
 const ok = (r: Project | { error: string }): Project => { if ('error' in r) throw new Error(r.error); return r }
-const shelfPlain = () => {
+const shelfPlain = (): Project => {
   const p = unlock(applyTemplate(emptyProject('S'), 'bookshelf', { shelves: 3, back: true }))
   return { ...p, sizes: [], rules: [] }
 }
