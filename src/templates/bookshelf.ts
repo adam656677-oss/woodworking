@@ -1,6 +1,6 @@
 import type { Board, Joint, Wood } from '../model/types'
 import { snap64 } from '../model/units'
-import type { TemplateDef } from './index'
+import { num, woodT, type TemplateDef, type UnlockForm } from './index'
 import { groove, makeBoard, ORIENT, woodOf } from './place'
 
 const DADO_DEPTH_MAX = 0.25
@@ -32,6 +32,38 @@ export const bookshelf: TemplateDef = {
       W: Math.max(params.W as number, 2 * t + 1),
       H: Math.max(params.H as number, 2 * END_INSET + (n + 2) * t + (n + 1)),
       D: Math.max(params.D as number, tb + 1)
+    }
+  },
+  unlockForm(params): UnlockForm {
+    const n = params.shelves as number
+    const back = params.back as boolean
+    const level = { width: '=D - TB', length: '=W - 2*T + 2*DadoDepth', x: '=T - DadoDepth' }
+    const boards: Record<number, Record<string, string>> = {
+      0: { width: '=D', length: '=H' },
+      1: { width: '=D', length: '=H', x: '=W - T' },
+      2: { ...level, z: '=H - Inset - T' },
+      3: { ...level, z: '=Inset' }
+    }
+    for (let i = 0; i < n; i++) boards[4 + i] = { ...level }
+    if (back) boards[4 + n] = { width: '=W - 2*T + 2*BackRabbet', length: '=H', x: '=T - BackRabbet', y: '=D - TB' }
+    // Joints: two dados per level (top, bottom, shelves), then two rabbets for the back.
+    const joints: Record<number, Record<string, string>> = {}
+    for (let k = 0; k < 2 * (n + 2); k++) joints[k] = { depth: '=DadoDepth' }
+    if (back) { joints[2 * (n + 2)] = { depth: '=BackRabbet' }; joints[2 * (n + 2) + 1] = { depth: '=BackRabbet' } }
+    return {
+      sizes: [
+        { name: 'W', expr: num(params.W as number) }, { name: 'H', expr: num(params.H as number) }, { name: 'D', expr: num(params.D as number) },
+        { name: 'Shelves', expr: num(n) }, { name: 'T', expr: woodT(params.wood as string) },
+        { name: 'TB', expr: back ? woodT(params.backWood as string) : '0' },
+        { name: 'DadoDepth', expr: `min(${num(DADO_DEPTH_MAX)}, floor(T*32)/64)` },
+        { name: 'BackRabbet', expr: `min(${num(BACK_RABBET_DEPTH_MAX)}, floor(T*32)/64)` },
+        { name: 'Inset', expr: num(END_INSET) }
+      ],
+      boards,
+      joints,
+      rules: n >= 1
+        ? [{ kind: 'count', expr: 'Shelves', first: 4, copies: Array.from({ length: n - 1 }, (_, i) => 5 + i), axis: 'z', from: 3, to: 2 }]
+        : []
     }
   },
   build(params, woods: Wood[]) {

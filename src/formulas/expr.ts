@@ -57,7 +57,7 @@ function tokenize(s: string): Tok[] | { error: string } {
 const near = (s: string, i: number) => s.slice(i).trim().slice(0, 14)
 
 export function parseFormula(text: string): { ok: true; expr: Expr } | { ok: false; error: string } {
-  const src = text.trim()
+  const src = text.trim().replace(/^=\s*/, '')
   if (!src) return { ok: false, error: 'Type a formula after =' }
   const toks = tokenize(src)
   if (!Array.isArray(toks)) return { ok: false, error: toks.error }

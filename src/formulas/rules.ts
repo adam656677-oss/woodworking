@@ -62,13 +62,17 @@ function spaceBetween(p: Project, axis: Axis3, from: string, to: string, parts: 
   const sizes = run.map(x => x.b.max[axis] - x.b.min[axis])
   const gap = (hi - lo - sizes.reduce((s, v) => s + v, 0)) / (run.length + 1)
   if (gap < 0) return { project: p, error: `The parts don't fit between ${nameOf(p, from)} and ${nameOf(p, to)}` }
+  // Positions on the 1/64" grid, mirrored for the far half so a symmetric run stays symmetric.
+  const mins: number[] = []
   let at = lo
+  run.forEach((_, i) => { at += gap; mins.push(snap64(at)); at += sizes[i] })
+  const n = run.length
+  for (let i = 0; i < n; i++) {
+    const j = n - 1 - i
+    if (i > j && Math.abs(sizes[i] - sizes[j]) < 1e-9) mins[i] = snap64(lo + hi - mins[j] - sizes[i])
+  }
   let q = p
-  run.forEach((x, i) => {
-    at += gap
-    q = moveMin(q, x.id, axis, at)
-    at += sizes[i]
-  })
+  run.forEach((x, i) => { q = moveMin(q, x.id, axis, mins[i]) })
   return { project: q, error: null }
 }
 
@@ -86,7 +90,10 @@ function copyPart(p: Project, firstId: string, run: Set<string>): Project {
       partnerBoardId: j.partnerBoardId === firstId ? id : j.partnerBoardId,
       restore: j.restore?.map(r => ({ ...r, boardId: r.boardId === firstId ? id : r.boardId }))
     }))
-  return { ...p, boards: [...p.boards, copy], joints: [...p.joints, ...joints] }
+  // The new joints go right after the run's own, so notes keep the order they'd have if made by hand.
+  const last = p.joints.reduce((k, j, i) => (run.has(j.hostBoardId) || run.has(j.partnerBoardId) ? i : k), p.joints.length - 1)
+  const all = [...p.joints.slice(0, last + 1), ...joints, ...p.joints.slice(last + 1)]
+  return { ...p, boards: [...p.boards, copy], joints: all }
 }
 
 export function applyRules(p0: Project, sizes: Map<string, number>): { project: Project; errors: FormulaError[] } {
@@ -117,8 +124,13 @@ export function applyRules(p0: Project, sizes: Map<string, number>): { project: 
     let copies = r.copies.filter(id => box(p, id))
     while (copies.length + 1 < n) {
       const before = new Set(p.boards.map(b => b.id))
-      p = copyPart(p, r.first, new Set([r.first, ...copies]))
-      copies = [...copies, p.boards.find(b => !before.has(b.id))!.id]
+      // Copy the last of the run and start it just past it, so the run keeps its order when it's spaced.
+      const lastId = copies.length ? copies[copies.length - 1] : r.first
+      p = copyPart(p, lastId, new Set([r.first, ...copies]))
+      const id = p.boards.find(b => !before.has(b.id))!.id
+      const lb = box(p, lastId)!
+      p = moveMin(p, id, r.axis, lb.max[r.axis])
+      copies = [...copies, id]
     }
     if (copies.length + 1 > n) {
       const gone = new Set(copies.slice(n - 1))

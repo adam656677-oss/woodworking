@@ -10,7 +10,7 @@ import { MSG_GAPS, MSG_SQUARE, turningProblem } from '../shaping/turning'
 import { taperProblem } from '../shaping/taper'
 import { edgeProblemFor, PROFILE_NAMES } from '../shaping/edges'
 
-export type Warning = { kind: 'overlap' | 'exceedsStock' | 'badJoint' | 'badShape'; boardIds: string[]; message: string }
+export type Warning = { kind: 'overlap' | 'exceedsStock' | 'badJoint' | 'badShape' | 'formula'; boardIds: string[]; message: string }
 
 export function validate(project: Project): Warning[] {
   const warnings: Warning[] = []

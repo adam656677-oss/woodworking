@@ -1,5 +1,5 @@
 import type { Board, Joint, Wood } from '../model/types'
-import type { TemplateDef } from './index'
+import { num, woodT, type TemplateDef, type UnlockForm } from './index'
 import { butt, groove, makeBoard, ORIENT, woodOf } from './place'
 
 /** A simple open box (optional lid): front/back run full width; sides fit between (butt) or into rabbets. */
@@ -18,6 +18,26 @@ export const box: TemplateDef = {
     // The inside must be at least 1" across, or the sides and bottom would have no (or negative) size.
     const min = 2 * woodOf(woods, params.wood as string).thickness + 1
     return { ...params, W: Math.max(params.W as number, min), D: Math.max(params.D as number, min) }
+  },
+  unlockForm(params): UnlockForm {
+    const rabbet = params.corners === 'rabbet'
+    const sides = { width: '=H', length: rabbet ? '=D - 2*(T - Rab)' : '=D - 2*T', y: rabbet ? '=T - Rab' : '=T' }
+    return {
+      sizes: [
+        { name: 'W', expr: num(params.W as number) }, { name: 'D', expr: num(params.D as number) }, { name: 'H', expr: num(params.H as number) },
+        { name: 'T', expr: woodT(params.wood as string) }, { name: 'Rab', expr: 'floor(T*32)/64' }
+      ],
+      boards: {
+        0: { width: '=H', length: '=W' },
+        1: { width: '=H', length: '=W', y: '=D - T' },
+        2: sides,
+        3: { ...sides, x: '=W - T' },
+        4: { width: '=D - 2*T', length: '=W - 2*T', x: '=T', y: '=T' },
+        5: { width: '=D', length: '=W', z: '=H' }
+      },
+      // Rabbet corners: front/back × left/right come first in the joint list.
+      joints: rabbet ? { 0: { depth: '=Rab' }, 1: { depth: '=Rab' }, 3: { depth: '=Rab' }, 4: { depth: '=Rab' } } : {}
+    }
   },
   build(params, woods: Wood[]) {
     const W = params.W as number

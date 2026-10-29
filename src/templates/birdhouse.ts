@@ -1,5 +1,5 @@
 import type { Joint, Wood } from '../model/types'
-import type { TemplateDef } from './index'
+import { num, woodT, type TemplateDef, type UnlockForm } from './index'
 import { butt, makeBoard, ORIENT, woodOf } from './place'
 
 const SCREWS = { fastener: 'screws' as const, count: 2 }
@@ -17,6 +17,25 @@ export const birdhouse: TemplateDef = {
     { key: 'hole', label: 'Entry hole diameter', kind: 'inches', default: 1.25, min: 0.75, max: 3 },
     { key: 'wood', label: 'Wood', kind: 'wood', default: '1x10' }
   ],
+  unlockForm(params): UnlockForm {
+    const side = { width: '=FloorD', length: '=Height', y: '=T' }
+    return {
+      sizes: [
+        { name: 'FloorW', expr: num(params.floorW as number) }, { name: 'FloorD', expr: num(params.floorD as number) },
+        { name: 'Height', expr: num(params.height as number) }, { name: 'Overhang', expr: num(params.overhang as number) },
+        { name: 'Hole', expr: num(params.hole as number) }, { name: 'T', expr: woodT(params.wood as string) },
+        { name: 'OuterW', expr: 'FloorW + 2*T' }, { name: 'OuterD', expr: 'FloorD + 2*T' }
+      ],
+      boards: {
+        0: { width: '=OuterW', length: '=Height', 'holes.0.diameter': '=Hole', 'holes.0.u': '=OuterW/2', 'holes.0.v': `=min(${HOLE_FROM_BOTTOM}, Height - Hole)` },
+        1: { width: '=OuterW', length: '=Height', y: '=OuterD - T' },
+        2: side,
+        3: { ...side, x: '=OuterW - T' },
+        4: { width: '=FloorD', length: '=FloorW', x: '=T', y: '=T' },
+        5: { width: '=OuterD + 2*Overhang', length: '=OuterW + 2*Overhang', x: '=-Overhang', y: '=-Overhang', z: '=Height' }
+      }
+    }
+  },
   build(params, woods: Wood[]) {
     const fw = params.floorW as number
     const fd = params.floorD as number

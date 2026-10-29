@@ -8,6 +8,7 @@ import type { Project, Wood } from '../model/types'
 import { validate, type Warning } from '../model/validate'
 import { cloneWoods, emptyProject } from '../model/woods'
 import { applyTemplate, findTemplate, unlock } from '../templates'
+import { recalc, type FormulaError } from '../formulas/recalc'
 
 export type Screen = 'home' | 'kids' | 'master' | 'plans' | 'draw'
 export type View = '3d' | 'front' | 'side' | 'top'
@@ -35,6 +36,8 @@ export type StudioState = {
   projectKey: number
   /** True while asking whether to save unsaved work before it is replaced. */
   pendingReplace: boolean
+  /** Formula and rule problems, by key (size:<name>, board:<id>:<path>, joint:<id>:<path>, rule:<id>). */
+  formulaErrors: Record<string, string>
   /** The designer is the kids' Simple Designer (fewer tools, 1/8" sizes, butt joints, kid woods). */
   kidsMode: boolean
 
@@ -88,7 +91,10 @@ export function createStudioStore() {
     /** Publish the history's current snapshot into state. */
     const sync = (dirty: boolean) => {
       const { project, selection } = history.current
-      set({ project, selection, warnings: validate(project), dirty, canUndo: history.canUndo, canRedo: history.canRedo })
+      const fe: FormulaError[] = recalc(project).errors
+      const formulaErrors = Object.fromEntries(fe.map(e => [e.key, e.message]))
+      const warnings = [...validate(project), ...fe.map(e => ({ kind: 'formula' as const, boardIds: e.boardIds, message: e.message }))]
+      set({ project, selection, warnings, formulaErrors, dirty, canUndo: history.canUndo, canRedo: history.canRedo })
       api()?.setDirty(dirty)
     }
     const start = (project: Project, filePath: string | null, dirty: boolean) => {
@@ -147,6 +153,7 @@ export function createStudioStore() {
       projectKey: 0,
       pendingReplace: false,
       kidsMode: false,
+      formulaErrors: {},
 
       goto: screen => set({ screen }),
       enterKidsDesigner: () => {
@@ -181,8 +188,10 @@ export function createStudioStore() {
           set({ error: LIVE_TEMPLATE })
           return
         }
-        const ids = new Set(result.boards.map(b => b.id))
-        history.push({ project: result, selection: get().selection.filter(id => ids.has(id)) })
+        // Sizes, formulas and rules are worked out again after every change (one undo step with it).
+        const done = recalc(result).project
+        const ids = new Set(done.boards.map(b => b.id))
+        history.push({ project: done, selection: get().selection.filter(id => ids.has(id)) })
         set({ error: null })
         sync(true)
       },
