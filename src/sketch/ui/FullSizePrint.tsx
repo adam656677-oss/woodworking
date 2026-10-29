@@ -44,10 +44,43 @@ function PageMap({ tiles, cols, rows }: { tiles: Tile[]; cols: number; rows: num
   )
 }
 
+/** The true-size pages of a drawing (letter, tiled), each with its label and a 1" check square. */
+export function FullSizePages({ sketch, breakLast = false }: { sketch: Sketch; breakLast?: boolean }) {
+  const b = sketchBounds(sketch)
+  const tiles = Number.isFinite(b.minX) ? tilePages(b) : []
+  const cols = Math.max(0, ...tiles.map(t => t.col + 1)), rows = Math.max(0, ...tiles.map(t => t.row + 1))
+  return (
+    <>
+      {tiles.map((t, i) => (
+        <section key={t.id} aria-label={`Page ${t.id}`} className="relative shrink-0 overflow-hidden bg-white shadow print:shadow-none"
+          style={{ width: `${PRINTABLE.w}in`, height: `${PRINTABLE.h}in`, breakAfter: i < tiles.length - 1 || breakLast ? 'page' : 'auto' }}>
+          <PageSvg sk={sketch} t={t} />
+          <div className="absolute right-[0.6in] top-[0.6in] text-right text-[9pt] leading-tight text-gray-700">
+            <div className="text-[16pt] font-bold text-gray-900">{t.id}</div>
+            <div>{sketch.name}</div>
+            <div>Page {i + 1} of {tiles.length} · full size</div>
+          </div>
+          <div className="absolute bottom-[0.6in] left-[0.6in] flex items-end gap-1 text-[8pt] text-gray-700">
+            <div data-testid="check-square" className="border border-gray-900" style={{ width: '1in', height: '1in' }} />
+            <span>1&quot; check square</span>
+          </div>
+          {i === 0 && (
+            <div className="absolute bottom-[0.6in] right-[0.6in] max-w-[3.2in] rounded border border-gray-400 bg-white/90 p-2 text-[8pt] leading-snug text-gray-800">
+              <p className="mb-1 font-bold">How to put it together</p>
+              <p>Printed at Actual size the square is exactly 1&quot;. Lay the pages out like the map, overlap each one up to its dashed line, line up the + marks, and tape.</p>
+              <div className="mt-1"><PageMap tiles={tiles} cols={cols} rows={rows} /></div>
+            </div>
+          )}
+        </section>
+      ))}
+    </>
+  )
+}
+
+
 export function FullSizePrint({ sketch, onBack }: { sketch: Sketch; onBack(): void }) {
   const b = sketchBounds(sketch)
-  const ok = Number.isFinite(b.minX)
-  const tiles = ok ? tilePages(b) : []
+  const tiles = Number.isFinite(b.minX) ? tilePages(b) : []
   const cols = Math.max(0, ...tiles.map(t => t.col + 1)), rows = Math.max(0, ...tiles.map(t => t.row + 1))
   return (
     <div className="fixed inset-0 z-40 flex flex-col bg-stone-200 print:static print:bg-white">
@@ -63,28 +96,7 @@ export function FullSizePrint({ sketch, onBack }: { sketch: Sketch; onBack(): vo
       </p>
       <div className="min-h-0 flex-1 overflow-auto p-6 print:overflow-visible print:p-0">
         <div className="print-area flex flex-col items-center gap-6 print:gap-0" data-testid="full-size-pages">
-          {tiles.map((t, i) => (
-            <section key={t.id} aria-label={`Page ${t.id}`} className="relative shrink-0 overflow-hidden bg-white shadow print:shadow-none"
-              style={{ width: `${PRINTABLE.w}in`, height: `${PRINTABLE.h}in`, breakAfter: i < tiles.length - 1 ? 'page' : 'auto' }}>
-              <PageSvg sk={sketch} t={t} />
-              <div className="absolute right-[0.6in] top-[0.6in] text-right text-[9pt] leading-tight text-gray-700">
-                <div className="text-[16pt] font-bold text-gray-900">{t.id}</div>
-                <div>{sketch.name}</div>
-                <div>Page {i + 1} of {tiles.length} · full size</div>
-              </div>
-              <div className="absolute bottom-[0.6in] left-[0.6in] flex items-end gap-1 text-[8pt] text-gray-700">
-                <div data-testid="check-square" className="border border-gray-900" style={{ width: '1in', height: '1in' }} />
-                <span>1&quot; check square</span>
-              </div>
-              {i === 0 && (
-                <div className="absolute bottom-[0.6in] right-[0.6in] max-w-[3.2in] rounded border border-gray-400 bg-white/90 p-2 text-[8pt] leading-snug text-gray-800">
-                  <p className="mb-1 font-bold">How to put it together</p>
-                  <p>Printed at Actual size the square is exactly 1&quot;. Lay the pages out like the map, overlap each one up to its dashed line, line up the + marks, and tape.</p>
-                  <div className="mt-1"><PageMap tiles={tiles} cols={cols} rows={rows} /></div>
-                </div>
-              )}
-            </section>
-          ))}
+          <FullSizePages sketch={sketch} />
         </div>
       </div>
     </div>
