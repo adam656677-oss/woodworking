@@ -19,7 +19,7 @@ model and in the saved file.
 
 - Display only; the design doesn't change, the cut list and checks don't move.
 - Each top-level group moves out from the design's centre as a unit; parts inside a group (and loose
-  parts) move out from their group's centre (or the design's). At 100% each offset is 1.5× the distance
+  parts) move out from their group's centre (or the design's). At 100% each offset equals the distance
   from the centre, so parts clear each other in most furniture.
 - Selecting and the move arrows are off while exploded (a note says why); the explode amount is kept per
   project while the app is open.

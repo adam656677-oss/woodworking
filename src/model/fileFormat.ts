@@ -5,7 +5,7 @@ import { AXES3 } from '../formulas/types'
 import type { Project } from './types'
 import { pruneGroups } from '../assemblies/ops'
 
-export const FORMAT_VERSION = 5
+export const FORMAT_VERSION = 6
 
 export class ProjectFileError extends Error {
   constructor(public code: 'corrupt' | 'newerVersion' | 'invalid', message: string) {
@@ -24,7 +24,9 @@ const MIGRATIONS: Record<number, Migration> = {
   // Version 4 adds named sizes, formulas and layout rules (all optional).
   3: raw => ({ ...raw, formatVersion: 4 }),
   // Version 5 adds groups (assemblies) and linked copies (all optional).
-  4: raw => ({ ...raw, formatVersion: 5 })
+  4: raw => ({ ...raw, formatVersion: 5 }),
+  // Version 6 adds dimensions and notes on the model (optional).
+  5: raw => ({ ...raw, formatVersion: 6 })
 }
 
 export function serialize(p: Project): string {
@@ -202,6 +204,12 @@ function check(raw: any): Project {
   }
   for (const b of raw.boards) {
     if ((b.groupId !== undefined && !isStr(b.groupId)) || (b.link !== undefined && !isStr(b.link))) invalid(`board "${b.name}" has a damaged group`)
+  }
+  if (raw.annotations !== undefined) {
+    const ok = (a: any) => isObj(a) && isStr(a.id) && (
+      a.kind === 'dimension' ? isVec(a.a) && isVec(a.b) && (a.label === undefined || isStr(a.label))
+        : a.kind === 'note' ? isVec(a.at) && isStr(a.text) : false)
+    if (!Array.isArray(raw.annotations) || !raw.annotations.every(ok)) invalid('a dimension or note is damaged')
   }
   return pruneGroups(raw as Project)
 }

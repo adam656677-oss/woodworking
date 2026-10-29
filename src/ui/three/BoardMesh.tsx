@@ -81,11 +81,15 @@ type Props = {
   selected: boolean
   warned: boolean
   onSelect(e: ThreeEvent<MouseEvent>): void
+  /** Exploded-view offset (display only). */
+  offset?: { x: number; y: number; z: number }
+  /** Section planes: the cut-away side is hidden and the inside shows as a solid cap colour. */
+  clip?: THREE.Plane[]
 }
 
 const deg = (d: number) => (d * Math.PI) / 180
 
-export const BoardMesh = forwardRef<THREE.Group, Props>(function BoardMesh({ board, cuts, kind, shape, turned, selected, warned, onSelect }, ref) {
+export const BoardMesh = forwardRef<THREE.Group, Props>(function BoardMesh({ board, cuts, kind, shape, turned, selected, warned, onSelect, offset, clip }, ref) {
   const geometry = useBoardGeometry(board, cuts, shape, turned)
   // Outline the board's overall shape (cut seams would show triangulation lines across flat faces).
   const shapeKey = JSON.stringify([shape ?? null, turned ?? null])
@@ -103,14 +107,20 @@ export const BoardMesh = forwardRef<THREE.Group, Props>(function BoardMesh({ boa
     <group
       ref={ref}
       name={board.id}
-      position={[board.position.x, board.position.y, board.position.z]}
+      position={[board.position.x + (offset?.x ?? 0), board.position.y + (offset?.y ?? 0), board.position.z + (offset?.z ?? 0)]}
       rotation={new THREE.Euler(deg(board.rotation.x), deg(board.rotation.y), deg(board.rotation.z), 'XYZ')}
     >
       <mesh geometry={geometry} onClick={onSelect} userData={{ boardId: board.id }}>
-        <meshStandardMaterial flatShading color={color} roughness={0.85} emissive={selected ? '#ff9800' : '#000000'} emissiveIntensity={selected ? 0.35 : 0} />
+        <meshStandardMaterial flatShading color={color} roughness={0.85} emissive={selected ? '#ff9800' : '#000000'} emissiveIntensity={selected ? 0.35 : 0} clippingPlanes={clip ?? []} />
       </mesh>
+      {clip && clip.length > 0 && (
+        // Inside faces seen through the cut read as the solid cut face.
+        <mesh geometry={geometry} raycast={() => null}>
+          <meshBasicMaterial color="#8d6e63" side={THREE.BackSide} clippingPlanes={clip} />
+        </mesh>
+      )}
       <lineSegments geometry={outline} raycast={() => null}>
-        <lineBasicMaterial color={selected ? '#e65100' : '#5d4037'} />
+        <lineBasicMaterial color={selected ? '#e65100' : '#5d4037'} clippingPlanes={clip ?? []} />
       </lineSegments>
     </group>
   )

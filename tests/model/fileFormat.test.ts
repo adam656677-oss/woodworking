@@ -65,9 +65,10 @@ test('migrate upgrades an older object with injected migrations', () => {
     1: r => ({ ...r, formatVersion: 2, sketches: [] }),
     2: r => ({ ...r, formatVersion: 3 }),
     3: r => ({ ...r, formatVersion: 4 }),
-    4: r => ({ ...r, formatVersion: 5 })
+    4: r => ({ ...r, formatVersion: 5 }),
+    5: r => ({ ...r, formatVersion: 6 })
   })
-  expect(up.formatVersion).toBe(5)
+  expect(up.formatVersion).toBe(FORMAT_VERSION)
   expect(up.sketches).toEqual([])
   expect(up.boards[0].holes).toEqual([])
   expect(up.boards[0].edgeBevels).toEqual({ left: 0, right: 0 })

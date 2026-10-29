@@ -64,6 +64,11 @@ export type Board = {
   link?: string
 }
 
+/** A dimension or note kept on the model (world inches). */
+export type Annotation =
+  | { id: string; kind: 'dimension'; a: Vec3; b: Vec3; label?: string }
+  | { id: string; kind: 'note'; at: Vec3; text: string }
+
 /** A group of parts (an assembly such as a drawer or a door); groups nest through parentId. */
 export type Group = { id: string; name: string; parentId?: string; link?: string }
 
@@ -104,7 +109,7 @@ export type TemplateState = { templateId: string; params: Record<string, number 
 
 export type Project = {
   /** 2 adds drawings; version 1 files are upgraded when opened. */
-  formatVersion: 1 | 2 | 3 | 4 | 5
+  formatVersion: 1 | 2 | 3 | 4 | 5 | 6
   name: string
   units: 'in'
   boards: Board[]
@@ -119,6 +124,8 @@ export type Project = {
   rules?: Rule[]
   /** Groups / assemblies (a tree). */
   groups?: Group[]
+  /** Dimensions and notes kept on the model. */
+  annotations?: Annotation[]
 }
 
 export const SQUARE: EndCut = { miter: 0, bevel: 0 }

@@ -4,13 +4,14 @@ import { deserialize, ProjectFileError, serialize } from '../model/fileFormat'
 import { History } from '../model/history'
 import { newId } from '../model/ids'
 import type { OpError } from '../model/ops'
-import type { Project, Wood } from '../model/types'
+import type { Project, Vec3, Wood } from '../model/types'
 import { validate, type Warning } from '../model/validate'
 import { cloneWoods, emptyProject } from '../model/woods'
 import { applyTemplate, findTemplate, freeze } from '../templates'
 import { recalc, type FormulaError } from '../formulas/recalc'
 import { exactText, releaseEdited } from '../formulas/ops'
 import { pruneGroups, syncLinks } from '../assemblies/ops'
+import { addNote } from '../checks/annotations'
 
 export type Screen = 'home' | 'kids' | 'master' | 'plans' | 'draw'
 export type View = '3d' | 'front' | 'side' | 'top'
@@ -46,6 +47,16 @@ export type StudioState = {
   hidden: string[]
   /** When set, only these parts show in the 3D view. */
   isolated: string[] | null
+  /** Exploded view, 0..1 (display only). */
+  explode: number
+  /** Section plane: axis, where (0..1 across the design), which side is kept. */
+  section: Section | null
+  showDims: boolean
+  overallSize: boolean
+  checksOpen: 'interference' | 'weight' | 'notes' | null
+  /** Waiting for a click on the model to pin a note; then the point waiting for its text. */
+  placingNote: boolean
+  pendingNote: Vec3 | null
 
   goto(screen: Screen): void
   /** Open the kids' Simple Designer: back to the kid's design if there is one, else a blank one. */
@@ -77,7 +88,12 @@ export type StudioState = {
   setHidden(ids: string[], hidden: boolean): void
   isolate(ids: string[] | null): void
   showAll(): void
+  setView(patch: Partial<Pick<StudioState, 'explode' | 'section' | 'showDims' | 'overallSize' | 'checksOpen' | 'placingNote' | 'pendingNote'>>): void
+  /** Pin the pending note with this text (null cancels). */
+  finishNote(text: string | null): void
 }
+
+export type Section = { axis: 'x' | 'y' | 'z'; at: number; flip: boolean }
 
 export const APP_NAME = 'A&A Woodworking Studio'
 
@@ -109,7 +125,7 @@ export function createStudioStore() {
     }
     const start = (project: Project, filePath: string | null, dirty: boolean) => {
       history = new History<Snapshot>({ project, selection: [] })
-      set({ filePath, screen: 'master', error: null, recovery: null, projectKey: get().projectKey + 1, hidden: [], isolated: null })
+      set({ filePath, screen: 'master', error: null, recovery: null, projectKey: get().projectKey + 1, hidden: [], isolated: null, explode: 0, section: null, placingNote: false, pendingNote: null })
       sync(dirty)
     }
     const loadText = (text: string, path: string | null, backupPath: string | null, dirty: boolean) => {
@@ -165,6 +181,13 @@ export function createStudioStore() {
       kidsMode: false,
       hidden: [],
       isolated: null,
+      explode: 0,
+      section: null,
+      showDims: true,
+      overallSize: false,
+      checksOpen: null,
+      placingNote: false,
+      pendingNote: null,
       formulaErrors: {},
 
       goto: screen => set({ screen }),
@@ -349,6 +372,12 @@ export function createStudioStore() {
       },
       isolate: ids => set({ isolated: ids && ids.length ? [...ids] : null }),
       showAll: () => set({ hidden: [], isolated: null }),
+      setView: patch => set(patch),
+      finishNote: text => {
+        const at = get().pendingNote
+        set({ pendingNote: null, placingNote: false })
+        if (at && text !== null) get().apply(p => { const r = addNote(p, at, text); return 'error' in r ? r : r.project })
+      },
       set: patch => set(patch)
     }
   })

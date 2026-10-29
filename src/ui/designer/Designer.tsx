@@ -13,6 +13,8 @@ import { WoodLibraryDialog } from './WoodLibraryDialog'
 import { SceneBoundary } from '../three/SceneBoundary'
 import { duplicateSelection, wholeGroup } from '../../assemblies/ops'
 import { GroupPanel } from '../../assemblies/ui/GroupPanel'
+import { ViewTools } from '../../checks/ui/ViewTools'
+import { ChecksPanel } from '../../checks/ui/ChecksPanel'
 
 const Scene = lazy(() => import('../three/Scene'))
 
@@ -96,6 +98,7 @@ export function Designer() {
             <StartPanel />
           ) : (
             <SceneBoundary>
+              {!kidsMode && <ViewTools />}
               <Suspense fallback={<div className="p-4 text-stone-500">Loading 3D view…</div>}>
                 <Scene />
               </Suspense>
@@ -103,6 +106,7 @@ export function Designer() {
           )}
         </section>
         <aside className="w-72 overflow-y-auto border-l border-stone-300 bg-white p-3">
+          {!kidsMode && <ChecksPanel />}
           {!kidsMode && <TemplatePanel />}
           {whole && <GroupPanel group={whole} />}
           {selection.length === 2 ? <JointPanel /> : whole && selection.length > 1 ? null : <PropertiesPanel />}

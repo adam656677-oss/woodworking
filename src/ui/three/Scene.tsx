@@ -9,6 +9,9 @@ import { BoardMesh } from './BoardMesh'
 import { MeasureTool } from './MeasureTool'
 import { MoveGizmo } from './MoveGizmo'
 import { ViewControls } from './ViewControls'
+import { designBox, explodeOffsets } from '../../checks/explode'
+import { addDimension } from '../../checks/annotations'
+import { Annotations3D } from '../../checks/ui/Annotations3D'
 
 export default function Scene() {
   const project = useStudio(s => s.project)
@@ -17,6 +20,18 @@ export default function Scene() {
   const view = useStudio(s => s.view)
   const measuring = useStudio(s => s.measuring)
   const projectKey = useStudio(s => s.projectKey)
+  const explode = useStudio(s => s.explode)
+  const section = useStudio(s => s.section)
+  const kidsMode = useStudio(s => s.kidsMode)
+  const offsets = useMemo(() => explodeOffsets(project, explode), [project, explode])
+  const clip = useMemo(() => {
+    const box = section ? designBox(project.boards) : null
+    if (!section || !box) return undefined
+    const v = box.min[section.axis] + section.at * (box.max[section.axis] - box.min[section.axis])
+    const n = new THREE.Vector3(section.axis === 'x' ? 1 : 0, section.axis === 'y' ? 1 : 0, section.axis === 'z' ? 1 : 0)
+    // Keep the low side (or the high side when flipped).
+    return [section.flip ? new THREE.Plane(n, -v) : new THREE.Plane(n.negate(), v)]
+  }, [section, project.boards])
   const hidden = useStudio(s => s.hidden)
   const isolated = useStudio(s => s.isolated)
   const shown = useMemo(() => {
@@ -48,12 +63,16 @@ export default function Scene() {
   }, [measuring])
   useEffect(() => {
     // No move arrows on a hidden part.
-    setSelectedGroup(selection.length === 1 && shown.some(b => b.id === selection[0]) ? groups.current.get(selection[0]) ?? null : null)
-  }, [selection, project, shown])
+    setSelectedGroup(explode === 0 && selection.length === 1 && shown.some(b => b.id === selection[0]) ? groups.current.get(selection[0]) ?? null : null)
+  }, [selection, project, shown, explode])
 
   const onSelect = (id: string) => (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation()
     const s = studio.getState()
+    if (s.placingNote) {
+      s.setView({ placingNote: false, pendingNote: { x: e.point.x, y: e.point.y, z: e.point.z } })
+      return
+    }
     if (s.measuring) {
       setPoints(pts => (pts.length >= 2 ? [e.point.clone()] : [...pts, e.point.clone()]))
       return
@@ -66,6 +85,7 @@ export default function Scene() {
 
   return (
     <Canvas
+      onCreated={({ gl }) => { gl.localClippingEnabled = true }}
       data-testid="scene"
       onPointerMissed={() => !studio.getState().measuring && studio.getState().select([])}
       gl={{ preserveDrawingBuffer: true }}
@@ -91,10 +111,18 @@ export default function Scene() {
           selected={selection.includes(b.id)}
           warned={warned.has(b.id)}
           onSelect={onSelect(b.id)}
+          offset={offsets.get(b.id)}
+          clip={clip}
         />
       ))}
       {selectedGroup && !measuring && <MoveGizmo key={selection[0]} object={selectedGroup} boardId={selection[0]} />}
-      <MeasureTool points={points} />
+      <MeasureTool points={points} onKeep={kidsMode || points.length < 2 ? undefined : () => {
+        const [a, b] = points
+        studio.getState().apply(p => { const r = addDimension(p, a, b); return 'error' in r ? r : r.project })
+        setPoints([])
+        studio.getState().setView({ checksOpen: 'notes' })
+      }} />
+      {!kidsMode && <Annotations3D />}
     </Canvas>
   )
 }

@@ -176,7 +176,7 @@ test('unlink makes a copy independent; the last one left loses its link too', ()
 
 test('files: v4 opens as v5; groups round-trip; damaged group references are cleaned on open', async () => {
   const { deserialize, serialize, FORMAT_VERSION } = await import('../../src/model/fileFormat')
-  expect(FORMAT_VERSION).toBe(5)
+  expect(FORMAT_VERSION).toBeGreaterThanOrEqual(5)
   const t = linkedPair()
   const back = deserialize(serialize(t.p))
   expect(back.groups).toEqual(t.p.groups)
@@ -185,7 +185,7 @@ test('files: v4 opens as v5; groups round-trip; damaged group references are cle
   raw.formatVersion = 4
   raw.boards[0].groupId = 'gone'
   const opened = deserialize(JSON.stringify(raw))
-  expect(opened.formatVersion).toBe(5)
+  expect(opened.formatVersion).toBe(FORMAT_VERSION)
   expect(opened.boards[0].groupId).toBeUndefined()
   raw.groups[0].name = 7
   expect(() => deserialize(JSON.stringify(raw))).toThrow('a group is damaged')

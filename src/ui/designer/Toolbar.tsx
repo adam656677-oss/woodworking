@@ -155,6 +155,11 @@ export function Toolbar() {
       ))}
       <Btn onClick={() => window.dispatchEvent(new Event('aa:zoom-fit'))}>Fit</Btn>
       <span className="mx-1 h-5 w-px bg-stone-300" />
+      {!kidsMode && <Menu label="Checks">
+        {close => ([['interference', 'Interference'], ['weight', 'Weight & balance'], ['notes', 'Dimensions & notes']] as const).map(([k, l]) => (
+          <button key={k} role="menuitem" className={item} onClick={() => { s.setView({ checksOpen: k }); close() }}>{l}</button>
+        ))}
+      </Menu>}
       {!kidsMode && <Btn onClick={() => s.set({ woodsOpen: true })}>Woods</Btn>}
       <Btn className="bg-amber-100 font-semibold" onClick={() => s.set({ cutListOpen: true })}>Cut List</Btn>
       {!kidsMode && (
