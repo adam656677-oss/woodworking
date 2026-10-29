@@ -49,3 +49,13 @@ test('a live template refuses formulas on its parts', () => {
   expect(s.getState().error).toMatch(/live template/)
   expect(s.getState().project.boards[0].formulas).toBeUndefined()
 })
+
+test('a change made by another tool (a joint shortening a part) is kept as a nudge on its formula', () => {
+  const { s, id } = store()
+  s.getState().apply(p => setBoardFormula(ok(setSize(p, 'W', '30')), id, 'length', '=W - 2'))
+  s.getState().apply(p => ({ ...p, boards: p.boards.map(b => (b.id === id ? { ...b, length: b.length - 1 / 16 } : b)) }))
+  expect(rail(s, id).length).toBe(28 - 1 / 16)
+  expect(rail(s, id).formulas?.length).toBe('(W - 2) - 1/16')
+  s.getState().apply(p => ok(setSize(p, 'W', '40')))
+  expect(rail(s, id).length).toBe(38 - 1 / 16)
+})

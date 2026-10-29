@@ -48,7 +48,7 @@ export function TurningSection({ board, onSheet }: { board: Board; onSheet(): vo
             {t.style !== 'custom' && (
               <div className="grid grid-cols-2 gap-2">
                 {([['top', 'Top pommel', t.top], ['bottom', 'Square foot', t.bottom], ['maxD', 'Biggest diameter', maxD], ['minD', 'Smallest diameter', minD]] as const).map(([k, label, v]) => (
-                  <FormulaInput key={k} label={label} allowZero={k === 'top' || k === 'bottom'} value={v}
+                  <FormulaInput key={`${board.id}-${k}`} label={label} allowZero={k === 'top' || k === 'bottom'} value={v}
                     formula={board.formulas?.[`turning.${k}`]} error={errors[`board:${board.id}:turning.${k}`]}
                     onSet={s => ('formula' in s
                       ? studio.getState().apply(p => setBoardFormula(p, board.id, `turning.${k}`, s.formula))

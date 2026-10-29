@@ -94,14 +94,18 @@ export function unlock(project: Project): Project {
   if (!template || !def) return rest
   const form = def.unlockForm(template.params, project.woods)
   const ids = rest.boards.map(b => b.id)
-  const boards = rest.boards.map((b, i) => (form.boards[i] ? { ...b, formulas: { ...form.boards[i] } } : b))
-  const joints = rest.joints.map((j, i) => (form.joints?.[i] ? { ...j, formulas: { ...form.joints[i] } } : j))
+  // Formulas are stored without their leading = (the boxes add it back when shown).
+  const bare = (f: Record<string, string>) => Object.fromEntries(Object.entries(f).map(([k, v]) => [k, v.replace(/^\s*=\s*/, '')]))
+  const boards = rest.boards.map((b, i) => (form.boards[i] ? { ...b, formulas: bare(form.boards[i]) } : b))
+  const joints = rest.joints.map((j, i) => (form.joints?.[i] ? { ...j, formulas: bare(form.joints[i]) } : j))
   const idOf = (v: unknown) => (typeof v === 'number' ? ids[v] : v)
   const rules = (form.rules ?? []).map((r, k) => {
     const out: Record<string, unknown> = { id: `r_${template.templateId}_${k}` }
-    for (const [key, v] of Object.entries(r)) out[key] = Array.isArray(v) && key !== 'axes' ? v.map(idOf) : key === 'kind' || key === 'expr' || key === 'gapExpr' || key === 'side' || key === 'axis' || key === 'gap' ? v : idOf(v)
+    for (const [key, v] of Object.entries(r)) out[key] = Array.isArray(v) && key !== 'axes' ? v.map(idOf) : key === 'kind' || key === 'side' || key === 'axis' || key === 'gap' ? v : idOf(v)
+    for (const key of ['expr', 'gapExpr'] as const) if (typeof r[key as keyof typeof r] === 'string') out[key] = (r[key as keyof typeof r] as string).replace(/^\s*=\s*/, '')
     return out
   }) as Project['rules']
-  const next: Project = { ...rest, boards, joints, sizes: form.sizes, ...(rules && rules.length ? { rules } : {}) }
+  const sizes = form.sizes.map(z => ({ ...z, expr: z.expr.replace(/^\s*=\s*/, '') }))
+  const next: Project = { ...rest, boards, joints, sizes, ...(rules && rules.length ? { rules } : {}) }
   return recalc(next).project
 }

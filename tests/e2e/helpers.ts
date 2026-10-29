@@ -59,7 +59,11 @@ export async function cutListRows(win: Page): Promise<string[][]> {
 
 export async function typeInches(win: Page, label: string, value: string) {
   const input = win.getByLabel(label, { exact: true })
-  await input.fill(value)
+  // A re-render landing between fill's select-all and its typing can leave old text in the box; refill until it holds.
+  await expect(async () => {
+    await input.fill(value)
+    await expect(input).toHaveValue(value, { timeout: 300 })
+  }).toPass({ timeout: 5000 })
   await input.press('Enter')
 }
 

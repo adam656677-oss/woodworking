@@ -57,7 +57,7 @@ export function TaperSection({ board, onSheet }: { board: Board; onSheet(): void
             </div>
             <div className="grid grid-cols-2 gap-2">
               {([['start', 'Starts from the top', t.start], ['foot', 'Size at the foot', t.foot]] as const).map(([k, label, v]) => (
-                <FormulaInput key={k} label={label} allowZero={k === 'start'} value={v}
+                <FormulaInput key={`${board.id}-${k}`} label={label} allowZero={k === 'start'} value={v}
                   formula={board.formulas?.[`taper.${k}`]} error={errors[`board:${board.id}:taper.${k}`]}
                   onSet={s => {
                     if ('formula' in s) return studio.getState().apply(p => setBoardFormula(p, board.id, `taper.${k}`, s.formula))

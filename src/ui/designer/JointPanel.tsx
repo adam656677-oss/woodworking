@@ -30,7 +30,7 @@ function JointSettings({ joint }: { joint: Joint }) {
     return (
       <div className="grid grid-cols-2 gap-2">
         {(['width', 'depth', 'offset'] as const).map(k => (
-          <GrooveBox key={k} joint={joint} field={k} label={k === 'offset' ? 'Offset' : `${NAMES[joint.type]} ${k}`} value={g[k]} />
+          <GrooveBox key={`${joint.id}-${k}`} joint={joint} field={k} label={k === 'offset' ? 'Offset' : `${NAMES[joint.type]} ${k}`} value={g[k]} />
         ))}
       </div>
     )

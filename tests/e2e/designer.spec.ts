@@ -28,6 +28,9 @@ test('2. bookshelf: a side and a shelf show their dado; a shallower dado shorten
     const panel = win.getByRole('region', { name: 'Joint' })
     await expect(panel).toContainText('Joined with a dado')
     await typeInches(win, 'Dado depth', '3/16')
+    // After Unlock the depth follows DadoDepth, so a typed number asks first.
+    await expect(panel.getByRole('dialog', { name: 'Replace' })).toContainText('Replace the formula =DadoDepth with 3/16"?')
+    await panel.getByRole('button', { name: 'Replace' }).click()
     const rows = await cutListRows(win)
     const shortened = rows.find(r => r[0] === '1' && r[1] === 'Shelf')
     expect(shortened?.slice(2, 5)).toEqual(['23/32"', '9-25/32"', '29"'])

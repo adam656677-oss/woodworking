@@ -81,7 +81,7 @@ export function PropertiesPanel() {
       return plain(q, s.value)
     })
     return (
-      <FormulaInput key={path} label={label} value={value} allowZero={path !== 'width' && path !== 'length'}
+      <FormulaInput key={`${board.id}-${path}`} label={label} value={value} allowZero={path !== 'width' && path !== 'length'}
         disabled={(path === 'width' || path === 'length') && !!board.outline}
         formula={board.formulas?.[path]} error={formulaErrors[`board:${board.id}:${path}`]}
         ruleNote={rule ? `This part is placed by a rule (${ruleLabel(project, rule)}).` : undefined} onSet={onSet} />

@@ -189,7 +189,7 @@ export function createStudioStore() {
           return
         }
         // Sizes, formulas and rules are worked out again after every change (one undo step with it).
-        const done = recalc(result).project
+        const done = recalc(keepNudges(prev, result)).project
         const ids = new Set(done.boards.map(b => b.id))
         history.push({ project: done, selection: get().selection.filter(id => ids.has(id)) })
         set({ error: null })
@@ -335,3 +335,36 @@ export function useStudio<T>(selector: (s: StudioState) => T): T {
   return useStore(studio, selector)
 }
 export { APP_NAME as appName }
+
+/** A fraction formulas can read, on the 1/64" grid (5/16, 3/2). */
+function fractionText(v: number): string {
+  let n = Math.round(Math.abs(v) * 64), d = 64
+  while (n % 2 === 0 && d > 1) { n /= 2; d /= 2 }
+  return d === 1 ? `${n}` : `${n}/${d}`
+}
+
+/**
+ * A width or length changed by another tool (a joint shortening a shelf, a resize) while its formula stayed the
+ * same would be undone by the recalculation — so the change is kept as a nudge on the formula: (W - 2) - 1/16.
+ */
+export function keepNudges(prev: Project, next: Project): Project {
+  if (!next.boards.some(b => b.formulas?.width || b.formulas?.length)) return next
+  const before = new Map(prev.boards.map(b => [b.id, b]))
+  let changed = false
+  const boards = next.boards.map(b => {
+    const old = before.get(b.id)
+    if (!old || !b.formulas) return b
+    let formulas = b.formulas
+    for (const k of ['width', 'length'] as const) {
+      const f = formulas[k]
+      if (!f || f !== old.formulas?.[k]) continue
+      const delta = Math.round((b[k] - old[k]) * 64) / 64
+      if (delta === 0) continue
+      formulas = { ...formulas, [k]: `(${f}) ${delta < 0 ? '-' : '+'} ${fractionText(delta)}` }
+    }
+    if (formulas === b.formulas) return b
+    changed = true
+    return { ...b, formulas }
+  })
+  return changed ? { ...next, boards } : next
+}

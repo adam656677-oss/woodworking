@@ -56,3 +56,12 @@ test.each(RESIZE)('after unlocking a %s, changing its sizes matches a fresh temp
   expect(r.errors).toEqual([])
   expect(rows(r.project)).toEqual(rows(live(id, fresh)))
 })
+
+test('unlocked formulas are stored without their leading =', () => {
+  for (const [id, params] of [['bookshelf', {}], ['box', {}], ['birdhouse', {}]] as const) {
+    const p = unlock(live(id, params))
+    const all = [...p.boards.flatMap(b => Object.values(b.formulas ?? {})), ...p.joints.flatMap(j => Object.values(j.formulas ?? {})), ...(p.sizes ?? []).map(s => s.expr)]
+    expect(all.length).toBeGreaterThan(0)
+    for (const f of all) expect(f.startsWith('=')).toBe(false)
+  }
+})
