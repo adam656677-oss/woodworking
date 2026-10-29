@@ -16,3 +16,6 @@ export type Rule =
 
 export type RuleKind = Rule['kind']
 export const RULE_KINDS: RuleKind[] = ['spacing', 'center', 'gap', 'count']
+
+/** A rule before it has an id (one shape per kind). */
+export type NewRule = Rule extends infer R ? (R extends Rule ? Omit<R, 'id'> : never) : never

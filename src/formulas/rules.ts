@@ -6,7 +6,7 @@ import type { Board, Joint, Project } from '../model/types'
 import { formatInches, snap64 } from '../model/units'
 import { evalFormula, parseFormula } from './expr'
 import { makeLookup, type FormulaError } from './recalc'
-import type { Axis3, Rule } from './types'
+import type { Axis3, NewRule, Rule } from './types'
 
 const MAX_COUNT = 100
 const AXIS_NAMES: Record<Axis3, string> = { x: 'across', y: 'front to back', z: 'up' }
@@ -161,7 +161,7 @@ export function applyRules(p0: Project, sizes: Map<string, number>): { project: 
   return { project: p, errors }
 }
 
-export function addRule(p: Project, r: Omit<Rule, 'id'> & { id?: string }): Project | OpError {
+export function addRule(p: Project, r: NewRule): Project | OpError {
   const ids = new Set(p.boards.map(b => b.id))
   const used = claimsOf(r as Rule).concat(refsOf(r as Rule))
   if (used.some(id => !ids.has(id))) return { error: 'Pick the parts for this rule' }
