@@ -17,6 +17,7 @@
   "dependencies": {
     "@react-three/drei": "^9.122.0",
     "@react-three/fiber": "^8.18.0",
+    "@salusoft89/planegcs": "^1.3.0",
     "@tesseract.js-data/eng": "^1.0.0",
     "heic-decode": "^2.1.0",
     "pdfjs-dist": "^6.4.299",
