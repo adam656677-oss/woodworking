@@ -91,7 +91,8 @@ export const BoardMesh = forwardRef<THREE.Group, Props>(function BoardMesh({ boa
   const shapeKey = JSON.stringify([shape ?? null, turned ?? null])
   const outline = useMemo(() => {
     if (turned) return new THREE.EdgesGeometry(turnedLeg(turned), 25)
-    if (shape) return new THREE.EdgesGeometry(extrudeOutline(shape, board.thickness, shape.profiles), 25)
+    // The plain outline: the profile's thin layers would draw a line at every step.
+    if (shape) return new THREE.EdgesGeometry(extrudeOutline({ outer: shape.outer, holes: shape.holes }, board.thickness), 25)
     const box = new THREE.BoxGeometry(board.width, board.length, board.thickness)
     box.translate(board.width / 2, board.length / 2, board.thickness / 2)
     return new THREE.EdgesGeometry(box)
