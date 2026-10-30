@@ -10,7 +10,11 @@ import { MSG_GAPS, MSG_SQUARE, turningProblem } from '../shaping/turning'
 import { taperProblem } from '../shaping/taper'
 import { edgeProblemFor, PROFILE_NAMES } from '../shaping/edges'
 
-export type Warning = { kind: 'overlap' | 'exceedsStock' | 'badJoint' | 'badShape' | 'formula'; boardIds: string[]; message: string }
+/** Where a warning's "Why?" goes in the Deep Library, with the values to open it with. */
+export type LibraryLink =
+  | { page: 'movement'; width: number; speciesId: string }
+  | { page: 'sag'; span: number; depth: number; thickness: number; moe: number; material: string }
+export type Warning = { kind: 'overlap' | 'exceedsStock' | 'badJoint' | 'badShape' | 'formula' | 'crossGrain' | 'sag'; boardIds: string[]; message: string; link?: LibraryLink }
 
 export function validate(project: Project): Warning[] {
   const warnings: Warning[] = []

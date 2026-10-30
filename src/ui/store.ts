@@ -1,4 +1,5 @@
 // The app's single store: the project (with undo history), selection, file state and screen.
+import { libraryAdvice } from '../library/advice'
 import { createStore, useStore } from 'zustand'
 import { deserialize, ProjectFileError, serialize } from '../model/fileFormat'
 import { History } from '../model/history'
@@ -137,7 +138,7 @@ export function createStudioStore() {
       const { project, selection } = history.current
       const fe: FormulaError[] = recalc(project).errors
       const formulaErrors = Object.fromEntries(fe.map(e => [e.key, e.message]))
-      const warnings = [...validate(project), ...fe.map(e => ({ kind: 'formula' as const, boardIds: e.boardIds, message: e.message }))]
+      const warnings = [...validate(project), ...fe.map(e => ({ kind: 'formula' as const, boardIds: e.boardIds, message: e.message })), ...libraryAdvice(project)]
       set({ project, selection, warnings, formulaErrors, dirty, canUndo: history.canUndo, canRedo: history.canRedo })
       api()?.setDirty(dirty)
     }

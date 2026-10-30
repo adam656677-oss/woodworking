@@ -2,9 +2,11 @@ import { kidMessage } from '../../kids/kidWords'
 import { studio, useStudio } from '../store'
 
 export function WarningsList() {
-  const warnings = useStudio(s => s.warnings)
+  const all = useStudio(s => s.warnings)
   const kidsMode = useStudio(s => s.kidsMode)
   const project = useStudio(s => s.project)
+  // Kids see the problems that stop a build; the library's advice is for the Master Shop.
+  const warnings = kidsMode ? all.filter(w => w.kind !== 'crossGrain' && w.kind !== 'sag') : all
   if (warnings.length === 0) return null
   return (
     <section aria-label="Warnings" className="max-h-48 overflow-y-auto border-t border-red-200 bg-red-50">
