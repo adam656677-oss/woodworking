@@ -127,6 +127,7 @@ function ImportDialog({ name, bytes }: { name: string; bytes: Uint8Array }) {
         </select>
       </label>
       <p className="text-sm">Size: <b data-testid="model-size">{size}</b></p>
+      {read.assembly && <p role="alert" className="text-sm text-amber-800">This STEP file is an assembly — its parts may come in stacked at one spot. Export it as one part (or one body) if it looks wrong.</p>}
       {read.skipped ? <p role="alert" className="text-sm text-amber-800">{read.skipped} curved face{read.skipped === 1 ? '' : 's'} couldn&apos;t be read — the model may have gaps.</p> : null}
       <p className="text-xs text-stone-500">A reference model shows in grey and counts in the interference and clearance checks. It isn&apos;t a part, so it&apos;s not in the cut list.</p>
       <div className="flex justify-end gap-2">

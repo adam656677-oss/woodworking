@@ -65,5 +65,11 @@ export function weld(a: Float32Array): { vertices: number[]; indices: number[] }
     if (idx === undefined) { idx = vertices.length / 3; map.set(k, idx); vertices.push(a[i], a[i + 1], a[i + 2]) }
     indices.push(idx)
   }
-  return { vertices, indices }
+  // Slivers whose corners weld together aren't triangles any more (3MF forbids them; STEP loops would break).
+  const kept: number[] = []
+  for (let i = 0; i < indices.length; i += 3) {
+    const [a, b, c] = [indices[i], indices[i + 1], indices[i + 2]]
+    if (a !== b && b !== c && a !== c) kept.push(a, b, c)
+  }
+  return { vertices, indices: kept }
 }

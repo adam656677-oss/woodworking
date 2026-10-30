@@ -80,7 +80,7 @@ export function modelGeometry(m: RefModel): THREE.BufferGeometry {
   g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(a), 3))
   g.setAttribute('uv', new THREE.BufferAttribute(new Float32Array((a.length / 3) * 2), 2))
   g.computeVertexNormals()
-  if (geoms.size > 20) geoms.delete(geoms.keys().next().value!)
+  if (geoms.size > 20) { const k = geoms.keys().next().value!; geoms.get(k)?.dispose(); geoms.delete(k) }
   geoms.set(m.data, g)
   return g
 }

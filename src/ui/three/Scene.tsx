@@ -59,13 +59,13 @@ export default function Scene() {
   const bounds: Box | null = useMemo(() => {
     // Parts, and the pictures being designed over (so Fit shows them).
     const pics = (project.references ?? []).filter(r => !r.hidden).map(r => ({ min: r.position, max: worldAt(r, { u: 1, v: 1 }) }))
-    const bs = [...project.boards.map(worldBox), ...pics, ...(project.models ?? []).filter(m => !m.hidden).map(modelBox)]
+    const bs = [...project.boards.map(worldBox), ...pics, ...(kidsMode ? [] : (project.models ?? []).filter(m => !m.hidden).map(modelBox))]
     if (bs.length === 0) return null
     return {
       min: { x: Math.min(...bs.map(b => b.min.x)), y: Math.min(...bs.map(b => b.min.y)), z: Math.min(...bs.map(b => b.min.z)) },
       max: { x: Math.max(...bs.map(b => b.max.x)), y: Math.max(...bs.map(b => b.max.y)), z: Math.max(...bs.map(b => b.max.z)) }
     }
-  }, [project.boards, project.references, project.models])
+  }, [project.boards, project.references, project.models, kidsMode])
 
   useEffect(() => {
     if (!measuring) setPoints([])

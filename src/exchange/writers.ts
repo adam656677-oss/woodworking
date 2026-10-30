@@ -100,11 +100,12 @@ export function toGlb(parts: PartMesh[], woods: Wood[]): Uint8Array {
   const groupNodes = new Map<string, number>()
   parts.forEach(p => {
     const { vertices, indices } = weld(p.positions)
+    if (!indices.length) return
     // glTF is Y-up in metres: (x, y, z) inches → (x, z, −y) metres.
     const v = new Float32Array(vertices.length)
     for (let i = 0; i < vertices.length; i += 3) { v[i] = vertices[i] * M; v[i + 1] = vertices[i + 2] * M; v[i + 2] = -vertices[i + 1] * M }
-    const min = [0, 1, 2].map(k => Math.min(...Array.from({ length: v.length / 3 }, (_, i) => v[i * 3 + k])))
-    const max = [0, 1, 2].map(k => Math.max(...Array.from({ length: v.length / 3 }, (_, i) => v[i * 3 + k])))
+    const min = [Infinity, Infinity, Infinity], max = [-Infinity, -Infinity, -Infinity]
+    for (let i = 0; i < v.length; i++) { min[i % 3] = Math.min(min[i % 3], v[i]); max[i % 3] = Math.max(max[i % 3], v[i]) }
     const ix = new Uint32Array(indices)
     const vb = add(new Uint8Array(v.buffer), 34962), ib = add(new Uint8Array(ix.buffer), 34963)
     accessors.push({ bufferView: vb, componentType: 5126, count: v.length / 3, type: 'VEC3', min, max })
@@ -155,7 +156,7 @@ export function toStep(parts: PartMesh[], fileName: string): string {
   const lines: string[] = []
   let n = 0
   const e = (s: string) => { n++; lines.push(`#${n}=${s};`); return `#${n}` }
-  const str = (s: string) => `'${s.replace(/'/g, "''").replace(/[^\x20-\x7e]/g, '_')}'`
+  const str = (s: string) => `'${s.replace(/\\/g, '\\\\').replace(/'/g, "''").replace(/[^\x20-\x7e]/g, '_')}'`
   const ctxApp = e(`APPLICATION_CONTEXT('automotive design')`)
   e(`APPLICATION_PROTOCOL_DEFINITION('international standard','automotive_design',2000,${ctxApp})`)
   const mm = e(`(LENGTH_UNIT() NAMED_UNIT(*) SI_UNIT(.MILLI.,.METRE.))`)
@@ -176,10 +177,19 @@ export function toStep(parts: PartMesh[], fileName: string): string {
     const pts: string[] = []
     for (let i = 0; i < vertices.length; i += 3) pts.push(e(`CARTESIAN_POINT('',(${num(vertices[i])},${num(vertices[i + 1])},${num(vertices[i + 2])}))`))
     const faces: string[] = []
+    // Each triangle a FACE_SURFACE on its PLANE, as faceted B-reps must be.
+    const V = (k: number) => [vertices[k * 3], vertices[k * 3 + 1], vertices[k * 3 + 2]]
     for (let i = 0; i < indices.length; i += 3) {
+      const [a, b, c] = [V(indices[i]), V(indices[i + 1]), V(indices[i + 2])]
+      const u = [b[0] - a[0], b[1] - a[1], b[2] - a[2]], w = [c[0] - a[0], c[1] - a[1], c[2] - a[2]]
+      const nv = [u[1] * w[2] - u[2] * w[1], u[2] * w[0] - u[0] * w[2], u[0] * w[1] - u[1] * w[0]]
+      const nl = Math.hypot(nv[0], nv[1], nv[2]), ul = Math.hypot(u[0], u[1], u[2])
+      if (!(nl > 0) || !(ul > 0)) continue
+      const dir = (d: number[], l: number) => e(`DIRECTION('',(${d.map(x => num(x / l)).join(',')}))`)
+      const plane = e(`PLANE('',${e(`AXIS2_PLACEMENT_3D('',${pts[indices[i]]},${dir(nv, nl)},${dir(u, ul)})`)})`)
       const loop = e(`POLY_LOOP('',(${pts[indices[i]]},${pts[indices[i + 1]]},${pts[indices[i + 2]]}))`)
       const bound = e(`FACE_OUTER_BOUND('',${loop},.T.)`)
-      faces.push(e(`FACE('',(${bound}))`))
+      faces.push(e(`FACE_SURFACE('',(${bound}),${plane},.T.)`))
     }
     const shell = e(`CLOSED_SHELL('',(${faces.join(',')}))`)
     const brep = e(`FACETED_BREP(${str(names[k])},${shell})`)

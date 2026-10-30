@@ -18,8 +18,8 @@ const loop = (pts: Pt[], layer: string) => pts.flatMap((p, i) => line(p, pts[(i 
 
 /** One part's drawing in its own flat coordinates: length across (x), width up (y). */
 function partEntities(p: Project, b: Board, at: Pt, cuts: BoxCut[]): string[] {
-  // Local (u across the width, v along the length) → flat (v, u).
-  const P = (u: number, v: number): Pt => ({ x: at.x + v, y: at.y + u })
+  // Seen from the top face: local (u across the width, v along the length) → flat (v, width − u), a turn, not a mirror.
+  const P = (u: number, v: number): Pt => ({ x: at.x + v, y: at.y + b.width - u })
   const out: string[] = []
   const shape = outlinePolygons(p, b)
   if (shape) {
