@@ -126,7 +126,10 @@ export function ungroup(p: Project, gid: string): Project {
   if (!g) return p
   const groups = groupsOf(p).filter(x => x.id !== gid).map(x => (x.parentId === gid ? (g.parentId ? { ...x, parentId: g.parentId } : stripParent(x)) : x))
   const boards = p.boards.map(b => (b.groupId === gid ? (g.parentId ? { ...b, groupId: g.parentId } : stripGroup(b)) : b))
-  return withGroups({ ...p, boards }, groups)
+  // Its hinges, slides and pulls stay: with the group above, or with one of its parts.
+  const first = groupBoardIds(p, gid)[0]
+  const hardware = p.hardware?.map(h => (h.groupId !== gid ? h : g.parentId ? { ...h, groupId: g.parentId } : (({ groupId: _g, ...rest }) => ({ ...rest, ...(first ? { boardId: first } : {}) }))(h)))
+  return withGroups({ ...p, boards, ...(hardware ? { hardware } : {}) }, groups)
 }
 function stripParent(g: Group): Group {
   const { parentId: _p, ...rest } = g

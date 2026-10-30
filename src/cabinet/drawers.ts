@@ -78,7 +78,8 @@ export function addDrawer(p0: Project, o: Opening, opts: DrawerOptions): { proje
   const bw = W - 2 * t + 2 * reach, bl = (by - (fy + t)) + 2 * reach
   const bottom = makeBoard('Drawer bottom', bottomWood, bw, bl, ORIENT.flatY, { x: x0 + t - reach, y: fy + t - reach, z: z0 + BOTTOM_UP })
   boards.push(bottom)
-  for (const b of [left, right, front, back]) joints.push(seat('dado', b, bottom, 'length', { width: GROOVE, depth: gd }))
+  // The groove is cut 1/4" wide whatever the bottom's thickness (a formula, so re-measuring doesn't narrow it).
+  for (const b of [left, right, front, back]) joints.push({ ...seat('dado', b, bottom, 'length', { width: GROOVE, depth: gd }), formulas: { width: '1/4' } })
 
   const hardware: Omit<HardwareUse, 'id'>[] = []
   if (size.slide) hardware.push({ itemId: opts.slides === 'side' ? `slide-side-${size.slide}` : `slide-under-${size.slide}`, qty: 1 })

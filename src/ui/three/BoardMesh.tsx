@@ -27,9 +27,15 @@ function brushFor(cut: Cut, board: Board): Brush | null {
   }
   if (cut.kind === 'profile') return profileBrush(cut, board)
   if (cut.kind === 'hole') {
-    const b = new Brush(new THREE.CylinderGeometry(cut.diameter / 2, cut.diameter / 2, cut.depth + 0.2, 32))
+    // Through holes run a hair past both faces; a stopped hole only past the face it's drilled from.
+    const through = cut.depth >= board.thickness - 1e-9
+    const fromTop = cut.center.z > 1e-9
+    const pad = 0.1
+    const len = cut.depth + (through ? 2 * pad : pad)
+    const z0 = through ? -pad : fromTop ? cut.center.z : -pad
+    const b = new Brush(new THREE.CylinderGeometry(cut.diameter / 2, cut.diameter / 2, len, 32))
     b.rotation.x = Math.PI / 2
-    b.position.set(cut.center.x, cut.center.y, cut.center.z + cut.depth / 2)
+    b.position.set(cut.center.x, cut.center.y, z0 + len / 2)
     b.updateMatrixWorld()
     return b
   }

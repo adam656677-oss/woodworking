@@ -48,18 +48,18 @@ test('a door swings about its hinge line and a drawer slides out', () => {
   const g = p.groups![0]
   const door = movedBoard(p.boards[0], g.motion!, 1)
   const b = worldBox(door)
-  // Hinged on the left at its back corner (x −1/2, y 0): opened 95°, it stands out in front, left of the hinge.
+  // Hinged on the left at its front corner (x −1/2, y −3/4): opened 95°, it stands out in front, at the hinge.
   expect(b.min.y).toBeLessThan(-15)
-  expect(b.max.x).toBeLessThan(0)
+  expect(b.max.x).toBeLessThan(0.5)
   const d = ok(addDrawer(emptyProject('T'), { x: 0, y: 0, z: 0, width: 16, height: 6, depth: 22 }, DRAWER_DEFAULTS)).project
   const out = opened(d, 0.5)
   expect(worldBox(out.boards[0]).min.y).toBeCloseTo(worldBox(d.boards[0]).min.y - 10)
 })
 
 test('clearance: a door that hits a drawer face is found; a well-spaced cabinet passes', () => {
-  // A door on the left and a drawer whose face sits right where the door swings.
+  // A door hinged on the right, and a drawer unit standing out in front of the cabinet, right where the door swings.
   let p = ok(addDoors(emptyProject('T'), { x: 0, y: 0, z: 0, width: 15, height: 30 }, { ...DOOR_DEFAULTS, style: 'slab', panelWood: 'ply-3-4', hinge: 'right' })).project
-  p = ok(addDrawer(p, { x: 16.5, y: 0, z: 10, width: 10, height: 6, depth: 22 }, DRAWER_DEFAULTS)).project
+  p = ok(addDrawer(p, { x: 16.5, y: -12, z: 10, width: 10, height: 6, depth: 22 }, DRAWER_DEFAULTS)).project
   const hits = clearance(p)
   expect(hits.length).toBeGreaterThan(0)
   expect(clashText(p, hits[0])).toMatch(/^Door 1 hits Drawer 1 at \d+% open$/)

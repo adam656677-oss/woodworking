@@ -33,7 +33,10 @@ export function HardwareList() {
               <tr key={r.useIds.join()} className="border-b border-stone-200">
                 <td className="px-2 py-1 font-semibold">
                   {r.useIds.length === 1 ? (
-                    <input aria-label={`How many ${r.name}`} type="number" min={0} value={r.qty} onChange={e => apply(p => setHardwareQty(p, r.useIds[0], Number(e.target.value)))} className="w-14 rounded border border-stone-300 px-1 print:border-0" />
+                    <input aria-label={`How many ${r.name}`} type="number" min={0} defaultValue={r.qty} key={`${r.useIds[0]}:${r.qty}`}
+                      onBlur={e => { const t = e.target.value.trim(); const v = Number(t); if (t !== '' && Number.isFinite(v) && v !== r.qty) apply(p => setHardwareQty(p, r.useIds[0], v)); else e.target.value = String(r.qty) }}
+                      onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
+                      className="w-14 rounded border border-stone-300 px-1 print:border-0" />
                   ) : r.qty}
                 </td>
                 <td className="px-2 py-1">{r.name}{r.note && <span className="text-stone-600"> — {sizeText(r.note)}</span>}</td>

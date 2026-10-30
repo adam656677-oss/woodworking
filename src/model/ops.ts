@@ -369,6 +369,9 @@ function boxesOverlap(a: Board, b: Board): boolean {
 function restoreOf(p: Project, j: Joint): JointRestore[] {
   if (j.restore) return j.restore
   if (j.type !== 'dado' && j.type !== 'rabbet') return []
+  // A stand-alone cut (a tenon cheek, a glass rabbet) and an edge groove changed nothing on the other part.
+  const g = j.params as GrooveParams
+  if (g.standalone || g.face === 'left' || g.face === 'right') return []
   const host = p.boards.find(b => b.id === j.hostBoardId)
   const partner = p.boards.find(b => b.id === j.partnerBoardId)
   if (!host || !partner) return []

@@ -1,7 +1,7 @@
 // Doors swing and drawers slide: where their parts are when open (display and the clearance check).
 import * as THREE from 'three'
 import { ancestry, groupBoardIds, groupsOf } from '../assemblies/ops'
-import { interferences, localSolids } from '../checks/solids'
+import { boardMatrix, interferences, localSolids } from '../checks/solids'
 import { worldBox, type Box } from '../model/geometry'
 import type { Board, Group, Motion, Project, Vec3 } from '../model/types'
 
@@ -58,9 +58,17 @@ export function clearance(p: Project): Clash[] {
     const swept = union(Array.from({ length: STEPS + 1 }, (_, k) => stepsAt(k)).flat().map(worldBox))
     const others = p.boards.filter(b => !ids.has(b.id) && overlaps(worldBox(b), swept))
     if (!others.length) continue
+    // Only moving parts against the rest: each pair checked on its own.
     const pairsAt = (k: number) => {
-      const sub: Project = { ...p, boards: [...stepsAt(k), ...others], joints: [] }
-      return interferences(sub, solids).filter(i => ids.has(i.a) !== ids.has(i.b)).map(i => (ids.has(i.a) ? i.b : i.a))
+      const out = new Set<string>()
+      for (const mv of stepsAt(k)) {
+        const box = worldBox(mv)
+        for (const o of others) {
+          if (!overlaps(box, worldBox(o))) continue
+          if (interferences({ ...p, boards: [mv, o], joints: [] }, solids).length) out.add(o.id)
+        }
+      }
+      return [...out]
     }
     const already = new Set(pairsAt(0))
     const found = new Set<string>()
@@ -84,3 +92,31 @@ export function clashText(p: Project, c: Clash): string {
 }
 
 export type { Vec3 }
+
+/**
+ * Doors and drawers keep their hinge line and slide direction with them: when a door's parts are moved or turned
+ * (as a group, with the arrows, inside a moved cabinet), its motion is carried along the same way — measured from
+ * how one of its parts moved.
+ */
+export function followMotion(prev: Project, next: Project): Project {
+  if (!groupsOf(next).some(g => g.motion)) return next
+  let changed = false
+  const groups = groupsOf(next).map(g => {
+    if (!g.motion) return g
+    const ref = groupBoardIds(next, g.id).map(id => [prev.boards.find(b => b.id === id), next.boards.find(b => b.id === id)] as const).find(([a, b]) => a && b)
+    if (!ref) return g
+    const [a, b] = ref as [Board, Board]
+    if (a.position.x === b.position.x && a.position.y === b.position.y && a.position.z === b.position.z &&
+      a.rotation.x === b.rotation.x && a.rotation.y === b.rotation.y && a.rotation.z === b.rotation.z) return g
+    const m = boardMatrix(b).multiply(boardMatrix(a).invert())
+    changed = true
+    const r = (v: number) => Math.round(v * 1e9) / 1e9 + 0
+    if (g.motion.kind === 'slide') {
+      const d = new THREE.Vector3(g.motion.dir.x, g.motion.dir.y, g.motion.dir.z).transformDirection(m)
+      return { ...g, motion: { ...g.motion, dir: { x: r(d.x), y: r(d.y), z: r(d.z) } } }
+    }
+    const o = new THREE.Vector3(g.motion.origin.x, g.motion.origin.y, g.motion.origin.z).applyMatrix4(m)
+    return { ...g, motion: { ...g.motion, origin: { x: r(o.x), y: r(o.y), z: r(o.z) } } }
+  })
+  return changed ? { ...next, groups } : next
+}

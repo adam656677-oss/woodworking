@@ -71,8 +71,9 @@ export function addDoors(p0: Project, o: Opening, opts: DoorOptions): { project:
     const hinge: 'left' | 'right' = opts.pair ? (i === 0 ? 'left' : 'right') : opts.hinge
     const made = makeDoor(r, opts, frame, panel, hinge)
     const name = nextName(p, 'Door')
-    // The hinge line: the door's back corner on the hinge side for overlay doors, its front corner for inset ones.
-    const origin = { x: hinge === 'left' ? r.x : r.x + r.width, y: opts.mounting === 'inset' ? r.y : r.y + frame.thickness, z: r.z }
+    // The hinge line: the door's front corner on the hinge side. (A concealed hinge carries the door forward as it
+    // opens, so its back edge never swings into the cabinet side; turning about the front corner does the same.)
+    const origin = { x: hinge === 'left' ? r.x : r.x + r.width, y: r.y, z: r.z }
     const g = addAsGroup(p, made.boards, made.joints, name, { kind: 'swing', origin, maxDeg: 95, dir: hinge === 'left' ? -1 : 1 })
     p = g.project
     groupIds.push(g.id)

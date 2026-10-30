@@ -8,7 +8,8 @@ import { openingFrom, type Opening } from '../build'
 import { addDoors, DOOR_DEFAULTS, type DoorOptions, type DoorStyle, type Mounting, type PullPlace } from '../doors'
 import { addDrawer, DRAWER_DEFAULTS, type BoxJoint, type DrawerOptions, type SlideKind } from '../drawers'
 import { addFaceFrame, FRAME_DEFAULTS, type FaceFrameOptions } from '../faceFrame'
-import { addShelfPins, faceToward, MM32, PIN_DEFAULTS, type PinOptions } from '../shelfPins'
+import { addShelfPins, faceToward, faceTowardPoint, MM32, PIN_DEFAULTS, type PinOptions } from '../shelfPins'
+import { worldBox } from '../../model/geometry'
 
 const PULLS: [string, string][] = [['', 'None'], ['knob', 'Knob'], ['pull-3', 'Bar pull 3"'], ['pull-96', 'Bar pull 96 mm'], ['pull-128', 'Bar pull 128 mm'], ['pull-160', 'Bar pull 160 mm']]
 const MOUNTINGS: [Mounting, string][] = [['full', 'Full overlay'], ['half', 'Half overlay'], ['inset', 'Inset']]
@@ -171,10 +172,12 @@ function PinMaker() {
     const sides = p.boards.filter(b => selection.includes(b.id))
     if (sides.length < 1 || sides.length > 2) return setError('Select one cabinet side, or the two sides facing each other')
     // The holes go in the faces that look inward: toward the other side, or the rest of the design.
+    // With one side, the holes face the middle of the design (or of the rest of it).
     const rest = p.boards.filter(b => !selection.includes(b.id))
+    const centre = (bs: typeof rest) => { const bx = bs.map(worldBox); return { x: (Math.min(...bx.map(q => q.min.x)) + Math.max(...bx.map(q => q.max.x))) / 2, y: (Math.min(...bx.map(q => q.min.y)) + Math.max(...bx.map(q => q.max.y))) / 2, z: (Math.min(...bx.map(q => q.min.z)) + Math.max(...bx.map(q => q.max.z))) / 2 } }
     for (const [i, b] of sides.entries()) {
-      const other = sides[1 - i] ?? rest[0]
-      const face = other ? faceToward(b, other) : 'top'
+      const other = sides[1 - i]
+      const face = other ? faceToward(b, other) : rest.length ? faceTowardPoint(b, centre(rest)) : 'top'
       const r = addShelfPins(p, b.id, { ...o, face, shelves: i === 0 ? o.shelves : 0 })
       if ('error' in r) return setError(r.error)
       p = r

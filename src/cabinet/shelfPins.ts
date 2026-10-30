@@ -45,12 +45,14 @@ export function addShelfPins(p: Project, boardId: string, o: PinOptions): Projec
   const holes = pinHoles(b, o)
   if ('error' in holes) return holes
   const d = pinDiameter(o.size)
-  const kept = b.holes.filter(h => !(h.depth !== undefined && Math.abs(h.diameter - d) < 1e-9))
+  const kept = b.holes.filter(h => !(h.depth !== undefined && Math.abs(h.diameter - d) < 1e-9 && (h.face ?? 'top') === o.face))
   let next: Project = { ...p, boards: p.boards.map(x => (x.id === boardId ? { ...x, holes: [...kept, ...holes] } : x)) }
   const item = o.size === '5mm' ? 'pin-5mm' : 'pin-14'
-  next = { ...next, hardware: (next.hardware ?? []).filter(h => !(h.boardId === boardId && h.itemId === item)) }
+  // One line of pins per side and face, replaced when that face is laid out again.
+  const note = `${o.face} face`
+  next = { ...next, hardware: (next.hardware ?? []).filter(h => !(h.boardId === boardId && h.itemId === item && (h.note ?? 'top face') === note)) }
   if (!next.hardware!.length) delete next.hardware
-  if (o.shelves > 0) next = addHardware(next, { itemId: item, qty: 4 * o.shelves, boardId })
+  if (o.shelves > 0) next = addHardware(next, { itemId: item, qty: 4 * o.shelves, boardId, note })
   return next
 }
 
@@ -59,6 +61,13 @@ export function faceToward(b: Board, other: Board): 'top' | 'bottom' {
   const mid = (x: Board) => toWorld(x, { x: x.width / 2, y: x.length / 2, z: x.thickness / 2 })
   const top = toWorld(b, { x: b.width / 2, y: b.length / 2, z: b.thickness }), bot = toWorld(b, { x: b.width / 2, y: b.length / 2, z: 0 })
   const o = mid(other)
+  const d = (q: { x: number; y: number; z: number }) => (q.x - o.x) ** 2 + (q.y - o.y) ** 2 + (q.z - o.z) ** 2
+  return d(top) <= d(bot) ? 'top' : 'bottom'
+}
+
+/** The face of `b` nearer a world point. */
+export function faceTowardPoint(b: Board, o: { x: number; y: number; z: number }): 'top' | 'bottom' {
+  const top = toWorld(b, { x: b.width / 2, y: b.length / 2, z: b.thickness }), bot = toWorld(b, { x: b.width / 2, y: b.length / 2, z: 0 })
   const d = (q: { x: number; y: number; z: number }) => (q.x - o.x) ** 2 + (q.y - o.y) ** 2 + (q.z - o.z) ** 2
   return d(top) <= d(bot) ? 'top' : 'bottom'
 }
