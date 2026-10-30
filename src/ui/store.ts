@@ -129,6 +129,13 @@ export function createStudioStore() {
       set({ project, selection, warnings, formulaErrors, dirty, canUndo: history.canUndo, canRedo: history.canRedo })
       api()?.setDirty(dirty)
     }
+    /** Shop Mode ticks aren't design changes: undo and redo keep them as they are. */
+    const keepProgress = (progress: Project['shopProgress']) => {
+      const cur = history.current as Snapshot
+      if (cur.project.shopProgress === progress) return
+      const { shopProgress: _s, ...rest } = cur.project
+      cur.project = progress ? { ...rest, shopProgress: progress } : rest
+    }
     const start = (project: Project, filePath: string | null, dirty: boolean) => {
       history = new History<Snapshot>({ project, selection: [] })
       set({ filePath, screen: 'master', error: null, recovery: null, projectKey: get().projectKey + 1, hidden: [], isolated: null, explode: 0, section: null, placingNote: false, pendingNote: null, refPick: null })
@@ -242,11 +249,15 @@ export function createStudioStore() {
         sync(true)
       },
       undo: () => {
+        const progress = history.current.project.shopProgress
         history.undo()
+        keepProgress(progress)
         sync(true)
       },
       redo: () => {
+        const progress = history.current.project.shopProgress
         history.redo()
+        keepProgress(progress)
         sync(true)
       },
       select: ids => {

@@ -55,5 +55,9 @@ export function isPlan(v: unknown): v is Plan {
   if (!Array.isArray(v.materials) || !v.materials.every((m: any) => isObj(m) && isStr(m.text) && isStr(m.amount))) return false
   if (!Array.isArray(v.steps) || !v.steps.every((s: any) => isObj(s) && isStr(s.id) && isStr(s.text))) return false
   if (!Array.isArray(v.cutRows) || !v.cutRows.every((r: any) => isObj(r) && isStr(r.id) && isNum(r.qty) && isStr(r.part) && isNum(r.thickness) && isNum(r.width) && isNum(r.length) && isStr(r.wood) && isStr(r.notes))) return false
-  return Array.isArray(v.unchecked) && v.unchecked.every(isStr)
+  if (!(Array.isArray(v.unchecked) && v.unchecked.every(isStr))) return false
+  // Shop Mode progress that's damaged is dropped (the plan itself is fine).
+  const pr = v.progress
+  if (pr !== undefined && !(isObj(pr) && Array.isArray(pr.done) && pr.done.every(isStr) && isObj(pr.minutes) && Object.values(pr.minutes).every(m => isNum(m) && (m as number) >= 0))) delete v.progress
+  return true
 }

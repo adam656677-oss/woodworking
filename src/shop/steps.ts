@@ -35,7 +35,7 @@ export function jointStep(p: Project, j: Joint): { title: string; text: string; 
     case 'dado':
     case 'rabbet': {
       const g = j.params as GrooveParams
-      const where = j.type === 'rabbet' ? `along the ${g.offset === 0 ? 'near' : 'far'} ${g.along === 'length' ? 'edge' : 'end'}` : `${inches(g.offset)} from the ${g.along === 'length' ? 'edge' : 'end'}`
+      const where = j.type === 'rabbet' ? `along the ${g.offset < 1e-6 ? 'near' : 'far'} ${g.along === 'length' ? 'edge' : 'end'}` : `${inches(g.offset)} from the ${g.along === 'length' ? 'edge' : 'end'}`
       return {
         title: `Cut the ${j.type} in ${host}`,
         text: `Cut a ${j.type} in ${host} for ${partner}: ${inches(g.width)} wide, ${inches(g.depth)} deep, ${where}, on the ${g.face} face.`,

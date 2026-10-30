@@ -356,7 +356,8 @@ export function createDrawStore() {
       },
       replace: sk => { commit(sk) },
       refPick: null,
-      setRefPick: refPick => set({ refPick }),
+      // Picking scale points uses plain clicks, so no drawing tool may take them.
+      setRefPick: refPick => set(refPick ? { refPick, tool: 'select' } : { refPick }),
       dragPoint: (id, to) => {
         dragStart ??= get().sketch
         const base = get().sketch

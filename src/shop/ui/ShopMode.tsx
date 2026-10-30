@@ -29,12 +29,20 @@ export function ShopMode() {
   useEffect(() => {
     if (!session) return
     const onKey = (e: KeyboardEvent) => {
+      // Shop Mode covers everything: keys never reach the screen underneath (Delete, Ctrl+Z…), except saving.
+      const save = (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's'
+      if (!save) e.stopImmediatePropagation()
+      if (e.repeat) { if (!save) e.preventDefault(); return }
+      // Space on a focused button or the Done box presses it, as usual.
+      const t = e.target as HTMLElement | null
+      if (e.key === ' ' && t && (t.tagName === 'BUTTON' || t.tagName === 'INPUT')) return
       if (['ArrowRight', 'PageDown', ' '].includes(e.key)) { e.preventDefault(); go(i + 1) }
       else if (['ArrowLeft', 'PageUp'].includes(e.key)) { e.preventDefault(); go(i - 1) }
+      else if (e.key.toLowerCase() === 'd' && !e.ctrlKey && !e.metaKey) { const s = shop.getState().session; if (s && step) shop.getState().setProgress(toggleDone(s.progress, step.key)) }
       else if (e.key === 'Escape') exit()
     }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
+    window.addEventListener('keydown', onKey, { capture: true })
+    return () => window.removeEventListener('keydown', onKey, { capture: true })
   })
 
   if (!session || !step) return null
@@ -80,7 +88,7 @@ export function ShopMode() {
         <button onClick={() => go(i - 1)} disabled={i === 0} className="rounded-xl border-4 border-stone-900 px-10 py-5 text-3xl font-black disabled:opacity-30">◀ Back</button>
         <label className="flex flex-1 items-center justify-center gap-3 text-3xl font-bold">
           <input type="checkbox" checked={done} onChange={() => shop.getState().setProgress(toggleDone(session.progress, step.key))} className="h-10 w-10 accent-green-700" />
-          Done
+          Done <span className="text-lg font-normal text-stone-500">(D)</span>
         </label>
         <div className="flex items-center gap-2 text-xl">
           <button onClick={() => (started === null ? setStarted(Date.now()) : stopTimer())} className={`rounded-lg px-4 py-3 text-xl font-bold ${started === null ? 'border-2 border-stone-900' : 'bg-amber-600 text-white'}`}>

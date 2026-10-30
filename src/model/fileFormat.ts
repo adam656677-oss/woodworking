@@ -220,13 +220,15 @@ function check(raw: any): Project {
     raw.annotations = raw.annotations.filter((a: { id: string }) => (seen.has(a.id) ? false : (seen.add(a.id), true)))
   }
   if (raw.references !== undefined) {
+    // A damaged picture is dropped; the design still opens.
     const ok = (r: any) => isObj(r) && isStr(r.id) && isStr(r.name) && oneOf(r.plane, ['front', 'side', 'top']) && isStr(r.dataUrl) && r.dataUrl.startsWith('data:image/') &&
-      isNum(r.width) && r.width > 0 && isNum(r.height) && r.height > 0 && isVec(r.position) && isNum(r.opacity)
-    if (!Array.isArray(raw.references) || !raw.references.every(ok)) invalid('a reference picture is damaged')
+      isNum(r.width) && r.width > 0 && isNum(r.height) && r.height > 0 && isVec(r.position) && isNum(r.opacity) && r.opacity >= 0 && r.opacity <= 1
+    raw.references = Array.isArray(raw.references) ? raw.references.filter(ok) : []
+    if (!raw.references.length) delete raw.references
   }
   if (raw.shopProgress !== undefined) {
     const sp = raw.shopProgress
-    if (!isObj(sp) || !Array.isArray(sp.done) || !sp.done.every(isStr) || !isObj(sp.minutes) || !Object.values(sp.minutes).every(isNum)) delete raw.shopProgress
+    if (!isObj(sp) || !Array.isArray(sp.done) || !sp.done.every(isStr) || !isObj(sp.minutes) || !Object.values(sp.minutes).every((m: any) => isNum(m) && m >= 0)) delete raw.shopProgress
   }
   return pruneGroups(raw as Project)
 }

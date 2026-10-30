@@ -215,7 +215,7 @@ export function Canvas({ onAsk, view, setView }: { onAsk(a: Ask): void; view: Vi
   }
 
   const onClick = (e: React.MouseEvent) => {
-    if (e.button !== 0 || tool === 'select') return
+    if (e.button !== 0 || tool === 'select' || draw.getState().refPick) return
     const q = toDrawing(e)
     const s = draw.getState()
     const sn = snapAt(q)

@@ -14,7 +14,11 @@ function PictureRow({ r }: { r: Reference }) {
   const [real, setReal] = useState('')
   const [msg, setMsg] = useState<string | null>(null)
   const picking = pick?.id === r.id
-  const set = (patch: Partial<Reference>) => apply(p => updateReference(p, r.id, patch))
+  const set = (patch: Partial<Reference>) => {
+    // A picture that's locked or hidden can't be picked on.
+    if ((patch.locked || patch.hidden) && picking) studio.getState().setView({ refPick: null })
+    apply(p => updateReference(p, r.id, patch))
+  }
   const scale = () => {
     const d = parseInches(real)
     if (!d.ok) return setMsg(d.reason)
@@ -31,7 +35,7 @@ function PictureRow({ r }: { r: Reference }) {
         <span className="flex-1 truncate font-semibold">{r.name}</span>
         <button aria-label={r.hidden ? `Show ${r.name}` : `Hide ${r.name}`} onClick={() => set({ hidden: !r.hidden })} className="px-1">{r.hidden ? '🙈' : '👁'}</button>
         <button aria-label={r.locked ? `Unlock ${r.name}` : `Lock ${r.name}`} onClick={() => set({ locked: !r.locked })} className="px-1">{r.locked ? '🔒' : '🔓'}</button>
-        <button aria-label={`Remove ${r.name}`} onClick={() => apply(p => removeReference(p, r.id))} className="px-1 text-stone-500 hover:text-red-700">✕</button>
+        <button aria-label={`Remove ${r.name}`} onClick={() => { if (picking) studio.getState().setView({ refPick: null }); apply(p => removeReference(p, r.id)) }} className="px-1 text-stone-500 hover:text-red-700">✕</button>
       </div>
       <label className="flex items-center gap-2 text-xs">See-through
         <input aria-label={`Opacity of ${r.name}`} type="range" min={0.1} max={1} step={0.05} value={r.opacity} onChange={e => set({ opacity: Number(e.target.value) })} className="flex-1" />

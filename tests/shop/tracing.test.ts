@@ -30,10 +30,10 @@ test('picking points: begin clears it', () => {
   expect(s.getState().refPick).toBeNull()
 })
 
-test('reference pictures round-trip in the project file; damaged ones refuse to open with a message', async () => {
+test('reference pictures round-trip in the project file; a damaged one is dropped and the design opens', async () => {
   const { addReference } = await import('../../src/shop/references')
   const p = addReference(emptyProject('T'), { name: 'Chair', dataUrl: ref.dataUrl, aspect: 2, plane: 'side' }).project
   expect(deserialize(serialize(p)).references).toEqual(p.references)
   const bad = JSON.parse(serialize(p)); bad.references[0].plane = 'diagonal'
-  expect(() => deserialize(JSON.stringify(bad))).toThrow(/reference picture is damaged/)
+  expect(deserialize(JSON.stringify(bad)).references).toBeUndefined()
 })

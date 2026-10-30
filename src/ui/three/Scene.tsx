@@ -72,6 +72,8 @@ export default function Scene() {
   }, [selection, project, shown, explode])
 
   const onSelect = (id: string) => (e: ThreeEvent<MouseEvent>) => {
+    // Picking scale points on a picture: the click goes through the parts to the picture.
+    if (studio.getState().refPick) return
     // A click that only touched the cut-away half of a part in a section belongs to the next part along the ray.
     const b = project.boards.find(x => x.id === id)
     const off = offsets.get(id)

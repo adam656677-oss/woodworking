@@ -74,6 +74,9 @@ async function loadPhoto(path: string): Promise<Electron.NativeImage> {
   return nativeImage.createFromBuffer(Buffer.from(bytes))
 }
 
+/** Lets the screen sleep again (Shop Mode's keep-awake). */
+let releaseAwake = (): void => {}
+
 function register(): void {
   ipcMain.handle('aa:openProject', async () => {
     const r = await dialog.showOpenDialog(win!, { defaultPath: defaultFolder(docsDir()), filters: AAW, properties: ['openFile'] })
@@ -137,10 +140,12 @@ function register(): void {
   })
   // Shop Mode keeps the screen on while it is open.
   let awake: number | null = null
+  const release = () => { if (awake !== null) { powerSaveBlocker.stop(awake); awake = null } }
   ipcMain.handle('aa:keepAwake', async (_e, on: boolean) => {
     if (on && awake === null) awake = powerSaveBlocker.start('prevent-display-sleep')
-    if (!on && awake !== null) { powerSaveBlocker.stop(awake); awake = null }
+    if (!on) release()
   })
+  releaseAwake = release
   ipcMain.handle('aa:print', async (_e, opts?: { landscape?: boolean }) => {
     const landscape = opts?.landscape ?? true
     await new Promise<void>(resolve => win!.webContents.print({ landscape }, () => resolve()))
@@ -257,6 +262,9 @@ app.whenReady().then(async () => {
   await mkdir(defaultFolder(docsDir()), { recursive: true }).catch(() => undefined)
   register()
   createWindow()
+  // A reload or a crashed page can't say Shop Mode closed: let the screen sleep again.
+  win?.webContents.on('did-start-loading', () => releaseAwake())
+  win?.webContents.on('render-process-gone', () => releaseAwake())
 })
 app.on('window-all-closed', () => app.quit())
 
