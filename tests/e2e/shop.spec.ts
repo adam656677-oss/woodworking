@@ -29,7 +29,7 @@ test('1. Shop Mode on a bookshelf: step through with the keyboard, tick a step, 
     await expect(shop.getByTestId('step-text')).toContainText('1/4" deep')
     await shop.getByRole('checkbox').check()
     await shot(win, 'shop-dado')
-    await win.keyboard.press(' ')
+    await win.keyboard.press('PageDown')
     await expect(shop.getByTestId('step-count')).toHaveText(/^Step 3 of/)
     await win.keyboard.press('Escape')
     await expect(shop).toHaveCount(0)
