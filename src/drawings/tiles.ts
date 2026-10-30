@@ -1,7 +1,8 @@
 // Full-size templates: a part's outline at 1:1, split over letter pages that overlap so they can be taped together.
 import type { Project } from '../model/types'
 import { formatInches } from '../model/units'
-import { viewLines, type Lines } from './lines'
+import type * as THREE from 'three'
+import { viewLines } from './lines'
 import { esc, num, svgPage, text, viewSvg } from './sheet'
 import { FACE } from './views'
 
@@ -39,9 +40,9 @@ const target = ([x, y]: [number, number]) =>
 export type Template = { name: string; size: string; tiling: Tiling; pages: string[] }
 
 /** A part's full-size template: a cover page (how to print and check it, and the page map) and its tiles. */
-export function template(p: Project, boardId: string, no: number, lines?: Lines): Template {
+export function template(p: Project, boardId: string, no: number, solids?: Map<string, THREE.BufferGeometry>): Template {
   const b = p.boards.find(x => x.id === boardId)!
-  const l = lines ?? viewLines(p, FACE, { ids: [boardId], local: true, hidden: false })
+  const l = viewLines(p, FACE, { ids: [boardId], local: true, hidden: false, ...(solids ? { solids } : {}) })
   const w = l.max[0] - l.min[0], h = l.max[1] - l.min[1]
   const t = tiling(w, h)
   const toCanvas = (u: number, v: number): [number, number] => [PAD + u - l.min[0], PAD + l.max[1] - v]
@@ -58,10 +59,8 @@ export function template(p: Project, boardId: string, no: number, lines?: Lines)
       s += `<g clip-path="url(#${esc(id)})"><g transform="translate(${num(TILE_MARGIN - ox)} ${num(TILE_MARGIN - oy)})">${art}`
       s += all.filter(([x, y]) => x >= ox - 0.3 && x <= ox + PW + 0.3 && y >= oy - 0.3 && y <= oy + PH + 0.3).map(target).join('')
       s += '</g></g>'
-      // The page's printed area, the overlap edges (dashed), and corner crop marks.
+      // The page's printed area (trim to it on the left and top) and corner crop marks.
       s += `<rect x="${TILE_MARGIN}" y="${TILE_MARGIN}" width="${PW}" height="${PH}" fill="none" stroke="#999" stroke-width="0.006"/>`
-      if (c > 0) s += `<line x1="${TILE_MARGIN + OVERLAP}" y1="${TILE_MARGIN}" x2="${TILE_MARGIN + OVERLAP}" y2="${TILE_MARGIN + PH}" stroke="#999" stroke-width="0.006" stroke-dasharray="0.08 0.06"/>`
-      if (r > 0) s += `<line x1="${TILE_MARGIN}" y1="${TILE_MARGIN + OVERLAP}" x2="${TILE_MARGIN + PW}" y2="${TILE_MARGIN + OVERLAP}" stroke="#999" stroke-width="0.006" stroke-dasharray="0.08 0.06"/>`
       for (const [x, y] of [[TILE_MARGIN, TILE_MARGIN], [TILE_MARGIN + PW, TILE_MARGIN], [TILE_MARGIN, TILE_MARGIN + PH], [TILE_MARGIN + PW, TILE_MARGIN + PH]]) {
         const dx = x < 1 ? -1 : 1, dy = y < 1 ? -1 : 1
         s += `<path d="M${num(x + dx * 0.05)} ${num(y)}h${num(dx * 0.2)}M${num(x)} ${num(y + dy * 0.05)}v${num(dy * 0.2)}" stroke="#000" stroke-width="0.006"/>`
@@ -69,7 +68,7 @@ export function template(p: Project, boardId: string, no: number, lines?: Lines)
       const name = tileName(r, c)
       s += text(TILE_PAGE.w / 2, TILE_PAGE.h / 2 + 0.6, name, { anchor: 'middle', size: 1.6, bold: true, fill: '#ececec' })
       s += text(TILE_MARGIN + OVERLAP + 0.1, TILE_PAGE.h - TILE_MARGIN - OVERLAP - 0.1, `${title} · page ${name} of ${tileName(t.rows - 1, t.cols - 1)} (${t.rows} down × ${t.cols} across) · full size`, { size: 0.11 })
-      if (c > 0 || r > 0) s += text(TILE_MARGIN + 0.62, TILE_MARGIN + 0.62, 'Lay this edge over the page before it, matching the ⊕ marks', { size: 0.09, fill: '#666' })
+      if (c > 0 || r > 0) s += text(TILE_MARGIN + 0.62, TILE_MARGIN + 0.62, `Trim the blank margin off the ${c > 0 && r > 0 ? 'left and top edges' : c > 0 ? 'left edge' : 'top edge'}, then lay this page over the one ${c > 0 ? 'to its left' : 'above'} so the ⊕ marks match`, { size: 0.09, fill: '#666' })
       pages.push(svgPage(TILE_PAGE.w, TILE_PAGE.h, s))
     }
   }
@@ -84,7 +83,7 @@ function cover(title: string, size: string, t: Tiling, art: (weight: number) => 
   const lines = [
     'Print at 100% ("Actual size") — not "Fit to page".',
     'Measure both squares below. If they are not exactly 1" and 5 cm, the printer scaled the pages.',
-    'Trim each page on its dashed line, lay it over its neighbour so the ⊕ marks match, and tape.',
+    'Trim the blank margin off the left and top of each page (not A1\'s), lay it over its neighbour so the ⊕ marks match, and tape.',
     'Pages run A1, A2… across the top row, then B1, B2… and so on.'
   ]
   lines.forEach((ln, i) => { s += text(M, M + 1.1 + i * 0.25, `${i + 1}. ${ln}`, { size: 0.13 }) })

@@ -23,8 +23,15 @@ test('a 30" × 10" part: a cover with test squares, then A1…B5, every page ful
   // Neighbouring pages show the same registration mark at the same place on the paper, offset by one step.
   const marks = (svg: string) => [...svg.matchAll(/<circle cx="([\d.]+)" cy="([\d.]+)" r="0.12"/g)].map(m => [+m[1], +m[2]])
   const a1 = marks(t.pages[1]), a2 = marks(t.pages[2])
-  expect(a1.length).toBeGreaterThan(0)
-  expect(a2.length).toBeGreaterThan(0)
+  // Marks are drawn in drawing coordinates: A1 and A2 share the marks in their overlap.
+  const shared = a1.filter(([x, y]) => a2.some(([u, v]) => Math.abs(u - x) < 1e-6 && Math.abs(v - y) < 1e-6))
+  expect(shared.length).toBeGreaterThanOrEqual(3)
+  // On paper each shared mark is inside the printed area of both pages (A2 is shifted left by one step).
+  const step = 8.5 - 2 * TILE_MARGIN - OVERLAP
+  for (const [x] of shared) {
+    expect(x + TILE_MARGIN).toBeLessThan(8.5 - TILE_MARGIN)
+    expect(x - step + TILE_MARGIN).toBeGreaterThan(TILE_MARGIN)
+  }
   expect(OVERLAP).toBe(0.5)
   expect(TILE_MARGIN).toBeGreaterThan(0)
 })

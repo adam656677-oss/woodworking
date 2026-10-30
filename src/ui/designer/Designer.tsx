@@ -48,6 +48,8 @@ export function Designer() {
         void s.save()
         return
       }
+      // The drawings dialog covers the design: its keys aren't for the parts behind it.
+      if (s.drawingsOpen) return
       if (isTyping(e)) return
       if (ctrl && e.key.toLowerCase() === 'z') {
         e.preventDefault()

@@ -10,6 +10,7 @@ import { stepsFromDesign } from '../../shop/steps'
 import { studio, useStudio } from '../../ui/store'
 import { PAPERS, SCALES, type Paper, type ScaleChoice } from '../sheet'
 import { template } from '../tiles'
+import { localSolids } from '../../checks/solids'
 import { coverSheet, drawingSheets, partList, pictureSvg, type Sheet } from '../views'
 
 type Tab = 'views' | 'parts' | 'templates' | 'packet'
@@ -32,7 +33,7 @@ export function DrawingsDialog() {
   const [tmpl, setTmpl] = useState<string[]>(() => shaped(project))
   const [packet, setPacket] = useState({ cover: true, drawings: true, parts: true, cutList: true, buy: true, steps: true, templates: true })
   const [pages, setPages] = useState<PageSpec[] | null>(null)
-  const [message, setMessage] = useState<string | null>(null)
+  const [message, setMessage] = useState<{ text: string; bad?: boolean } | null>(null)
   const shop = useStock(s => s.items)
 
   const close = () => studio.getState().set({ drawingsOpen: false })
@@ -48,8 +49,9 @@ export function DrawingsDialog() {
   const key = JSON.stringify([tab, paper, scale, hidden, views, chosen, tmpl, packet, kids])
   useEffect(() => {
     setPages(null)
+    setMessage(null)
     const t = window.setTimeout(() => {
-      try { setPages(buildPages()) } catch (err) { setMessage(`Couldn't draw this: ${(err as Error).message}`); setPages([]) }
+      try { setPages(buildPages()) } catch (err) { setMessage({ text: `Couldn't draw this: ${(err as Error).message}`, bad: true }); setPages([]) }
     }, 30)
     return () => window.clearTimeout(t)
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -58,7 +60,14 @@ export function DrawingsDialog() {
   function buildPages(): PageSpec[] {
     const opts = { paper, scale, hidden, date: today() }
     const sheetPages = (s: Sheet[], tag: string): PageSpec[] => s.map((x, i) => ({ key: `${tag}${i}`, kind: 'sheet', paper: x.paper, svg: x.svg }))
-    const tiles = (ids: string[]): PageSpec[] => parts.filter(q => ids.includes(q.boardId)).flatMap(q => template(project, q.boardId, q.no).pages.map((svg, i) => ({ key: `t${q.boardId}${i}`, kind: 'tile' as const, svg })))
+    const tiles = (ids: string[]): PageSpec[] => {
+      const picked = parts.filter(q => ids.includes(q.boardId))
+      if (!picked.length) return []
+      const solids = localSolids(project)
+      const out = picked.flatMap(q => template(project, q.boardId, q.no, solids).pages.map((svg, i) => ({ key: `t${q.boardId}${i}`, kind: 'tile' as const, svg })))
+      for (const g of solids.values()) g.dispose()
+      return out
+    }
     if (kids) return kidsPages(project)
     if (tab === 'views') return sheetPages(drawingSheets(project, views, opts), 'v')
     if (tab === 'parts') return sheetPages(drawingSheets(project, { parts: chosen }, opts), 'p')
@@ -72,10 +81,11 @@ export function DrawingsDialog() {
       packet.steps && 'Steps',
       packet.templates && tmpl.length > 0 && 'Full-size templates'
     ].filter(Boolean) as string[]
-    const sheets = drawingSheets(project, { views: packet.drawings, exploded: packet.drawings, section: packet.drawings, parts: packet.parts ? 'all' : [] }, opts)
-    const total = sheets.length + (packet.cover ? 1 : 0)
-    // Renumber "n of N" across the cover and the sheets.
-    const renumbered = sheets.map((s, i) => ({ ...s, svg: s.svg.replace(/>\d+ of \d+</, `>${i + 1 + (packet.cover ? 1 : 0)} of ${total}<`) }))
+    const set = { views: packet.drawings, exploded: packet.drawings, section: packet.drawings, parts: packet.parts ? 'all' as const : [] }
+    // Numbered "n of N" across the cover and the sheets.
+    const count = (packet.drawings ? 3 : 0) + (packet.parts ? parts.length : 0)
+    const total = count + (packet.cover ? 1 : 0)
+    const renumbered = drawingSheets(project, set, opts, { first: packet.cover ? 2 : 1, total })
     const out: PageSpec[] = []
     if (packet.cover) out.push({ key: 'cover', kind: 'sheet', paper, svg: coverSheet(project, opts, contents, `1 of ${total}`).svg })
     out.push(...sheetPages(renumbered, 's'))
@@ -86,9 +96,16 @@ export function DrawingsDialog() {
     return out
   }
 
+  const fileName = () => `${project.name || 'Untitled'} ${kids ? 'plan' : tab === 'packet' ? 'plan packet' : tab === 'templates' ? 'templates' : 'drawings'}`
   const savePdf = async () => {
-    const path = await window.aa.savePdf(`${project.name} ${kids ? 'plan' : tab === 'packet' ? 'plan packet' : tab === 'templates' ? 'templates' : 'drawings'}`)
-    if (path) setMessage(`Saved ${path}`)
+    const path = await window.aa.savePdf(fileName())
+    if (path) setMessage({ text: `Saved ${path}` })
+  }
+
+  // Printing goes through a PDF so every page keeps its own size and full-size templates stay full size.
+  const printIt = async () => {
+    const ok = await window.aa.printPdf(fileName())
+    setMessage(ok ? { text: 'Opened in your PDF viewer — print it at 100% ("Actual size"), not "Fit".' } : { text: 'Couldn\'t open the PDF to print. Use Save as PDF instead.', bad: true })
   }
   const tabs: [Tab, string][] = [['views', 'Views'], ['parts', 'Part sheets'], ['templates', 'Templates'], ['packet', 'Plan packet']]
   const box = (on: boolean, set: (v: boolean) => void, label: string) => (
@@ -107,8 +124,8 @@ export function DrawingsDialog() {
           </nav>
         )}
         <div className="ml-auto flex gap-2">
-          <button className="rounded border px-3 py-1 text-sm hover:bg-stone-100" onClick={() => void window.aa.print({ landscape: tab !== 'templates' && !kids, edgeToEdge: true })}>Print</button>
-          <button className="rounded border px-3 py-1 text-sm hover:bg-stone-100" onClick={() => void savePdf()}>Save as PDF</button>
+          <button disabled={!pages?.length} className="rounded border px-3 py-1 text-sm hover:bg-stone-100 disabled:opacity-40" onClick={() => void printIt()}>Print</button>
+          <button disabled={!pages?.length} className="rounded border px-3 py-1 text-sm hover:bg-stone-100 disabled:opacity-40" onClick={() => void savePdf()}>Save as PDF</button>
           <button className="rounded bg-amber-700 px-3 py-1 text-sm text-white" onClick={close}>Close</button>
         </div>
       </header>
@@ -147,7 +164,7 @@ export function DrawingsDialog() {
           </>}
         </div>
       )}
-      {message && <p className="no-print bg-white px-4 py-1 text-xs text-green-800 print:hidden">{message}</p>}
+      {message && <p role={message.bad ? 'alert' : 'status'} className={`no-print bg-white px-4 py-1 text-xs print:hidden ${message.bad ? 'text-red-700' : 'text-green-800'}`}>{message.text}</p>}
       <div className="packet-inner flex-1 overflow-auto p-6 print:overflow-visible print:p-0">
         {pages === null ? <p className="text-stone-600">Drawing…</p> : pages.length === 0 ? (
           <p className="text-stone-600">{project.boards.length ? (tab === 'templates' ? 'Pick the parts to make full-size templates of. Shaped parts are picked for you.' : 'Nothing picked.') : 'Add some parts first.'}</p>

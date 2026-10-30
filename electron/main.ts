@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, nativeImage, net, powerSaveBlocker } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, nativeImage, net, powerSaveBlocker, shell } from 'electron'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { basename, join } from 'node:path'
 import { autosavePath, defaultFolder, deleteAutosave, load, safeSave, writeAutosave } from './fileStore'
@@ -14,6 +14,12 @@ import type { Progress } from '../src/kids/progress'
 
 // Test hooks: e2e runs point these at temp folders so they never touch real documents or settings.
 if (process.env.AA_USER_DATA) app.setPath('userData', process.env.AA_USER_DATA)
+/** A file name Windows accepts: no reserved characters or names, no control characters, no trailing dots or spaces. */
+const safeName = (n: unknown) => {
+  let s = String(n ?? '').replace(/[\u0000-\u001f\\/:*?"<>|]/g, '-').replace(/[. ]+$/, '').trim().slice(0, 120)
+  if (!s || /^(con|prn|aux|nul|com\d|lpt\d)$/i.test(s)) s = `Drawings ${s}`.trim()
+  return s
+}
 const docsDir = () => process.env.AA_DOCS_DIR ?? app.getPath('documents')
 const AAW = [{ name: 'A&A Project', extensions: ['aaw'] }]
 
@@ -176,9 +182,21 @@ function register(): void {
     // Label sheets: no printer margins, so the labels land where the sheet's die cuts are.
     await new Promise<void>(resolve => win!.webContents.print({ landscape, ...(opts?.edgeToEdge ? { margins: { marginType: 'none' as const } } : {}) }, () => resolve()))
   })
+  ipcMain.handle('aa:printPdf', async (_e, name: string) => {
+    // A temporary PDF opened in the system viewer: each page keeps its own size, so templates print 1:1.
+    try {
+      const dir = join(app.getPath('temp'), 'aa-print')
+      await mkdir(dir, { recursive: true })
+      const file = join(dir, `${safeName(name)}.pdf`)
+      await writeFile(file, await win!.webContents.printToPDF({ preferCSSPageSize: true, printBackground: true }))
+      return (await shell.openPath(file)) === ''
+    } catch {
+      return false
+    }
+  })
   ipcMain.handle('aa:savePdf', async (_e, suggestedName: string) => {
     const r = await dialog.showSaveDialog(win!, {
-      defaultPath: join(defaultFolder(docsDir()), `${String(suggestedName).replace(/[\\/:*?"<>|]/g, '-')}.pdf`),
+      defaultPath: join(defaultFolder(docsDir()), `${safeName(suggestedName)}.pdf`),
       filters: [{ name: 'PDF', extensions: ['pdf'] }]
     })
     if (r.canceled || !r.filePath) return null

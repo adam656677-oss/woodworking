@@ -9,7 +9,7 @@ import { formatInches } from '../model/units'
 import type { Project, Vec3 } from '../model/types'
 import { viewLines, VIEWS, type Lines, type View } from './lines'
 import {
-  balloon, chain, dimension, isEven, dimText, drawArea, fitScale, mapper, PAPERS, scaleText, svgPage, table, text, titleBlock, viewSize, viewSvg,
+  balloon, chain, dimension, fits, isEven, dimText, drawArea, fitScale, mapper, PAPERS, scaleText, svgPage, table, text, titleBlock, viewSize, viewSvg,
   type Paper, type ScaleChoice
 } from './sheet'
 
@@ -22,6 +22,8 @@ export const FACE: View = { toViewer: { x: 0, y: 0, z: 1 }, right: { x: 0, y: 1,
 export const EDGE: View = { toViewer: { x: 1, y: 0, z: 0 }, right: { x: 0, y: 1, z: 0 }, up: { x: 0, y: 0, z: 1 } }
 
 const GAP = 0.9
+/** A note in red at the top of the sheet when the drawing doesn't fit at the chosen scale. */
+const tooBig = (A: ReturnType<typeof drawArea>, s: number) => text(A.x + A.w, A.y + 0.05, `Too big for this paper at ${scaleText(s)} — choose a smaller scale or bigger paper`, { anchor: 'end', size: 0.12, fill: '#c62828', bold: true })
 const dot = (q: Vec3, d: Vec3) => q.x * d.x + q.y * d.y + q.z * d.z
 const label = (x: number, y: number, t: string, sub?: string) => text(x, y, t, { anchor: 'middle', bold: true, size: 0.13 }) + (sub ? text(x, y + 0.16, sub, { anchor: 'middle', size: 0.1 }) : '')
 
@@ -51,6 +53,7 @@ export function viewsSheet(c: Ctx): Sheet {
   const x0 = A.x + 0.6, yTop = A.y + 0.2, yFront = yTop + dy / s + GAP
   const mf = mapper(front, s, x0, yFront), mt = mapper(top, s, x0, yTop), ms = mapper(side, s, x0 + fx / s + GAP, yFront)
   let body = viewSvg(front, mf) + viewSvg(top, mt) + viewSvg(side, ms)
+  if (!fits(fx + dy, dy + fz, s, availW, availH)) body += tooBig(A, s)
   const fs = viewSize(front, s), ss = viewSize(side, s)
   // Overall sizes.
   body += dimension(mf(front.min[0], front.min[1]), mf(front.max[0], front.min[1]), -0.35, dimText(fx))
@@ -99,7 +102,17 @@ export function explodedSheet(c: Ctx): Sheet {
     const wb = worldBox(b)
     const off = offsets.get(b.id) ?? { x: 0, y: 0, z: 0 }
     const cq = { x: (wb.min.x + wb.max.x) / 2 + off.x, y: (wb.min.y + wb.max.y) / 2 + off.y, z: (wb.min.z + wb.max.z) / 2 + off.z }
-    const to = f.m(dot(cq, VIEWS.iso.right), dot(cq, VIEWS.iso.up))
+    const c2: [number, number] = [dot(cq, VIEWS.iso.right), dot(cq, VIEWS.iso.up)]
+    // Point at a line of the part you can see (its middle may be behind another part).
+    let best: [number, number] | null = null, bd = Infinity
+    for (const sg of l.segs) {
+      if (sg.boardId !== b.id || sg.hidden) continue
+      const q: [number, number] = [(sg.a[0] + sg.b[0]) / 2, (sg.a[1] + sg.b[1]) / 2]
+      const d = Math.hypot(q[0] - c2[0], q[1] - c2[1])
+      if (d < bd) { bd = d; best = q }
+    }
+    if (!best) continue
+    const to = f.m(best[0], best[1])
     let dx = to[0] - mid[0], dy = to[1] - mid[1]
     const d = Math.hypot(dx, dy) || 1
     dx /= d; dy /= d
@@ -127,6 +140,7 @@ export function sectionSheet(c: Ctx): Sheet {
   const sz = { w: W / s, h: H / s }
   const m = mapper(l, s, A.x + (A.w - sz.w) / 2, A.y + 0.3)
   let body = viewSvg(l, m)
+  if (!fits(W, H, s, A.w - 1.4, A.h - 1.2)) body += tooBig(A, s)
   body += dimension(m(l.min[0], l.min[1]), m(l.max[0], l.min[1]), -0.35, dimText(W))
   body += dimension(m(l.min[0], l.min[1]), m(l.min[0], l.max[1]), 0.35, dimText(H))
   body += label(A.x + A.w / 2, A.y + 0.3 + sz.h + 0.7, 'SECTION A–A', 'cut through the middle, looking at it from the right')
@@ -148,6 +162,7 @@ export function partSheet(c: Ctx, boardId: string, no: number, qty: number): She
   const yEdge = yFace + Wd / s + GAP
   const mEdge = mapper(edge, s, x0, yEdge)
   let body = viewSvg(face, mFace) + viewSvg(edge, mEdge)
+  if (!fits(L, Wd + T, s, A.w - notesW - 1.6, A.h - 1.0 - 2 * GAP)) body += tooBig(A, s)
   // Face view: U is along the length (0 at the left end), V is across (bottom edge at -width).
   const cuts = cutGeometry(p).filter(k => k.boardId === b.id)
   const holes = cuts.filter(k => k.kind === 'hole') as Extract<(typeof cuts)[number], { kind: 'hole' }>[]
@@ -191,6 +206,14 @@ export function partSheet(c: Ctx, boardId: string, no: number, qty: number): She
   if (row?.cutWidth !== undefined || row?.cutLength !== undefined) put(`Cut size ${formatInches(row?.cutWidth ?? b.width)} × ${formatInches(row?.cutLength ?? b.length)}`)
   ny += 0.08
   const notes = [...new Set([...(row?.notes ?? []), ...jointNotes(p, b.id)])]
+  // Parts in one cut-list row can be mirror images (cuts on the other face or end): say so.
+  if (row && row.boardIds.length > 1) {
+    const all = cutGeometry(p)
+    const sig = (id: string) => JSON.stringify(all.filter(k => k.boardId === id).map(k => JSON.stringify({ ...k, boardId: '' }, (_k, v) => (typeof v === 'number' ? Math.round(v * 1000) / 1000 : v))).sort())
+    const mine = sig(b.id)
+    const same = row.boardIds.filter(id => sig(id) === mine).length
+    if (same < row.boardIds.length) notes.unshift(`Make ${same} as drawn and ${row.boardIds.length - same} as a mirror image (its cuts are on the other face or end).`)
+  }
   if (notes.length) put('Notes', { bold: true, size: 0.12 })
   for (const n of notes) for (const ln of wrap(n, 42)) put(ln, { size: 0.1 })
   if (many) {
@@ -220,7 +243,8 @@ export function partList(p: Project): { boardId: string; no: number; qty: number
 export type DrawingSet = { views?: boolean; exploded?: boolean; section?: boolean; parts?: string[] | 'all' }
 
 /** All the sheets asked for, numbered "n of N". */
-export function drawingSheets(p: Project, set: DrawingSet, opts: SheetOpts): Sheet[] {
+/** `numbering` puts these sheets inside a bigger set (the plan packet's cover comes first). */
+export function drawingSheets(p: Project, set: DrawingSet, opts: SheetOpts, numbering?: { first: number; total: number }): Sheet[] {
   if (!p.boards.length) return []
   const jobs: ((c: Ctx) => Sheet)[] = []
   if (set.views) jobs.push(viewsSheet)
@@ -229,7 +253,7 @@ export function drawingSheets(p: Project, set: DrawingSet, opts: SheetOpts): She
   const parts = partList(p).filter(q => set.parts === 'all' || (set.parts ?? []).includes(q.boardId))
   for (const q of parts) jobs.push(c => partSheet(c, q.boardId, q.no, q.qty))
   let k = 0
-  const c: Ctx = { ...opts, project: p, solids: localSolids(p), sheetNo: () => `${++k} of ${jobs.length}` }
+  const c: Ctx = { ...opts, project: p, solids: localSolids(p), sheetNo: () => `${(numbering?.first ?? 1) + k++} of ${numbering?.total ?? jobs.length}` }
   const out = jobs.map(j => j(c))
   for (const g of c.solids.values()) g.dispose()
   return out

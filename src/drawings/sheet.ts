@@ -9,7 +9,7 @@ export const PAPERS: Record<Paper, { w: number; h: number; label: string }> = {
   tabloid: { w: 17, h: 11, label: 'Tabloid (11 × 17)' }
 }
 /** Drawing scales, 1:N. */
-export const SCALES = [1, 2, 4, 8, 12, 16]
+export const SCALES = [1, 2, 4, 8, 12, 16, 24, 32, 48]
 export type ScaleChoice = 'auto' | number
 
 export const MARGIN = 0.4
@@ -24,11 +24,12 @@ export function drawArea(paper: Paper) {
   return { x: MARGIN, y: MARGIN, w: P.w - 2 * MARGIN, h: P.h - 2 * MARGIN - TITLE_H }
 }
 
-/** The smallest-reduction scale at which a w × h drawing fits a box (the largest scale if nothing fits). */
+/** The smallest-reduction scale at which a w × h drawing fits a box (the largest scale if nothing fits; check `fits`). */
 export function fitScale(w: number, h: number, boxW: number, boxH: number): number {
   for (const s of SCALES) if (w / s <= boxW + 1e-9 && h / s <= boxH + 1e-9) return s
   return SCALES[SCALES.length - 1]
 }
+export const fits = (w: number, h: number, s: number, boxW: number, boxH: number) => w / s <= boxW + 1e-9 && h / s <= boxH + 1e-9
 export const scaleText = (s: number) => (s === 1 ? 'Full size (1:1)' : `1:${s}`)
 
 export const esc = (t: string) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
@@ -172,7 +173,16 @@ export function isEven(xs: number[], scale: number): boolean {
 /** A spacing in inches, or in millimetres when it's on the 32 mm system (shelf-pin holes). */
 export function spacingText(d: number): string {
   const mm = d * 25.4
-  return mm >= 31 && Math.abs(mm - 32 * Math.round(mm / 32)) < 0.3 && Math.abs(d * 32 - Math.round(d * 32)) > 0.15 ? `${Math.round(mm)} mm` : dimText(d)
+  if (mm >= 31 && Math.abs(mm - 32 * Math.round(mm / 32)) < 0.3) return `${Math.round(mm)} mm`
+  return formatInches(d, { sixtyFourths: true })
+}
+/** "n × spacing = span (eq. sp.)", with ≈ when the spacing as written doesn't multiply out to the span exactly. */
+export function spacingLabel(n: number, span: number): string {
+  const d = span / n
+  const mm = d * 25.4
+  const shown = mm >= 31 && Math.abs(mm - 32 * Math.round(mm / 32)) < 0.3 ? Math.round(mm) / 25.4 : Math.round(d * 64) / 64
+  const exact = Math.abs(shown * n - Math.round(span * 32) / 32) < 1 / 128
+  return `${n} × ${spacingText(d)} ${exact ? '=' : '≈'} ${dimText(span)} (eq. sp.)`
 }
 
 /**
@@ -186,7 +196,7 @@ export function chain(start: number, at: number[], scale: number, place: (a: num
   if (isEven(xs, scale)) {
     const n = xs.length - 1, span = (xs[n] - xs[0]) * scale
     return place(start, xs[0], dimText((xs[0] - start) * scale), 0) +
-      place(xs[0], xs[n], `${n} × ${spacingText(span / n)} = ${dimText(span)} (eq. sp.)`, 1)
+      place(xs[0], xs[n], spacingLabel(n, span), 1)
   }
   let s = ''
   let prev = start

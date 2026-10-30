@@ -10,7 +10,8 @@ const bookshelf = () => { const { template: _t, ...p } = applyTemplate(emptyProj
 test('scale: the largest that fits', () => {
   expect(fitScale(30, 20, 9, 6)).toBe(4)
   expect(fitScale(8, 5, 9, 6)).toBe(1)
-  expect(fitScale(500, 500, 9, 6)).toBe(16)
+  expect(fitScale(500, 500, 9, 6)).toBe(48)
+  expect(fitScale(168, 40, 8.4, 5)).toBe(24)
 })
 
 test('a bookshelf makes views, exploded, section and part sheets, numbered n of N', () => {
@@ -55,4 +56,25 @@ test('a section shades the faces it cuts through', async () => {
   const l = viewLines(p, VIEWS.side, { clip: { axis: 'x', at: 15, keep: 'low' } })
   expect(l.cut!.length).toBeGreaterThan(4)
   expect(xs.length).toBeGreaterThan(0)
+}, 60000)
+
+test('eq. sp. labels: ≈ when the spacing as written does not multiply out; 32 mm system in mm', async () => {
+  const { spacingLabel, spacingText } = await import('../../src/drawings/sheet')
+  expect(spacingLabel(4, 33.78125)).toBe('4 × 8-29/64" ≈ 33-25/32" (eq. sp.)')
+  expect(spacingLabel(3, 6)).toBe('3 × 2" = 6" (eq. sp.)')
+  expect(spacingText(96 / 25.4)).toBe('96 mm')
+  expect(spacingText(192 / 25.4)).toBe('192 mm')
+})
+
+test('the bookshelf side sheet says one of the two is a mirror image', () => {
+  const p = bookshelf()
+  const side = partList(p).find(q => q.name === 'Side')!
+  const [s] = drawingSheets(p, { parts: [side.boardId] }, { paper: 'letter', scale: 'auto', hidden: true, date: 'd' })
+  expect(s.svg).toContain('Make 1 as drawn and 1 as a mirror image')
+}, 60000)
+
+test('a design too big for the paper at the chosen scale says so', () => {
+  const p = bookshelf()
+  const [s] = drawingSheets(p, { views: true }, { paper: 'letter', scale: 1, hidden: true, date: 'd' })
+  expect(s.svg).toContain('Too big for this paper')
 }, 60000)

@@ -6,7 +6,7 @@ import { studio } from '../../src/ui/store'
 
 afterEach(cleanup)
 beforeEach(() => {
-  ;(window as any).aa = { setDirty: () => {}, loadStock: async () => [], saveStock: async () => {}, print: async () => {}, savePdf: async () => null }
+  ;(window as any).aa = { setDirty: () => {}, loadStock: async () => [], saveStock: async () => {}, print: async () => {}, savePdf: async () => null, printPdf: async () => true }
   stock.setState({ items: [], loaded: true })
   studio.getState().newFromTemplate('bookshelf')
 })

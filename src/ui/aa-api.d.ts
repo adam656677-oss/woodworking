@@ -28,9 +28,11 @@ export type AaApi = {
   saveStock(items: unknown): Promise<void>
   /** Save a shape for a CNC (DXF) or laser/vinyl cutter (SVG); returns where, or null if cancelled. */
   exportShape(kind: 'dxf' | 'svg', text: string, suggestedName: string): Promise<string | null>
-  /** Print the page; landscape unless told otherwise. */
   /** Saves what printing would print as a PDF; the chosen path, or null. */
   savePdf(name: string): Promise<string | null>
+  /** Makes that PDF in a temporary folder and opens it in the system's PDF viewer to print; false if it couldn't. */
+  printPdf(name: string): Promise<boolean>
+  /** Print the page; landscape unless told otherwise. */
   print(opts?: { landscape?: boolean; edgeToEdge?: boolean }): Promise<void>
   /** Keep the display awake (Shop Mode). */
   keepAwake(on: boolean): Promise<void>
