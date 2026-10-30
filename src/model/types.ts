@@ -69,6 +69,25 @@ export type Annotation =
   | { id: string; kind: 'dimension'; a: Vec3; b: Vec3; label?: string }
   | { id: string; kind: 'note'; at: Vec3; text: string }
 
+/** A picture placed in the 3D view to design over (a photo or scan), sized in inches. */
+export type Reference = {
+  id: string
+  name: string
+  /** front = upright facing you (X across, Z up), side = upright facing right (Y across, Z up), top = flat (X, Y). */
+  plane: 'front' | 'side' | 'top'
+  dataUrl: string
+  width: number
+  height: number
+  /** The picture's low corner. */
+  position: Vec3
+  opacity: number
+  locked?: boolean
+  hidden?: boolean
+}
+
+/** Shop Mode ticks and minutes, by step key. */
+export type ShopProgressData = { done: string[]; minutes: Record<string, number> }
+
 /** A group of parts (an assembly such as a drawer or a door); groups nest through parentId. */
 export type Group = { id: string; name: string; parentId?: string; link?: string }
 
@@ -109,7 +128,7 @@ export type TemplateState = { templateId: string; params: Record<string, number 
 
 export type Project = {
   /** 2 adds drawings; version 1 files are upgraded when opened. */
-  formatVersion: 1 | 2 | 3 | 4 | 5 | 6
+  formatVersion: 1 | 2 | 3 | 4 | 5 | 6 | 7
   name: string
   units: 'in'
   boards: Board[]
@@ -126,6 +145,10 @@ export type Project = {
   groups?: Group[]
   /** Dimensions and notes kept on the model. */
   annotations?: Annotation[]
+  /** Pictures to design over. */
+  references?: Reference[]
+  /** Shop Mode progress for this design's generated steps. */
+  shopProgress?: ShopProgressData
 }
 
 export const SQUARE: EndCut = { miter: 0, bevel: 0 }

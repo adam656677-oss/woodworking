@@ -23,6 +23,8 @@ export type AaApi = {
   exportShape(kind: 'dxf' | 'svg', text: string, suggestedName: string): Promise<string | null>
   /** Print the page; landscape unless told otherwise. */
   print(opts?: { landscape?: boolean }): Promise<void>
+  /** Keep the display awake (Shop Mode). */
+  keepAwake(on: boolean): Promise<void>
   loadUserWoods(): Promise<Wood[]>
   saveUserWoods(woods: Wood[]): Promise<void>
   setDirty(dirty: boolean): void

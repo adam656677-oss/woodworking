@@ -4,7 +4,7 @@ import { deserialize, ProjectFileError, serialize } from '../model/fileFormat'
 import { History } from '../model/history'
 import { newId } from '../model/ids'
 import type { OpError } from '../model/ops'
-import type { Project, Vec3, Wood } from '../model/types'
+import type { Project, ShopProgressData, Vec3, Wood } from '../model/types'
 import { validate, type Warning } from '../model/validate'
 import { cloneWoods, emptyProject } from '../model/woods'
 import { applyTemplate, findTemplate, freeze } from '../templates'
@@ -91,6 +91,8 @@ export type StudioState = {
   setView(patch: Partial<Pick<StudioState, 'explode' | 'section' | 'showDims' | 'overallSize' | 'checksOpen' | 'placingNote' | 'pendingNote'>>): void
   /** Pin the pending note with this text (null cancels). */
   finishNote(text: string | null): void
+  /** Shop Mode progress is saved with the design but isn't an undo step. */
+  setShopProgress(p: ShopProgressData): void
 }
 
 export type Section = { axis: 'x' | 'y' | 'z'; at: number; flip: boolean }
@@ -376,6 +378,11 @@ export function createStudioStore() {
         // Leaving the notes panel stops placing a note.
         const leaving = 'checksOpen' in patch && patch.checksOpen !== 'notes'
         set(leaving ? { ...patch, placingNote: false, pendingNote: null } : patch)
+      },
+      setShopProgress: progress => {
+        const cur = history.current
+        ;(cur as Snapshot).project = { ...cur.project, shopProgress: progress }
+        sync(true)
       },
       finishNote: text => {
         const at = get().pendingNote

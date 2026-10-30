@@ -5,7 +5,7 @@ import { AXES3 } from '../formulas/types'
 import type { Project } from './types'
 import { pruneGroups } from '../assemblies/ops'
 
-export const FORMAT_VERSION = 6
+export const FORMAT_VERSION = 7
 
 export class ProjectFileError extends Error {
   constructor(public code: 'corrupt' | 'newerVersion' | 'invalid', message: string) {
@@ -26,7 +26,9 @@ const MIGRATIONS: Record<number, Migration> = {
   // Version 5 adds groups (assemblies) and linked copies (all optional).
   4: raw => ({ ...raw, formatVersion: 5 }),
   // Version 6 adds dimensions and notes on the model (optional).
-  5: raw => ({ ...raw, formatVersion: 6 })
+  5: raw => ({ ...raw, formatVersion: 6 }),
+  // Version 7 adds reference pictures and Shop Mode progress (optional).
+  6: raw => ({ ...raw, formatVersion: 7 })
 }
 
 export function serialize(p: Project): string {
@@ -213,6 +215,15 @@ function check(raw: any): Project {
     // A repeated id (a hand-edited file) keeps the first.
     const seen = new Set<string>()
     raw.annotations = raw.annotations.filter((a: { id: string }) => (seen.has(a.id) ? false : (seen.add(a.id), true)))
+  }
+  if (raw.references !== undefined) {
+    const ok = (r: any) => isObj(r) && isStr(r.id) && isStr(r.name) && oneOf(r.plane, ['front', 'side', 'top']) && isStr(r.dataUrl) && r.dataUrl.startsWith('data:image/') &&
+      isNum(r.width) && r.width > 0 && isNum(r.height) && r.height > 0 && isVec(r.position) && isNum(r.opacity)
+    if (!Array.isArray(raw.references) || !raw.references.every(ok)) invalid('a reference picture is damaged')
+  }
+  if (raw.shopProgress !== undefined) {
+    const sp = raw.shopProgress
+    if (!isObj(sp) || !Array.isArray(sp.done) || !sp.done.every(isStr) || !isObj(sp.minutes) || !Object.values(sp.minutes).every(isNum)) delete raw.shopProgress
   }
   return pruneGroups(raw as Project)
 }

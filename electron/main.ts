@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, nativeImage, net } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, nativeImage, net, powerSaveBlocker } from 'electron'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { basename, join } from 'node:path'
 import { autosavePath, defaultFolder, deleteAutosave, load, safeSave, writeAutosave } from './fileStore'
@@ -134,6 +134,12 @@ function register(): void {
     if (r.canceled || !r.filePath) return null
     await writeFile(r.filePath, String(text), 'utf8')
     return r.filePath
+  })
+  // Shop Mode keeps the screen on while it is open.
+  let awake: number | null = null
+  ipcMain.handle('aa:keepAwake', async (_e, on: boolean) => {
+    if (on && awake === null) awake = powerSaveBlocker.start('prevent-display-sleep')
+    if (!on && awake !== null) { powerSaveBlocker.stop(awake); awake = null }
   })
   ipcMain.handle('aa:print', async (_e, opts?: { landscape?: boolean }) => {
     const landscape = opts?.landscape ?? true

@@ -7,6 +7,8 @@ import { TEMPLATES } from '../../templates'
 import { studio, useStudio, type View } from '../store'
 import { duplicateSelection, groupBoardIds, groupBoards, rotateGroup, ungroup, wholeGroup } from '../../assemblies/ops'
 import { GroupNameDialog } from '../../assemblies/ui/GroupPanel'
+import { shop } from '../../shop/shopStore'
+import { designSession } from '../../shop/steps'
 
 function Btn(props: React.ButtonHTMLAttributes<HTMLButtonElement> & { active?: boolean }) {
   const { active, className, ...rest } = props
@@ -162,6 +164,8 @@ export function Toolbar() {
       </Menu>}
       {!kidsMode && <Btn onClick={() => s.set({ woodsOpen: true })}>Woods</Btn>}
       <Btn className="bg-amber-100 font-semibold" onClick={() => s.set({ cutListOpen: true })}>Cut List</Btn>
+      <Btn disabled={boards.length === 0} className="font-semibold" title="Big-text steps for the bench"
+        onClick={() => shop.getState().open({ ...designSession(studio.getState().project, pr => studio.getState().setShopProgress(pr)), kid: kidsMode })}>🪚 Shop Mode</Btn>
       {!kidsMode && (
         <Btn className="font-semibold" onClick={() => { s.goto('plans'); void plans.getState().openLibrary(false, () => s.goto('master')) }}>📋 My Plans</Btn>
       )}

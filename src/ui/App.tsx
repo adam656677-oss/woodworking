@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { UnsavedDialog } from './common/UnsavedDialog'
+import { ShopMode } from '../shop/ui/ShopMode'
 import { Designer } from './designer/Designer'
 import { Home } from './Home'
 import { KidsShell } from '../kids/ui/KidsShell'
@@ -37,6 +38,7 @@ export default function App() {
     <>
       {screen === 'kids' ? <KidsShell /> : screen === 'master' ? <Designer /> : screen === 'plans' ? <PlansShell /> : screen === 'draw' ? <DrawingBoard /> : <Home />}
       <UnsavedDialog />
+      <ShopMode />
     </>
   )
 }

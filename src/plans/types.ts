@@ -29,6 +29,8 @@ export type Plan = {
   unchecked: string[]
   /** Why a drafted item needs a closer look (item id → reason). */
   checkNotes?: Record<string, string>
+  /** Shop Mode ticks and minutes, by step id. */
+  progress?: { done: string[]; minutes: Record<string, number> }
 }
 
 /** One line of text from a page, with where it sits. `size` is the text height; `uncertain` lists words the reader doubted. */
