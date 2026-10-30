@@ -1,5 +1,6 @@
 import { kidMessage } from '../../kids/kidWords'
 import { studio, useStudio } from '../store'
+import { openLibrary } from '../../library/ui/Library'
 
 export function WarningsList() {
   const all = useStudio(s => s.warnings)
@@ -13,10 +14,16 @@ export function WarningsList() {
       <h2 className="px-3 py-1 text-xs font-bold uppercase text-red-700">Warnings ({warnings.length})</h2>
       <ul>
         {warnings.map((w, i) => (
-          <li key={i}>
-            <button className="w-full px-3 py-1 text-left text-xs text-red-800 hover:bg-red-100" onClick={() => studio.getState().select(w.boardIds)}>
+          <li key={i} className="flex items-start">
+            <button className="flex-1 px-3 py-1 text-left text-xs text-red-800 hover:bg-red-100" onClick={() => studio.getState().select(w.boardIds)}>
               ⚠ {kidsMode ? kidMessage(w, project) : w.message}
             </button>
+            {w.link && !kidsMode && (
+              <button className="shrink-0 px-2 py-1 text-xs text-amber-800 underline" onClick={() => {
+                const l = w.link!
+                openLibrary('master', l.page, l.page === 'movement' ? { width: l.width, speciesId: l.speciesId } : { span: l.span, depth: l.depth, thickness: l.thickness, moe: l.moe, material: l.material })
+              }}>{w.link.page === 'sag' ? 'Shelf sag calculator →' : 'Wood movement →'}</button>
+            )}
           </li>
         ))}
       </ul>

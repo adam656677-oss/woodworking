@@ -9,6 +9,13 @@
         "Poplar is a soft hardwood. It is smooth and paints beautifully.",
         "It is a little harder than pine."
       ]
+    },
+    {
+      "image": "boards",
+      "text": [
+        "Poplar is in the middle: softer than oak, harder than pine.",
+        "It takes paint beautifully, so it's the go-to wood for painted furniture."
+      ]
     }
   ]
 }

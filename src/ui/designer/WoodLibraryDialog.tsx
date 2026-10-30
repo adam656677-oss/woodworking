@@ -3,6 +3,11 @@ import type { Wood, WoodKind } from '../../model/types'
 import { formatInches } from '../../model/units'
 import { studio, useStudio } from '../store'
 import { InchInput } from './InchInput'
+import { findSpecies, SPECIES } from '../../library/species'
+import type { Project } from '../../model/types'
+
+/** Sets which species a wood in this design is (weight, movement, sag and rendering use it). */
+export const setWoodSpecies = (p: Project, woodId: string, species: string): Project => ({ ...p, woods: p.woods.map(w => (w.id === woodId ? { ...w, species } : w)) })
 
 type Draft = { name: string; species: string; kind: WoodKind; thickness: number; width: number; length: number; price: string }
 const blank: Draft = { name: '', species: '', kind: 'hardwood', thickness: 0.75, width: 6, length: 96, price: '' }
@@ -53,7 +58,8 @@ export function WoodLibraryDialog() {
           <h3 className="mb-2 text-sm font-semibold">{editing ? 'Edit stock' : 'Add stock'}</h3>
           <div className="grid grid-cols-3 gap-2">
             <label className="flex flex-col text-xs">Name<input aria-label="Name" className="rounded border px-2 py-1 text-sm" value={draft.name} onChange={e => setDraft({ ...draft, name: e.target.value })} /></label>
-            <label className="flex flex-col text-xs">Species<input aria-label="Species" className="rounded border px-2 py-1 text-sm" value={draft.species} onChange={e => setDraft({ ...draft, species: e.target.value })} /></label>
+            <label className="flex flex-col text-xs">Species<input aria-label="Species" list="aa-species" className="rounded border px-2 py-1 text-sm" value={draft.species} onChange={e => setDraft({ ...draft, species: e.target.value })} />
+              <datalist id="aa-species">{SPECIES.map(x => <option key={x.id} value={x.name} />)}</datalist></label>
             <label className="flex flex-col text-xs">Kind
               <select aria-label="Kind" className="rounded border px-1 py-1 text-sm" value={draft.kind} onChange={e => setDraft({ ...draft, kind: e.target.value as WoodKind })}>
                 <option value="hardwood">Hardwood board</option><option value="lumber">Dimensional lumber</option><option value="sheet">Sheet good</option>
@@ -73,7 +79,18 @@ export function WoodLibraryDialog() {
         </div>
         <h3 className="mt-4 text-sm font-semibold">Built in</h3>
         <ul className="grid grid-cols-2 gap-x-4 text-xs text-stone-600">
-          {builtIn.map(w => <li key={w.id}>{w.name} — {formatInches(w.thickness)} × {formatInches(w.width)} × {formatInches(w.length)}</li>)}
+          {builtIn.map(w => (
+            <li key={w.id} className="flex items-center justify-between gap-2 py-0.5">
+              <span>{w.name} — {formatInches(w.thickness)} × {formatInches(w.width)} × {formatInches(w.length)}</span>
+              {w.kind !== 'sheet' && (
+                <select aria-label={`Species of ${w.name}`} value={findSpecies(w.species)?.id ?? ''} className="max-w-40 rounded border px-1"
+                  onChange={e => { const sp = SPECIES.find(x => x.id === e.target.value); s.apply(p => setWoodSpecies(p, w.id, sp ? sp.name : w.kind === 'lumber' ? 'Pine' : 'Hardwood')) }}>
+                  <option value="">{w.kind === 'lumber' ? 'Pine (any)' : 'Hardwood (any)'}</option>
+                  {SPECIES.map(x => <option key={x.id} value={x.id}>{x.name}</option>)}
+                </select>
+              )}
+            </li>
+          ))}
         </ul>
       </div>
     </div>

@@ -1,0 +1,14 @@
+{
+  "id": "wood-walnut",
+  "title": "Walnut",
+  "level": 0,
+  "cards": [
+    {
+      "image": "tree",
+      "text": [
+        "Walnut is dark chocolate brown and easy to carve and sand.",
+        "It costs more, so it's saved for special projects."
+      ]
+    }
+  ]
+}

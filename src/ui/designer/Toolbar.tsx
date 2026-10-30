@@ -1,3 +1,4 @@
+import { openLibrary } from '../../library/ui/Library'
 import { openFinishing } from '../../finish/ui/FinishingSchool'
 import { useMemo, useState } from 'react'
 import { worldBox } from '../../model/geometry'
@@ -183,6 +184,7 @@ export function Toolbar() {
       </Menu>}
       {!kidsMode && <Btn onClick={() => s.set({ woodsOpen: true })}>Woods</Btn>}
       {!kidsMode && <Btn onClick={() => openFinishing('master', 'schedule')}>Finish</Btn>}
+      {!kidsMode && <Btn onClick={() => openLibrary('master')}>Library</Btn>}
       {!kidsMode && <Btn onClick={() => s.setView({ picturesOpen: true })}>🖼 Pictures</Btn>}
       <Btn className="bg-amber-100 font-semibold" onClick={() => s.set({ cutListOpen: true })}>Cut List</Btn>
       <Btn onClick={() => s.set({ drawingsOpen: true })}>{kidsMode ? 'Print my plan' : 'Drawings'}</Btn>

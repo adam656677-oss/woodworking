@@ -1,4 +1,5 @@
-// Wood densities for weight (lb/ft³, air-dry at about 12% moisture). The Deep Library (Piece 11) will supersede this.
+// Wood densities for weight (lb/ft³, air-dry at about 12% moisture): the Deep Library's species, then these rough matches.
+import { findSpecies } from '../library/species'
 const TABLE: [RegExp, number][] = [
   // Sheet goods first: "Birch plywood" weighs as plywood, not birch.
   [/plywood|\bply\b/, 34], [/\bmdf\b/, 47],
@@ -11,6 +12,9 @@ export const DEFAULT_DENSITY = 35
 
 /** Density of a species by name; `estimated` when the name isn't known. */
 export function densityOf(species: string): { lbPerCuFt: number; estimated: boolean } {
+  // A species from the Deep Library first (sheet goods are matched by the table, below).
+  const sp = /plywood|\bply\b|\bmdf\b/i.test(species) ? undefined : findSpecies(species)
+  if (sp) return { lbPerCuFt: sp.density, estimated: false }
   const s = species.toLowerCase()
   for (const [re, v] of TABLE) if (re.test(s)) return { lbPerCuFt: v, estimated: false }
   return { lbPerCuFt: DEFAULT_DENSITY, estimated: true }

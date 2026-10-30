@@ -1,0 +1,14 @@
+{
+  "id": "wood-maple",
+  "title": "Maple",
+  "level": 0,
+  "cards": [
+    {
+      "image": "tree",
+      "text": [
+        "Hard maple is very hard (1,450 on the hardness test) and smooth.",
+        "It's the wood for cutting boards because it's tough and closed-grained."
+      ]
+    }
+  ]
+}
