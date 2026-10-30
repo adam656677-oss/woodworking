@@ -208,8 +208,11 @@ function check(raw: any): Project {
   if (raw.annotations !== undefined) {
     const ok = (a: any) => isObj(a) && isStr(a.id) && (
       a.kind === 'dimension' ? isVec(a.a) && isVec(a.b) && (a.label === undefined || isStr(a.label))
-        : a.kind === 'note' ? isVec(a.at) && isStr(a.text) : false)
+        : a.kind === 'note' ? isVec(a.at) && isStr(a.text) && a.text.trim() !== '' : false)
     if (!Array.isArray(raw.annotations) || !raw.annotations.every(ok)) invalid('a dimension or note is damaged')
+    // A repeated id (a hand-edited file) keeps the first.
+    const seen = new Set<string>()
+    raw.annotations = raw.annotations.filter((a: { id: string }) => (seen.has(a.id) ? false : (seen.add(a.id), true)))
   }
   return pruneGroups(raw as Project)
 }

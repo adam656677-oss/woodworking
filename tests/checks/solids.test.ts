@@ -87,7 +87,8 @@ test('explode: nothing at 0%; groups move out as units, parts from their group c
   expect(off.get(b)!.x).toBeCloseTo(10)
   const g = groupBoards(p, [a, b], 'Pair')
   if ('error' in g) throw new Error(g.error)
+  // The pair is the whole design, so the group stays put and its parts open up 40% as far: -10 × 0.5 × 0.4.
   const og = explodeOffsets(g.project, 0.5)
-  expect(og.get(a)!.x).toBeCloseTo(-5)
+  expect(og.get(a)!.x).toBeCloseTo(-2)
   void addJoint
 })

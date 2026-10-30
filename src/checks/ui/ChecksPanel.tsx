@@ -1,5 +1,6 @@
 // Checks: interference, weight & balance, and the design's dimensions and notes.
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import type { Annotation } from '../../model/types'
 import { formatInches } from '../../model/units'
 import { studio, useStudio } from '../../ui/store'
 import { dimensionLength, editAnnotation, removeAnnotation } from '../annotations'
@@ -101,14 +102,27 @@ function NotesList() {
         {list.map(a => (
           <li key={a.id} className="flex items-center gap-1 text-xs">
             <span className="shrink-0">{a.kind === 'note' ? '📝' : '↔'}</span>
-            <input aria-label={a.kind === 'note' ? 'Note' : 'Dimension label'} defaultValue={a.kind === 'note' ? a.text : a.label ?? ''} placeholder={a.kind === 'dimension' ? formatInches(dimensionLength(a)) : ''}
-              onBlur={e => { const v = e.target.value; const cur = a.kind === 'note' ? a.text : a.label ?? ''; if (v !== cur) apply(p => editAnnotation(p, a.id, v)) }}
-              className="min-w-0 flex-1 rounded border border-transparent px-1 hover:border-stone-300" />
+            <AnnotationText a={a} />
             {a.kind === 'dimension' && <span className="shrink-0 text-stone-500">{formatInches(dimensionLength(a))}</span>}
             <button aria-label={`Delete ${a.kind}`} onClick={() => apply(p => removeAnnotation(p, a.id))} className="px-1 text-stone-400 hover:text-red-700">✕</button>
           </li>
         ))}
       </ul>
     </>
+  )
+}
+
+/** A note's text or a dimension's label: follows undo and other changes unless it's being typed in. */
+function AnnotationText({ a }: { a: Annotation }) {
+  const cur = a.kind === 'note' ? a.text : a.label ?? ''
+  const [text, setText] = useState(cur)
+  const [typing, setTyping] = useState(false)
+  useEffect(() => { if (!typing) setText(cur) }, [cur, typing])
+  return (
+    <input aria-label={a.kind === 'note' ? 'Note' : 'Dimension label'} value={text} placeholder={a.kind === 'dimension' ? formatInches(dimensionLength(a)) : ''}
+      onFocus={() => setTyping(true)} onChange={e => setText(e.target.value)}
+      onBlur={() => { setTyping(false); if (text !== cur) studio.getState().apply(p => editAnnotation(p, a.id, text)) }}
+      onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
+      className="min-w-0 flex-1 rounded border border-transparent px-1 hover:border-stone-300" />
   )
 }

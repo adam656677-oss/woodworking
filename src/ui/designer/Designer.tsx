@@ -63,7 +63,7 @@ export function Designer() {
         s.apply(p => deleteBoards(p, s.selection))
         s.select([])
       } else if (e.key === 'Escape') {
-        s.set({ measuring: false })
+        s.set({ measuring: false }); s.setView({ placingNote: false, pendingNote: null })
       }
     }
     window.addEventListener('keydown', onKey)

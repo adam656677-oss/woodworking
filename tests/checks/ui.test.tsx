@@ -83,3 +83,23 @@ test('dimensions & notes: pin a note, label a dimension, delete', () => {
   fireEvent.click(screen.getByRole('button', { name: 'Delete note' }))
   expect(studio.getState().project.annotations).toHaveLength(1)
 })
+
+test('undoing a label shows the old label, and leaving the box then writes nothing back', () => {
+  start(false)
+  act(() => studio.getState().apply(p => { const r = addDimension(p, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 30 }); return 'error' in r ? r : r.project }))
+  act(() => studio.getState().setView({ checksOpen: 'notes' }))
+  render(<ChecksPanel />)
+  const label = () => screen.getByLabelText('Dimension label') as HTMLInputElement
+  fireEvent.change(label(), { target: { value: 'Height' } }); fireEvent.blur(label())
+  act(() => studio.getState().undo())
+  expect(label().value).toBe('')
+  fireEvent.focus(label()); fireEvent.blur(label())
+  expect((studio.getState().project.annotations![0] as { label?: string }).label).toBeUndefined()
+})
+
+test('closing the notes panel or pressing Escape stops placing a note', () => {
+  start(false)
+  act(() => studio.getState().setView({ checksOpen: 'notes', placingNote: true }))
+  act(() => studio.getState().setView({ checksOpen: 'weight' }))
+  expect(studio.getState().placingNote).toBe(false)
+})

@@ -10,6 +10,7 @@ import { MeasureTool } from './MeasureTool'
 import { MoveGizmo } from './MoveGizmo'
 import { ViewControls } from './ViewControls'
 import { designBox, explodeOffsets } from '../../checks/explode'
+import { pickOnModel } from '../../checks/pick'
 import { addDimension } from '../../checks/annotations'
 import { Annotations3D } from '../../checks/ui/Annotations3D'
 
@@ -67,14 +68,22 @@ export default function Scene() {
   }, [selection, project, shown, explode])
 
   const onSelect = (id: string) => (e: ThreeEvent<MouseEvent>) => {
+    // A click that only touched the cut-away half of a part in a section belongs to the next part along the ray.
+    const b = project.boards.find(x => x.id === id)
+    const off = offsets.get(id)
+    const wb = b ? worldBox(b) : null
+    const drawn = wb && off ? { min: { x: wb.min.x + off.x, y: wb.min.y + off.y, z: wb.min.z + off.z }, max: { x: wb.max.x + off.x, y: wb.max.y + off.y, z: wb.max.z + off.z } } : wb
+    const at = drawn ? pickOnModel(e.point, e.ray, drawn, clip?.[0], off) : e.point
+    if (!at) return
     e.stopPropagation()
     const s = studio.getState()
     if (s.placingNote) {
-      s.setView({ placingNote: false, pendingNote: { x: e.point.x, y: e.point.y, z: e.point.z } })
+      s.setView({ placingNote: false, pendingNote: { x: at.x, y: at.y, z: at.z } })
       return
     }
     if (s.measuring) {
-      setPoints(pts => (pts.length >= 2 ? [e.point.clone()] : [...pts, e.point.clone()]))
+      const v = new THREE.Vector3(at.x, at.y, at.z)
+      setPoints(pts => (pts.length >= 2 ? [v] : [...pts, v]))
       return
     }
     const multi = e.nativeEvent.ctrlKey || e.nativeEvent.metaKey || e.nativeEvent.shiftKey

@@ -372,7 +372,11 @@ export function createStudioStore() {
       },
       isolate: ids => set({ isolated: ids && ids.length ? [...ids] : null }),
       showAll: () => set({ hidden: [], isolated: null }),
-      setView: patch => set(patch),
+      setView: patch => {
+        // Leaving the notes panel stops placing a note.
+        const leaving = 'checksOpen' in patch && patch.checksOpen !== 'notes'
+        set(leaving ? { ...patch, placingNote: false, pendingNote: null } : patch)
+      },
       finishNote: text => {
         const at = get().pendingNote
         set({ pendingNote: null, placingNote: false })

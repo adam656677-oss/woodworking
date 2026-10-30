@@ -5,6 +5,8 @@ import type { Project, Vec3 } from '../model/types'
 
 /** At 100% each offset is this many times the distance from the centre. */
 export const EXPLODE_SCALE = 1
+/** Parts inside a group spread this much of a loose part's distance. */
+const INSIDE = 0.4
 
 const centreOf = (b: Box): Vec3 => ({ x: (b.min.x + b.max.x) / 2, y: (b.min.y + b.max.y) / 2, z: (b.min.z + b.max.z) / 2 })
 /** The box around every part. */
@@ -37,7 +39,9 @@ export function explodeOffsets(p: Project, amount: number): Map<string, Vec3> {
     if (top) {
       if (!tops.has(top.id)) tops.set(top.id, centreOf(groupBox(p, top.id)!))
       const gc = tops.get(top.id)!
-      off = { x: (gc.x - c.x) * k + (bc.x - gc.x) * k, y: (gc.y - c.y) * k + (bc.y - gc.y) * k, z: (gc.z - c.z) * k + (bc.z - gc.z) * k }
+      // The group moves out as a unit; its own parts open up less, so the group still reads as one.
+      const g = { x: (gc.x - c.x) * k, y: (gc.y - c.y) * k, z: (gc.z - c.z) * k }
+      off = { x: g.x + (bc.x - gc.x) * k * INSIDE, y: g.y + (bc.y - gc.y) * k * INSIDE, z: g.z + (bc.z - gc.z) * k * INSIDE }
     } else off = { x: (bc.x - c.x) * k, y: (bc.y - c.y) * k, z: (bc.z - c.z) * k }
     out.set(b.id, off)
   }
