@@ -134,6 +134,9 @@ function check(raw: any): Project {
     if (!Array.isArray(raw.sketches)) invalid('the drawings are damaged')
     for (const s of raw.sketches) {
       checkSketch(s)
+      // A damaged tracing picture is dropped; the drawing itself still opens.
+      const r = isObj(s) ? s.reference : undefined
+      if (r !== undefined && !(isObj(r) && isStr(r.dataUrl) && r.dataUrl.startsWith('data:image/') && isNum(r.x) && isNum(r.y) && isNum(r.width) && r.width > 0 && isNum(r.height) && r.height > 0 && isNum(r.opacity))) delete s.reference
       sketches.set(s.id, new Set(s.entities.map((e: { id: string }) => e.id)))
     }
   }

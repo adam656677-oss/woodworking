@@ -52,6 +52,7 @@ export function Canvas({ onAsk, view, setView }: { onAsk(a: Ask): void; view: Vi
   const tool = useDraw(s => s.tool)
   const selection = useDraw(s => s.selection)
   const solve = useDraw(s => s.solve)
+  const refPick = useDraw(s => s.refPick)
   const svgRef = useRef<SVGSVGElement>(null)
   const [size, setSize] = useState({ w: 800, h: 600 })
   const [hover, setHover] = useState<Snap | null>(null)
@@ -172,6 +173,8 @@ export function Canvas({ onAsk, view, setView }: { onAsk(a: Ask): void; view: Vi
 
   const onDown = (e: React.PointerEvent) => {
     const q = toDrawing(e)
+    const pick = draw.getState().refPick
+    if (pick && pick.length < 2 && e.button === 0) { draw.getState().setRefPick([...pick, q]); return }
     if (e.button === 1 || e.button === 2) {
       drag.current = { kind: 'pan', x: e.clientX, y: e.clientY, ox: view.ox, oy: view.oy }
       ;(e.target as Element).setPointerCapture?.(e.pointerId)
@@ -382,6 +385,12 @@ export function Canvas({ onAsk, view, setView }: { onAsk(a: Ask): void; view: Vi
         onClick={onClick}
         onContextMenu={e => { e.preventDefault(); if (tool === 'spline' && pending.length >= 2) draw.getState().addSpline(pending); setPending([]) }}
       >
+        {sketch.reference && (() => {
+          const r = sketch.reference
+          const tl = toScreen({ x: r.x, y: r.y + r.height })
+          return <image data-testid="tracing-picture" href={r.dataUrl} x={tl.x} y={tl.y} width={r.width * view.scale} height={r.height * view.scale} opacity={r.opacity} preserveAspectRatio="none" />
+        })()}
+        {refPick?.map((p, i) => { const s = toScreen(p); return <circle key={`rp${i}`} cx={s.x} cy={s.y} r={6} fill="#dc2626" /> })}
         <g aria-hidden>
           {gridLines.map((l, i) => (
             <line key={i} {...l} stroke={l.w === 2 ? '#d6d3d1' : l.w === 1 ? '#e7e5e4' : '#f5f5f4'} strokeWidth={l.w === 2 ? 1.5 : 1} />

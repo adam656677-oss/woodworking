@@ -3,6 +3,9 @@ import { ancestry } from '../assemblies/ops'
 import { cutList } from '../model/cutlist'
 import type { Board, ButtParams, GrooveParams, Joint, MiterParams, PocketParams, Project } from '../model/types'
 import { formatInches } from '../model/units'
+import { TOOLS } from '../kids/content'
+import { adultDoes } from '../kids/logic'
+import type { KidProject, Tier } from '../kids/types'
 
 export type ShopPart = { qty: number; name: string; size: string }
 export type ShopStep = {
@@ -107,9 +110,23 @@ export function stepsFromDesign(p: Project): ShopStep[] {
   return steps
 }
 
-/** A plan's own steps. */
-export function stepsFromPlan(plan: { steps: { id: string; text: string; tool?: string; photo?: string }[] }): ShopStep[] {
-  return plan.steps.map((s, i) => ({ key: s.id, title: `Step ${i + 1}`, text: s.text, tools: s.tool ? [s.tool] : [], parts: [], ...(s.photo ? { photo: s.photo } : {}) }))
+const toolName = (id: string) => TOOLS[id]?.name ?? id
+
+/** A plan's own steps; with a child's tier, steps whose tool is beyond it are marked "Adult does this". */
+export function stepsFromPlan(plan: { steps: { id: string; text: string; tool?: string; photo?: string }[] }, tier?: Tier): ShopStep[] {
+  return plan.steps.map((s, i) => ({
+    key: s.id, title: `Step ${i + 1}`, text: s.text, tools: s.tool ? [toolName(s.tool)] : [], parts: [],
+    ...(s.photo ? { photo: s.photo } : {}),
+    ...(tier && adultDoes(s.tool, tier) ? { adult: true } : {})
+  }))
+}
+
+/** A kids' project's steps, marked for the child's tier. */
+export function stepsFromKid(proj: KidProject, tier: Tier): ShopStep[] {
+  return proj.steps.map((s, i) => ({
+    key: `${proj.id}:${i}`, title: `Step ${i + 1}`, text: s.text, tools: s.tool ? [toolName(s.tool)] : [], parts: [],
+    ...(adultDoes(s.tool, tier) ? { adult: true } : {})
+  }))
 }
 
 /** Marks a step done or not done. */

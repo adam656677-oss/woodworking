@@ -56,6 +56,9 @@ export type DrawState = {
   undo(): void
   redo(): void
   snap(q: Pt, tol: number, opts?: { grid?: number; from?: Pt; ignore?: string[] }): Snap
+  /** Points picked on the tracing picture to scale it (null when not picking). */
+  refPick: Pt[] | null
+  setRefPick(p: Pt[] | null): void
 }
 
 const MAX_HISTORY = 200
@@ -185,7 +188,7 @@ export function createDrawStore() {
 
       begin: (sk, context = {}) => {
         set({
-          sketch: sk, past: [], future: [], selection: [], message: null, dirty: false,
+          sketch: sk, past: [], future: [], selection: [], message: null, dirty: false, refPick: null,
           tool: sk.mode === 'freehand' ? 'freehand' : 'select',
           context: { boardId: null, kids: false, isNew: false, ...context },
           solve: { status: 'ok', dof: -1, conflicting: [] }
@@ -352,6 +355,8 @@ export function createDrawStore() {
         return commit(r)
       },
       replace: sk => { commit(sk) },
+      refPick: null,
+      setRefPick: refPick => set({ refPick }),
       dragPoint: (id, to) => {
         dragStart ??= get().sketch
         const base = get().sketch

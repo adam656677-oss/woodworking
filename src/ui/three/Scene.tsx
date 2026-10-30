@@ -13,6 +13,8 @@ import { designBox, explodeOffsets } from '../../checks/explode'
 import { pickOnModel } from '../../checks/pick'
 import { addDimension } from '../../checks/annotations'
 import { Annotations3D } from '../../checks/ui/Annotations3D'
+import { References3D } from '../../shop/ui/References3D'
+import { worldAt } from '../../shop/references'
 
 export default function Scene() {
   const project = useStudio(s => s.project)
@@ -51,13 +53,15 @@ export default function Scene() {
   const forms = useMemo(() => new Map(project.boards.map(b => [b.id, boardForm(project, b)])), [project])
   const warned = useMemo(() => new Set(warnings.flatMap(w => w.boardIds)), [warnings])
   const bounds: Box | null = useMemo(() => {
-    if (project.boards.length === 0) return null
-    const bs = project.boards.map(worldBox)
+    // Parts, and the pictures being designed over (so Fit shows them).
+    const pics = (project.references ?? []).filter(r => !r.hidden).map(r => ({ min: r.position, max: worldAt(r, { u: 1, v: 1 }) }))
+    const bs = [...project.boards.map(worldBox), ...pics]
+    if (bs.length === 0) return null
     return {
       min: { x: Math.min(...bs.map(b => b.min.x)), y: Math.min(...bs.map(b => b.min.y)), z: Math.min(...bs.map(b => b.min.z)) },
       max: { x: Math.max(...bs.map(b => b.max.x)), y: Math.max(...bs.map(b => b.max.y)), z: Math.max(...bs.map(b => b.max.z)) }
     }
-  }, [project.boards])
+  }, [project.boards, project.references])
 
   useEffect(() => {
     if (!measuring) setPoints([])
@@ -132,6 +136,7 @@ export default function Scene() {
         studio.getState().setView({ checksOpen: 'notes' })
       }} />
       {!kidsMode && <Annotations3D />}
+      {!kidsMode && <References3D />}
     </Canvas>
   )
 }

@@ -28,7 +28,11 @@ export type Sketch = {
   points: SketchPoint[]
   entities: SketchEntity[]
   constraints: SketchConstraint[]
+  /** A photo or scan behind the drawing to trace over (drawing inches; x, y = its low-left corner). */
+  reference?: SketchReference
 }
+
+export type SketchReference = { dataUrl: string; x: number; y: number; width: number; height: number; opacity: number }
 
 /** A board's shape: the outer loop and inner loops (cutouts) as entity ids, plus circles that are holes. */
 export type Outline = {

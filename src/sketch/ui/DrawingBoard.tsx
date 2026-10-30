@@ -9,6 +9,7 @@ import { FreehandBoard } from './FreehandBoard'
 import { Outputs } from './Outputs'
 import { HINTS, SHORTCUTS, ToolBar } from './ToolBar'
 import { backTo, leaveDrawing } from './session'
+import { TracingPicture } from './TracingPicture'
 
 const KIND_LABEL = { distance: 'Length', hdistance: 'Width (across)', vdistance: 'Height (up)', radius: 'Radius', diameter: 'Diameter', angle: 'Angle' } as const
 
@@ -98,6 +99,7 @@ function PreciseBoard() {
   const name = useDraw(s => s.sketch.name)
   const tool = useDraw(s => s.tool)
   const message = useDraw(s => s.message)
+  const kidsDraw = useDraw(s => s.context.kids)
   const [ask, setAsk] = useState<Dialog | null>(null)
   const [view, setView] = useState<View>({ scale: 24, ox: 80, oy: 500 })
   const box = useRef<HTMLDivElement>(null)
@@ -158,6 +160,7 @@ function PreciseBoard() {
         <div ref={box} className="relative min-w-0 flex-1">
           <Canvas onAsk={setAsk} view={view} setView={setView} />
           {ask && <AskDialog ask={ask} onClose={() => setAsk(null)} />}
+          {!kidsDraw && <TracingPicture />}
         </div>
         <ConstraintBar
           onDistance={refs => setAsk({ kind: 'dimension', refs, options: ['distance'], at: { x: 0, y: 0 } })}

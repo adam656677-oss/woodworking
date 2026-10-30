@@ -11,6 +11,7 @@ import { plans, usePlans } from '../plansStore'
 import type { CutRow, Plan, PlanStep } from '../types'
 import { PlanPicture } from './PlanPicture'
 import { useNearView } from './useNearView'
+import { openPlanShop } from '../../shop/open'
 
 type Tab = 'overview' | 'steps' | 'cut' | 'pages'
 const field = 'rounded border border-stone-300 px-2 py-1 text-sm'
@@ -260,6 +261,7 @@ export function PlanEditor() {
         <button onClick={() => p.back()} className="rounded px-3 py-1 font-semibold hover:bg-stone-200">← My Plans</button>
         <h1 className="flex-1 truncate text-xl font-bold">{plan.name || 'Untitled plan'}</h1>
         {plan.unchecked.length > 0 && <button onClick={() => plans.setState({ view: 'import' })} className="rounded bg-amber-100 px-3 py-1 text-sm text-amber-900">{plan.unchecked.length} drafted items to check</button>}
+        {plan.steps.length > 0 && <button onClick={() => void openPlanShop(folder, plan, p.kidsView)} className="rounded bg-stone-800 px-3 py-1 text-sm font-semibold text-white">🪚 Shop Mode</button>}
         <button onClick={() => p.showGuide()} className="rounded bg-amber-700 px-3 py-1 text-sm font-semibold text-white">Print build guide</button>
       </header>
       {notice && <p role="alert" className="bg-amber-100 px-4 py-1 text-sm text-amber-900">{notice}</p>}

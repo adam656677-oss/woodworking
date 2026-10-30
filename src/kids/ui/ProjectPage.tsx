@@ -8,6 +8,7 @@ import { BigButton, KidsPageFrame, Stars } from './kit'
 import { PinPrompt } from './PinPrompt'
 import { ProjectViewer } from './ProjectViewer'
 import { ReadAloud } from './ReadAloud'
+import { openKidShop } from '../../shop/open'
 
 const TIER_LABEL: Record<Tier, string> = { beginner: 'Beginner', intermediate: 'Intermediate', advanced: 'Advanced', adult: 'Grown-ups only' }
 
@@ -32,6 +33,7 @@ export function ProjectPage({ id }: { id: string }) {
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <BigButton disabled={!open} onClick={() => k.go({ name: 'sheet', id })}>Print project sheet</BigButton>
+            <BigButton disabled={!open} onClick={() => openKidShop(proj)}>🪚 Shop Mode</BigButton>
             <BigButton color="green" disabled={!open || !!built} onClick={() => setAsking(true)}>Mark as built</BigButton>
           </div>
           {!open && <p className="text-xl font-semibold text-amber-800">Pass the Level {proj.level} quiz to unlock</p>}

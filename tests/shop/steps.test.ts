@@ -45,3 +45,23 @@ test('plan steps and progress', () => {
   expect(pr.minutes.s1).toBe(3)
   expect(toggleDone(pr, 's1').done).toEqual([])
 })
+
+test("a plan's steps name their tools and mark what a grown-up does for the child's tier", async () => {
+  const { TOOLS } = await import('../../src/kids/content')
+  const adultTool = Object.values(TOOLS).find(t => t.tier === 'adult')!
+  const plan = { steps: [{ id: 's1', text: 'Sand it', tool: Object.values(TOOLS).find(t => t.tier === 'beginner')!.id }, { id: 's2', text: 'Rip it', tool: adultTool.id }] }
+  const grown = stepsFromPlan(plan)
+  expect(grown[1].tools).toEqual([adultTool.name])
+  expect(grown.some(s => s.adult)).toBe(false)
+  const kid = stepsFromPlan(plan, 'beginner')
+  expect(kid.map(s => !!s.adult)).toEqual([false, true])
+})
+
+test("a kids' project gives its own steps with Adult does this marks", async () => {
+  const { stepsFromKid } = await import('../../src/shop/steps')
+  const { PROJECTS } = await import('../../src/kids/content')
+  const proj = PROJECTS[0]
+  const steps = stepsFromKid(proj, 'beginner')
+  expect(steps.map(s => s.text)).toEqual(proj.steps.map(s => s.text))
+  expect(steps[0].key).toBe(`${proj.id}:0`)
+})

@@ -56,6 +56,10 @@ export type StudioState = {
   checksOpen: 'interference' | 'weight' | 'notes' | null
   /** Waiting for a click on the model to pin a note; then the point waiting for its text. */
   placingNote: boolean
+  /** The Pictures panel (reference images). */
+  picturesOpen: boolean
+  /** Picking two points on a reference picture to scale it. */
+  refPick: { id: string; pts: { u: number; v: number }[] } | null
   pendingNote: Vec3 | null
 
   goto(screen: Screen): void
@@ -88,7 +92,7 @@ export type StudioState = {
   setHidden(ids: string[], hidden: boolean): void
   isolate(ids: string[] | null): void
   showAll(): void
-  setView(patch: Partial<Pick<StudioState, 'explode' | 'section' | 'showDims' | 'overallSize' | 'checksOpen' | 'placingNote' | 'pendingNote'>>): void
+  setView(patch: Partial<Pick<StudioState, 'explode' | 'section' | 'showDims' | 'overallSize' | 'checksOpen' | 'placingNote' | 'pendingNote' | 'picturesOpen' | 'refPick'>>): void
   /** Pin the pending note with this text (null cancels). */
   finishNote(text: string | null): void
   /** Shop Mode progress is saved with the design but isn't an undo step. */
@@ -127,7 +131,7 @@ export function createStudioStore() {
     }
     const start = (project: Project, filePath: string | null, dirty: boolean) => {
       history = new History<Snapshot>({ project, selection: [] })
-      set({ filePath, screen: 'master', error: null, recovery: null, projectKey: get().projectKey + 1, hidden: [], isolated: null, explode: 0, section: null, placingNote: false, pendingNote: null })
+      set({ filePath, screen: 'master', error: null, recovery: null, projectKey: get().projectKey + 1, hidden: [], isolated: null, explode: 0, section: null, placingNote: false, pendingNote: null, refPick: null })
       sync(dirty)
     }
     const loadText = (text: string, path: string | null, backupPath: string | null, dirty: boolean) => {
@@ -189,6 +193,8 @@ export function createStudioStore() {
       overallSize: false,
       checksOpen: null,
       placingNote: false,
+      picturesOpen: false,
+      refPick: null,
       pendingNote: null,
       formulaErrors: {},
 
