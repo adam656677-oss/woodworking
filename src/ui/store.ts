@@ -11,6 +11,7 @@ import { applyTemplate, findTemplate, freeze } from '../templates'
 import { recalc, type FormulaError } from '../formulas/recalc'
 import { exactText, releaseEdited } from '../formulas/ops'
 import { pruneGroups, syncLinks } from '../assemblies/ops'
+import { pruneHardware } from '../cabinet/hardware'
 import { addNote } from '../checks/annotations'
 
 export type Screen = 'home' | 'kids' | 'master' | 'plans' | 'draw'
@@ -242,7 +243,7 @@ export function createStudioStore() {
         // In the kids' designer a typed size or move simply wins: the formula or rule behind it is dropped.
         const edited = get().kidsMode ? releaseEdited(prev, result) : keepNudges(prev, result)
         // Linked copies follow, empty groups go, then sizes, formulas and rules are worked out again.
-        const done = recalc(pruneGroups(syncLinks(prev, edited))).project
+        const done = pruneHardware(recalc(pruneGroups(syncLinks(prev, edited))).project)
         const ids = new Set(done.boards.map(b => b.id))
         history.push({ project: done, selection: get().selection.filter(id => ids.has(id)) })
         set({ error: null })

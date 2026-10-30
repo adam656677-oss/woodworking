@@ -221,6 +221,8 @@ export function jointNotes(project: Project, boardId: string): string[] {
       notes.push(p.count > 1 ? `${base}, ${formatInches(p.spacing)} apart` : base)
     }
   }
+  // A metric drill (5 mm shelf pins) reads in millimetres.
+  const dia = (d: number) => { const mm = d * 25.4; return Math.abs(mm - Math.round(mm)) < 0.01 && Math.abs(d * 64 - Math.round(d * 64)) > 1e-6 ? `${Math.round(mm)} mm` : formatInches(d) }
   // Many alike stopped holes (shelf pins) are one line; others each get their own.
   const alike = new Map<string, number>()
   for (const h of b.holes) if (h.depth !== undefined) { const k = `${h.diameter}:${h.depth}`; alike.set(k, (alike.get(k) ?? 0) + 1) }
@@ -229,11 +231,11 @@ export function jointNotes(project: Project, boardId: string): string[] {
     const deep = h.depth !== undefined ? `, ${formatInches(h.depth)} deep` : ''
     const k = `${h.diameter}:${h.depth}`
     if (h.depth !== undefined && (alike.get(k) ?? 0) > 3) {
-      if (!counted.has(k)) { counted.add(k); notes.push(`${alike.get(k)} × ${formatInches(h.diameter)} holes${deep} (shelf pins)`) }
+      if (!counted.has(k)) { counted.add(k); notes.push(`${alike.get(k)} × ${dia(h.diameter)} holes${deep} (shelf pins)`) }
       continue
     }
     const where = Math.abs(h.u - b.width / 2) < 1e-6 ? 'centered' : `${formatInches(h.u)} from edge`
-    notes.push(`${formatInches(h.diameter)} hole${deep}, ${formatInches(h.v)} from end, ${where}`)
+    notes.push(`${dia(h.diameter)} hole${deep}, ${formatInches(h.v)} from end, ${where}`)
   }
   notes.push(...angleNotes(b))
   const withBoth = notes.map(n => {

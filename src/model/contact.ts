@@ -3,7 +3,7 @@ import { AXES, type Axis, type Box, isAxisAligned, localAxes, overlap1, worldBox
 import type { Board, GrooveParams, JointType, Project } from './types'
 
 export type Contact = {
-  kind: 'endToFace' | 'edgeToFace' | 'faceToFace' | 'cornerEnds'
+  kind: 'endToFace' | 'edgeToFace' | 'faceToFace' | 'cornerEnds' | 'endToEdge'
   host: string
   partner: string
   nearHostEnd: boolean
@@ -89,6 +89,8 @@ export function contactBetween(project: Project, aId: string, bId: string): Cont
   if (pPart === 'end' && hPart !== 'end' && flushWithHostEnd(host, hb, pbx)) {
     return { kind: 'cornerEnds', host: host.id, partner: partner.id, nearHostEnd: true, cornerAngle: 90, hostSurface: hPart === 'face' ? 'face' : 'edge' }
   }
+  // A frame's rail ending against a stile's edge partway along it (face frames, doors).
+  if (pPart === 'end' && hPart === 'edge') return { kind: 'endToEdge', host: host.id, partner: partner.id, nearHostEnd: false }
   if (hPart !== 'face') return null
   const near = patchToHostEnd(host, hb, pbx) <= host.thickness + TOUCH_TOL
   if (pPart === 'end') return { kind: 'endToFace', host: host.id, partner: partner.id, nearHostEnd: near }
@@ -104,6 +106,8 @@ export function jointOffers(c: Contact): JointType[] {
       return ['butt', 'dado', 'rabbet']
     case 'faceToFace':
       return ['butt']
+    case 'endToEdge':
+      return ['butt', 'pocketScrew']
     case 'cornerEnds':
       return c.hostSurface === 'face' ? ['butt', 'miter', 'rabbet', 'pocketScrew'] : ['butt', 'miter']
   }

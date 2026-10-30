@@ -1,5 +1,5 @@
 // The hardware library (hinges, slides, pulls, screws, pins, glass) and a design's hardware list.
-import { groupsOf } from '../assemblies/ops'
+import { groupBoardIds, groupsOf } from '../assemblies/ops'
 import { newId } from '../model/ids'
 import type { HardwareItem, HardwareUse, Project } from '../model/types'
 
@@ -62,7 +62,8 @@ export function addItem(p: Project, item: Omit<HardwareItem, 'id'>): { project: 
 /** Hardware whose part or group is gone goes with it. */
 export function pruneHardware(p: Project): Project {
   if (!p.hardware?.length) return p
-  const groups = new Set(groupsOf(p).map(g => g.id)), boards = new Set(p.boards.map(b => b.id))
+  // A group counts while it still has parts.
+  const groups = new Set(groupsOf(p).filter(g => groupBoardIds(p, g.id).length > 0).map(g => g.id)), boards = new Set(p.boards.map(b => b.id))
   const keep = p.hardware.filter(h => (!h.groupId || groups.has(h.groupId)) && (!h.boardId || boards.has(h.boardId)))
   if (keep.length === p.hardware.length) return p
   return keep.length ? { ...p, hardware: keep } : (({ hardware: _h, ...rest }) => rest)(p)
