@@ -10,7 +10,7 @@ const FOOD = new Set(['cutting-board', 'spoon', 'serving-board'])
 /** How to finish a kids' project (none for the finish sampler — finishing is the project). */
 export function kidFinish(p: KidProject): KidFinish | null {
   if (p.id === 'finish-sampler') return null
-  if (FOOD.has(p.id)) return { name: 'Food-safe oil', steps: [
+  if (FOOD.has(p.id) || /cutting board|spoon|serving/i.test(p.name)) return { name: 'Food-safe oil', steps: [
     { text: 'Sand smooth with 220 sandpaper and wipe off the dust.', tool: 'sandpaper' },
     { text: 'Wipe on food-safe mineral oil. After 15 minutes, wipe off the extra.', tool: 'finish-rag' },
     { text: 'Let it soak in overnight, then add another coat. Re-oil whenever it looks dry.', tool: 'finish-rag' }

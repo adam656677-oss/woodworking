@@ -13,8 +13,8 @@ test('quiz sizes per level are 8, 6, 6, 6', () => {
   expect(LEVELS.map(l => QUIZZES[l.quiz].questions.length)).toEqual([8, 6, 6, 6])
 })
 
-test('the five starter projects, in order', () => {
-  expect(PROJECTS.map(p => p.id)).toEqual(['pencil-holder', 'tic-tac-toe', 'birdhouse', 'picture-frame', 'toolbox'])
+test('the five starter projects in order, then the finish sampler', () => {
+  expect(PROJECTS.map(p => p.id)).toEqual(['pencil-holder', 'tic-tac-toe', 'birdhouse', 'picture-frame', 'toolbox', 'finish-sampler'])
 })
 
 test.each(['pencil-holder', 'tic-tac-toe', 'birdhouse', 'picture-frame', 'toolbox'])('%s builds with no warnings and only butt joints', id => {

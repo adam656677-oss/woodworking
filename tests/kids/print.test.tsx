@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { kidFinish } from '../../src/finish/kids'
 import { cleanup, render, screen, within } from '@testing-library/react'
 import { designFor, findProject } from '../../src/kids/content'
 import { kids } from '../../src/kids/kidsStore'
@@ -19,7 +20,9 @@ test('the birdhouse sheet has every cut-list row, a check box per step and a pho
   const rows = cutList(designFor('birdhouse')).rows
   expect(within(table).getAllByRole('row')).toHaveLength(rows.length + 1)
   for (const r of rows) expect(within(table).getAllByText(formatInches(r.length)).length).toBeGreaterThan(0)
-  expect(screen.getAllByRole('checkbox')).toHaveLength(findProject('birdhouse')!.steps.length)
+  // A box per build step, and one per finishing step.
+  expect(screen.getAllByRole('checkbox')).toHaveLength(findProject('birdhouse')!.steps.length + kidFinish(findProject('birdhouse')!)!.steps.length)
+  expect(screen.getByRole('region', { name: 'Finishing' }).textContent).toContain('outside')
   expect(screen.getByText('Glue your photo here')).toBeTruthy()
   expect(screen.getByText(/Time spent/)).toBeTruthy()
   expect(screen.getByText(/Cost/)).toBeTruthy()

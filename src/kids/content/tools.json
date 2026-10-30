@@ -145,5 +145,10 @@
     "id": "spray-finish",
     "name": "Spray-can finish",
     "tier": "adult"
+  },
+  "shellac": {
+    "id": "shellac",
+    "name": "Shellac and brush",
+    "tier": "adult"
   }
 }

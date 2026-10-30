@@ -14,7 +14,8 @@
     "miter-box",
     "sandpaper",
     "finish-rag",
-    "paintbrush"
+    "paintbrush",
+    "shellac"
   ],
   "steps": [
     {
@@ -41,8 +42,8 @@
       "tool": "finish-rag"
     },
     {
-      "text": "Box 4: brush on a thin coat of shellac. A grown-up helps \u2014 it smells strong.",
-      "tool": "paintbrush"
+      "text": "Box 4: a grown-up brushes on a thin coat of shellac, with a window open and no flames nearby \u2014 it smells strong and can catch fire.",
+      "tool": "shellac"
     },
     {
       "text": "When everything is dry, rub paste wax on half of each box and buff it. Which do you like best?",

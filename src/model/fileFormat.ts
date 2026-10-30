@@ -1,4 +1,5 @@
 // .aaw project files: versioned JSON with structural checks, so a damaged file gives a plain message, not a crash.
+import { finishById } from '../finish/finishes'
 import { CONSTRAINT_KINDS } from '../sketch/types'
 import { EDGE_SIDES, FACES, PROFILE_KINDS, TURN_STYLES } from '../shaping/types'
 import { AXES3 } from '../formulas/types'
@@ -262,7 +263,11 @@ function check(raw: any): Project {
       (s.finishId === undefined || isStr(s.finishId)) && (s.product === undefined || isStr(s.product)) && (s.method === undefined || oneOf(s.method, ['wipe', 'brush', 'spray'])) &&
       (s.sheen === undefined || isStr(s.sheen)) && (s.notes === undefined || isStr(s.notes))
     if (!isObj(f) || !isStr(f.name) || !Array.isArray(f.steps)) delete raw.finish
-    else f.steps = f.steps.filter(okStep)
+    else {
+      f.steps = f.steps.filter(okStep)
+      // A finish this version doesn't know is cleared; the step stays.
+      for (const s of f.steps) if (s.finishId !== undefined && !finishById(s.finishId)) delete s.finishId
+    }
   }
   if (raw.cutSettings !== undefined) {
     // Each setting is checked on its own; a damaged one falls back to the default.

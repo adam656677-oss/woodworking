@@ -62,6 +62,8 @@ test("a kids' project gives its own steps with Adult does this marks", async () 
   const { PROJECTS } = await import('../../src/kids/content')
   const proj = PROJECTS[0]
   const steps = stepsFromKid(proj, 'beginner')
-  expect(steps.map(s => s.text)).toEqual(proj.steps.map(s => s.text))
+  // Its own steps first, then its finishing steps.
+  const { kidFinish } = await import('../../src/finish/kids')
+  expect(steps.map(s => s.text)).toEqual([...proj.steps, ...(kidFinish(proj)?.steps ?? [])].map(s => s.text))
   expect(steps[0].key).toBe(`${proj.id}:0`)
 })

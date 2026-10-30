@@ -93,6 +93,9 @@ function Selector() {
   const [methods, setMethods] = useState<Method[]>(['wipe', 'brush'])
   const [compare, setCompare] = useState<string[]>([])
   const ranked = useMemo(() => rankFinishes(wants, methods), [wants, methods])
+  // Only finishes still in the list can be compared (a new choice can drop one).
+  const visible = ranked.slice(0, 8).map(r => r.finish.id)
+  const shown = compare.filter(id => visible.includes(id))
   const toggle = <T,>(xs: T[], x: T) => (xs.includes(x) ? xs.filter(y => y !== x) : [...xs, x])
   return (
     <div className="flex flex-col gap-4">
@@ -112,12 +115,12 @@ function Selector() {
               {r.reasons.length > 0 && <div className="text-sm text-green-800">✓ {r.reasons.join(' · ')}</div>}
               {r.warnings.length > 0 && <div className="text-sm text-amber-800">! {r.warnings.join(' · ')}</div>}
             </div>
-            <label className="flex items-center gap-1 text-xs"><input type="checkbox" aria-label={`Compare ${r.finish.name}`} checked={compare.includes(r.finish.id)} disabled={!compare.includes(r.finish.id) && compare.length >= 3} onChange={() => setCompare(toggle(compare, r.finish.id))} />Compare</label>
+            <label className="flex items-center gap-1 text-xs"><input type="checkbox" aria-label={`Compare ${r.finish.name}`} checked={shown.includes(r.finish.id)} disabled={!shown.includes(r.finish.id) && shown.length >= 3} onChange={() => setCompare(toggle(shown, r.finish.id))} />Compare</label>
           </li>
         ))}
         {ranked.length === 0 && <li className="text-stone-600">Nothing fits — try allowing another way of putting it on.</li>}
       </ol>
-      {compare.length >= 2 && <Compare ids={compare} />}
+      {shown.length >= 2 && <Compare ids={shown} />}
     </div>
   )
 }
@@ -199,10 +202,25 @@ function ScheduleBuilder() {
               <div className="flex flex-wrap items-center gap-2">
                 <span className="w-6 font-bold">{i + 1}</span>
                 <input aria-label="Step" value={st.title} onChange={e => edit(st.id, { title: e.target.value })} className="min-w-64 flex-1 rounded border border-stone-300 px-2 py-0.5" />
-                <select aria-label="Finish" value={st.finishId ?? ''} onChange={e => edit(st.id, { finishId: e.target.value || undefined })} className="rounded border border-stone-300 px-1">
+                <select aria-label="Finish" value={st.finishId ?? ''} onChange={e => {
+                  // A new finish brings its own way of putting it on and its recoat time.
+                  const f = finishById(e.target.value)
+                  edit(st.id, f ? { finishId: f.id, method: f.methods[0], dryHours: f.recoat, sheen: f.sheens.includes(st.sheen ?? '') ? st.sheen : undefined } : { finishId: undefined, method: undefined, sheen: undefined })
+                }} className="rounded border border-stone-300 px-1">
                   <option value="">(no finish — prep or other)</option>
                   {FINISHES.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
                 </select>
+                {st.finishId && (
+                  <select aria-label="Method" value={st.method ?? ''} onChange={e => edit(st.id, { method: (e.target.value || undefined) as FinishStep['method'] })} className="rounded border border-stone-300 px-1 text-xs">
+                    {finishById(st.finishId)?.methods.map(m => <option key={m} value={m}>{m === 'wipe' ? 'Wipe' : m === 'brush' ? 'Brush' : 'Spray'}</option>)}
+                  </select>
+                )}
+                {st.finishId && (finishById(st.finishId)?.sheens.length ?? 0) > 0 && (
+                  <select aria-label="Sheen" value={st.sheen ?? ''} onChange={e => edit(st.id, { sheen: e.target.value || undefined })} className="rounded border border-stone-300 px-1 text-xs">
+                    <option value="">Sheen…</option>
+                    {finishById(st.finishId)!.sheens.map(x => <option key={x} value={x}>{x}</option>)}
+                  </select>
+                )}
                 <label className="text-xs">Coats <input aria-label="Coats" type="number" min={1} max={50} value={st.coats} onChange={e => edit(st.id, { coats: Math.max(1, Math.min(50, Math.round(Number(e.target.value) || 1))) })} className="w-12 rounded border border-stone-300 px-1" /></label>
                 <label className="text-xs">Dry (hours) <input aria-label="Dry hours" type="number" min={0} step={0.5} value={st.dryHours} onChange={e => edit(st.id, { dryHours: Math.max(0, Number(e.target.value) || 0) })} className="w-16 rounded border border-stone-300 px-1" /></label>
                 <button aria-label={`Move step ${i + 1} up`} disabled={i === 0} onClick={() => apply(sc => { const xs = [...sc.steps]; [xs[i - 1], xs[i]] = [xs[i], xs[i - 1]]; return { ...sc, steps: xs } })} className="px-1 disabled:opacity-30">↑</button>

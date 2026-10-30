@@ -48,3 +48,18 @@ test('the schedule builder: start from a template, a bad step is flagged, and it
   expect(within(last).getByRole('alert').textContent).toMatch(/wrinkles/)
   expect(studio.getState().dirty).toBe(true)
 })
+
+test('compare: a finish that drops out of the list leaves the comparison and frees its box', () => {
+  openFinishing('master', 'select')
+  render(<FinishingSchool />)
+  for (const n of ['Oil-based polyurethane', 'Wipe-on polyurethane', 'Spar (exterior) varnish']) {
+    const box = screen.queryByLabelText(`Compare ${n}`)
+    if (box) fireEvent.click(box)
+  }
+  fireEvent.click(screen.getByLabelText('Food-safe (cutting boards, bowls)'))
+  expect(screen.queryByLabelText('Compare Spar (exterior) varnish')).toBeNull()
+  const table = screen.queryByRole('table', { name: 'Compare finishes' })
+  if (table) expect(table.textContent).not.toContain('Spar')
+  const free = screen.getAllByRole('checkbox', { name: /^Compare / }).filter(b => !(b as HTMLInputElement).checked)
+  expect(free.some(b => !(b as HTMLInputElement).disabled)).toBe(true)
+})

@@ -21,6 +21,7 @@ export function rankFinishes(wants: Want[], methods: Method[] = ['wipe', 'brush'
   for (const f of TOPCOATS) {
     if (!f.methods.some(m => methods.includes(m))) continue
     if (wants.includes('food') && f.food === 'no') continue
+    if (wants.includes('clear') && f.base === 'paint-latex') continue
     const reasons: string[] = [], warnings: string[] = []
     let score = 0
     const rate = (n: number, good: string, bad: string) => { score += n; if (n >= 4) reasons.push(good); else if (n <= 2) warnings.push(bad) }
@@ -35,6 +36,10 @@ export function rankFinishes(wants: Want[], methods: Method[] = ['wipe', 'brush'
       if (w === 'food') { const n = f.food === 'yes' ? 5 : 4; score += n; reasons.push(f.food === 'yes' ? 'Food-safe as soon as it\'s on' : `Food-safe once fully cured (${f.cure} days)`) }
     }
     if (!wants.length) score = f.durability + f.ease
+    // Knives cut a film to pieces: for food, oils come first.
+    const film = !['oil', 'oil-varnish', 'non-drying', 'wax'].includes(f.base)
+    if (wants.includes('food') && film) { score -= 2 * wants.length; warnings.push('A film finish — fine for bowls and trays, but knives cut it on cutting boards; use oil there') }
+    if (f.id === 'spar' && (wants.includes('durable') || wants.includes('heat'))) warnings.push('Made for outdoors — too soft for indoor tabletops')
     out.push({ finish: f, score: score / Math.max(1, wants.length), reasons, warnings })
   }
   return out.sort((a, b) => b.score - a.score || b.finish.ease - a.finish.ease || a.finish.name.localeCompare(b.finish.name))

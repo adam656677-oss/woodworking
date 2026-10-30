@@ -23,7 +23,7 @@ export const TEMPLATES: { id: string; name: string; about: string; steps: StepIn
     sand(180), { kind: 'prep', title: 'Raise the grain', coats: 1, dryHours: 1, notes: 'Wipe with a damp rag, let dry, sand lightly with 220.' },
     coat('seal', 'shellac', 1, { title: 'Seal with 1-lb cut shellac (warms the colour)' }), coat('topcoat', 'water-poly', 3, { method: 'brush', sheen: 'Satin', notes: 'Synthetic brush; sand with 320 between coats.' })] },
   { id: 'spray-lacquer', name: 'Spray lacquer', about: 'The production furniture finish: fast, smooth, rubs out beautifully. Needs a spray setup.', steps: [
-    sand(180), coat('colour', 'oil-stain', 1, { notes: 'Optional. Let it dry overnight before spraying.' }), coat('seal', 'sanding-sealer', 1), sand(320, 'Sand the sealer smooth.'),
+    sand(180), coat('colour', 'oil-stain', 1, { dryHours: 24, notes: 'Optional. Let it dry a full day before spraying.' }), coat('seal', 'sanding-sealer', 1), sand(320, 'Sand the sealer smooth.'),
     coat('topcoat', 'nitro', 3, { sheen: 'Satin' }), { kind: 'rubout', title: 'Rub out', coats: 1, dryHours: 0, notes: 'After a week: 600 grit, then rubbing compound or #0000 steel wool for satin.' }] },
   { id: 'painted', name: 'Painted', about: 'A painted piece: primer that blocks knots and tannin, then two coats of enamel.', steps: [
     sand(150), coat('seal', 'shellac', 1, { title: 'Prime with shellac-based primer', notes: 'Spot-prime knots first.' }), sand(220),
@@ -47,7 +47,7 @@ export function checkSchedule(s: FinishSchedule): { stepId: string; level: 'warn
   const out: { stepId: string; level: 'warn' | 'error'; text: string }[] = []
   let under: string | null = null
   for (const st of s.steps) {
-    if (!st.finishId) continue
+    if (!st.finishId || !finishById(st.finishId)) continue
     if (under) {
       const a = canGoOver(st.finishId, under)
       const u = finishById(under)!.name, t = finishById(st.finishId)!.name
@@ -64,9 +64,9 @@ export function checkSchedule(s: FinishSchedule): { stepId: string; level: 'warn
 export function scheduleTime(s: FinishSchedule): { hours: number; cureDays: number; text: string } {
   let hours = 0
   for (const st of s.steps) hours += st.coats * st.dryHours
-  const last = [...s.steps].reverse().find(st => st.finishId && finishById(st.finishId)?.role === 'topcoat')
-  const cureDays = last ? finishById(last.finishId!)!.cure : 0
-  return { hours, cureDays, text: `About ${hoursText(hours)} of coats and drying${cureDays ? `, then ${cureDays} days to cure fully before hard use` : ''}` }
+  // Ready for hard use when the slowest finish in it has cured.
+  const cureDays = Math.max(0, ...s.steps.map(st => (st.finishId ? finishById(st.finishId)?.cure ?? 0 : 0)))
+  return { hours, cureDays, text: `About ${hoursText(hours)} of coats and drying${cureDays ? `, then ${cureDays} day${cureDays === 1 ? '' : 's'} to cure fully before hard use` : ''}` }
 }
 
 /** One line per step for Shop Mode and the plan packet. */
@@ -78,7 +78,7 @@ export function stepText(st: FinishStep): string {
     st.sheen ? `Sheen: ${st.sheen}.` : '',
     st.notes ?? '',
     f?.rags ? 'Oily rags can catch fire by themselves: lay them flat outside to dry or keep them in a sealed can of water.' : '',
-    f?.methods.length === 1 && f.methods[0] === 'spray' ? 'Spray with ventilation and a respirator.' : ''
+    f && (st.method ?? f.methods[0]) === 'spray' ? 'Spray with ventilation and a respirator.' : ''
   ]
   return bits.filter(Boolean).join(' ')
 }
