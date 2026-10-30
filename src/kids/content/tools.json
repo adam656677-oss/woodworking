@@ -130,5 +130,20 @@
     "id": "planer",
     "name": "Planer",
     "tier": "adult"
+  },
+  "finish-rag": {
+    "id": "finish-rag",
+    "name": "Rag and wipe-on finish",
+    "tier": "beginner"
+  },
+  "paintbrush": {
+    "id": "paintbrush",
+    "name": "Paintbrush",
+    "tier": "beginner"
+  },
+  "spray-finish": {
+    "id": "spray-finish",
+    "name": "Spray-can finish",
+    "tier": "adult"
   }
 }

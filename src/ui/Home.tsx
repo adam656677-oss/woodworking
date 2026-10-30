@@ -1,3 +1,4 @@
+import { openFinishing } from '../finish/ui/FinishingSchool'
 import { studio } from './store'
 
 export function Home() {
@@ -26,6 +27,13 @@ export function Home() {
         >
           <span className="text-5xl" aria-hidden>📐</span>
           <span className="text-2xl font-bold">Master Shop</span>
+        </button>
+        <button
+          onClick={() => openFinishing('home')}
+          className="flex h-56 w-72 flex-col items-center justify-center gap-3 rounded-2xl border-4 border-emerald-700 bg-emerald-50 text-emerald-950 shadow-lg hover:bg-emerald-100"
+        >
+          <span className="text-5xl" aria-hidden>🖌️</span>
+          <span className="text-2xl font-bold">Finishing School</span>
         </button>
       </div>
     </main>

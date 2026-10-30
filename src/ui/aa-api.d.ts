@@ -28,6 +28,8 @@ export type AaApi = {
   saveStock(items: unknown): Promise<void>
   /** Save a shape for a CNC (DXF) or laser/vinyl cutter (SVG); returns where, or null if cancelled. */
   exportShape(kind: 'dxf' | 'svg', text: string, suggestedName: string): Promise<string | null>
+  /** Opens an allowed https link in the system browser. */
+  openLink(url: string): Promise<boolean>
   /** Saves what printing would print as a PDF; the chosen path, or null. */
   savePdf(name: string): Promise<string | null>
   /** Makes that PDF in a temporary folder and opens it in the system's PDF viewer to print; false if it couldn't. */

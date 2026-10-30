@@ -111,12 +111,19 @@ function toolbox(p: Project): Built {
   }
 }
 
+function finishSampler(p: Project): Built {
+  // One 1x6 board, marked into four boxes for four finishes.
+  const board = makeBoard('Sampler board', woodOf(p.woods, '1x6'), 5.5, 16, ORIENT.flatX, { x: 0, y: 0, z: 0 })
+  return { boards: [board], joints: [] }
+}
+
 export const DESIGNS: Record<string, (p: Project) => Built> = {
   'pencil-holder': pencilHolder,
   'tic-tac-toe': ticTacToe,
   birdhouse,
   'picture-frame': pictureFrame,
-  toolbox
+  toolbox,
+  'finish-sampler': finishSampler
 }
 
 /** A fresh project holding the starter project's design. */

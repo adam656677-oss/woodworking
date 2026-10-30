@@ -194,6 +194,14 @@ function register(): void {
       return false
     }
   })
+  ipcMain.handle('aa:openLink', async (_e, url: string) => {
+    // Only the outside sites the app links to, and only over https.
+    let u: URL
+    try { u = new URL(String(url)) } catch { return false }
+    if (u.protocol !== 'https:' || !['www.mohawk-finishing.com', 'mohawk-finishing.com'].includes(u.hostname)) return false
+    await shell.openExternal(u.toString())
+    return true
+  })
   ipcMain.handle('aa:savePdf', async (_e, suggestedName: string) => {
     const r = await dialog.showSaveDialog(win!, {
       defaultPath: join(defaultFolder(docsDir()), `${safeName(suggestedName)}.pdf`),

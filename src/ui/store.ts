@@ -15,7 +15,7 @@ import { pruneHardware } from '../cabinet/hardware'
 import { followMotion } from '../cabinet/motion'
 import { addNote } from '../checks/annotations'
 
-export type Screen = 'home' | 'kids' | 'master' | 'plans' | 'draw'
+export type Screen = 'home' | 'kids' | 'master' | 'plans' | 'draw' | 'finish'
 export type View = '3d' | 'front' | 'side' | 'top'
 type Snapshot = { project: Project; selection: string[] }
 
@@ -363,7 +363,7 @@ export function createStudioStore() {
         }
       },
       autosaveNow: async () => {
-        if (!get().dirty || (get().screen !== 'master' && get().screen !== 'draw')) return
+        if (!get().dirty || !['master', 'draw', 'finish'].includes(get().screen)) return
         try {
           await api().writeAutosave(get().filePath, serialize(get().project))
         } catch {

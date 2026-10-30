@@ -91,6 +91,25 @@ export type CutSettings = {
   hardwoodBoard?: { width: number; length: number }
 }
 
+export type FinishStepKind = 'prep' | 'colour' | 'seal' | 'topcoat' | 'rubout' | 'other'
+export type FinishStep = {
+  id: string
+  kind: FinishStepKind
+  /** What to do, in a few words ("Sand to 180", "Wipe on boiled linseed oil"). */
+  title: string
+  /** A finish from the finish data, when the step puts one on. */
+  finishId?: string
+  /** A named product (generic or a brand), when the user wants one written down. */
+  product?: string
+  method?: 'wipe' | 'brush' | 'spray'
+  coats: number
+  /** Hours to wait after each coat. */
+  dryHours: number
+  sheen?: string
+  notes?: string
+}
+export type FinishSchedule = { name: string; steps: FinishStep[] }
+
 /** A dimension or note kept on the model (world inches). */
 export type Annotation =
   | { id: string; kind: 'dimension'; a: Vec3; b: Vec3; label?: string }
@@ -223,6 +242,8 @@ export type Project = {
   models?: RefModel[]
   /** Cutting allowances, waste and tax for layouts and the shopping list. */
   cutSettings?: CutSettings
+  /** How the piece gets finished: prep, colour, seal, topcoats, rub-out. */
+  finish?: FinishSchedule
 }
 
 export const SQUARE: EndCut = { miter: 0, bevel: 0 }

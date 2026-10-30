@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { designFor, findProject, TOOLS } from '../content'
 import { adultDoes } from '../logic'
+import { kidFinish } from '../../finish/kids'
 import { kids, useKids } from '../kidsStore'
 import { CutSheet } from './CutSheet'
 import { Stars } from './kit'
@@ -12,6 +13,7 @@ export function ProjectSheet({ projectId }: { projectId: string }) {
   const progress = useKids(s => s.progress)
   const [picture, setPicture] = useState<string | null>(null)
   const design = designFor(projectId)
+  const finish = kidFinish(proj)
   return (
     <main className="h-full overflow-y-auto bg-stone-200 p-6 print:bg-white print:p-0">
       <div className="mx-auto mb-4 flex max-w-[8.5in] gap-3 print:hidden">
@@ -55,6 +57,19 @@ export function ProjectSheet({ projectId }: { projectId: string }) {
             ))}
           </ol>
         </section>
+        {finish && (
+          <section className="mt-4" aria-label="Finishing">
+            <h2 className="text-2xl font-bold">Finishing: {finish.name}</h2>
+            <ol className="mt-1 flex flex-col gap-1 text-lg">
+              {finish.steps.map((s, i) => (
+                <li key={i} className="flex items-start gap-2">
+                  <input type="checkbox" aria-label={`Finishing step ${i + 1} done`} className="mt-1 h-5 w-5" />
+                  <span><strong>{i + 1}.</strong> {s.text}{adultDoes(s.tool, progress.tier) && <strong className="text-red-700"> (Adult does this)</strong>}</span>
+                </li>
+              ))}
+            </ol>
+          </section>
+        )}
         <section className="mt-4">
           <h2 className="text-2xl font-bold">Cut sheet</h2>
           <CutSheet project={design} />

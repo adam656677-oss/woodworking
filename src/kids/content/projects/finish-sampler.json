@@ -1,0 +1,52 @@
+{
+  "id": "finish-sampler",
+  "name": "Finish sampler",
+  "level": 2,
+  "stars": 1,
+  "minutes": 45,
+  "kind": "useful",
+  "picture": "finish",
+  "blurb": "One board with four finishes side by side, so you can see what each one looks like on real wood.",
+  "tools": [
+    "tape-measure",
+    "pencil",
+    "hand-saw",
+    "miter-box",
+    "sandpaper",
+    "finish-rag",
+    "paintbrush"
+  ],
+  "steps": [
+    {
+      "text": "Cut a 1x6 board 16 inches long.",
+      "tool": "hand-saw"
+    },
+    {
+      "text": "Sand it smooth on the top and the edges.",
+      "tool": "sandpaper"
+    },
+    {
+      "text": "Draw lines across the board every 4 inches to make four boxes, and write a finish name under each box.",
+      "tool": "pencil"
+    },
+    {
+      "text": "Box 1: leave it bare so you can see the plain wood."
+    },
+    {
+      "text": "Box 2: wipe on water-based finish with a rag. Let it dry 2 hours and add a second coat.",
+      "tool": "finish-rag"
+    },
+    {
+      "text": "Box 3: wipe on food-safe mineral oil. Wipe off the extra after 15 minutes.",
+      "tool": "finish-rag"
+    },
+    {
+      "text": "Box 4: brush on a thin coat of shellac. A grown-up helps \u2014 it smells strong.",
+      "tool": "paintbrush"
+    },
+    {
+      "text": "When everything is dry, rub paste wax on half of each box and buff it. Which do you like best?",
+      "tool": "finish-rag"
+    }
+  ]
+}

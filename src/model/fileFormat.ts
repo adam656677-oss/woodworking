@@ -6,7 +6,7 @@ import type { Project } from './types'
 import { pruneGroups } from '../assemblies/ops'
 import { isPackedMesh } from '../exchange/models'
 
-export const FORMAT_VERSION = 10
+export const FORMAT_VERSION = 11
 
 export class ProjectFileError extends Error {
   constructor(public code: 'corrupt' | 'newerVersion' | 'invalid', message: string) {
@@ -35,7 +35,9 @@ const MIGRATIONS: Record<number, Migration> = {
   // Version 9 adds reference models (optional).
   8: raw => ({ ...raw, formatVersion: 9 }),
   // Version 10 adds edge banding, cutting settings and lumber prices by length (all optional).
-  9: raw => ({ ...raw, formatVersion: 10 })
+  9: raw => ({ ...raw, formatVersion: 10 }),
+  // Version 11 adds the finishing schedule (optional).
+  10: raw => ({ ...raw, formatVersion: 11 })
 }
 
 export function serialize(p: Project): string {
@@ -251,6 +253,16 @@ function check(raw: any): Project {
   for (const b of raw.boards) {
     const bd = b.banding
     if (bd !== undefined && !(isObj(bd) && isStr(bd.bandId) && Array.isArray(bd.edges) && bd.edges.every((e: unknown) => oneOf(e, ['left', 'right', 'start', 'end'])))) delete b.banding
+  }
+  if (raw.finish !== undefined) {
+    // A damaged schedule is dropped; damaged steps are dropped from a good one.
+    const f = raw.finish
+    const okStep = (s: any) => isObj(s) && isStr(s.id) && oneOf(s.kind, ['prep', 'colour', 'seal', 'topcoat', 'rubout', 'other']) && isStr(s.title) &&
+      isNum(s.coats) && s.coats >= 1 && s.coats <= 50 && isNum(s.dryHours) && s.dryHours >= 0 && s.dryHours < 10000 &&
+      (s.finishId === undefined || isStr(s.finishId)) && (s.product === undefined || isStr(s.product)) && (s.method === undefined || oneOf(s.method, ['wipe', 'brush', 'spray'])) &&
+      (s.sheen === undefined || isStr(s.sheen)) && (s.notes === undefined || isStr(s.notes))
+    if (!isObj(f) || !isStr(f.name) || !Array.isArray(f.steps)) delete raw.finish
+    else f.steps = f.steps.filter(okStep)
   }
   if (raw.cutSettings !== undefined) {
     // Each setting is checked on its own; a damaged one falls back to the default.

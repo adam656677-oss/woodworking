@@ -1,4 +1,7 @@
 // Steps for Shop Mode: from a plan's own steps, a kid project, or worked out from a design.
+import { finishById } from '../finish/finishes'
+import { kidFinish } from '../finish/kids'
+import { stepText } from '../finish/schedule'
 import { ancestry } from '../assemblies/ops'
 import { cutList } from '../model/cutlist'
 import type { Board, ButtParams, GrooveParams, Joint, MiterParams, PocketParams, Project } from '../model/types'
@@ -110,6 +113,15 @@ export function stepsFromDesign(p: Project): ShopStep[] {
       tools: ['Clamps', 'Square'], parts: [], boardIds: p.boards.map(b => b.id)
     })
   }
+  // The finishing schedule, step by step.
+  for (const st of p.finish?.steps ?? []) {
+    const f = st.finishId ? finishById(st.finishId) : undefined
+    steps.push({
+      key: `finish:${st.id}`, title: `Finish: ${st.title}`, text: stepText(st) || st.title,
+      tools: st.kind === 'prep' ? ['Sandpaper'] : f ? [st.method === 'spray' ? 'Spray gun' : st.method === 'brush' ? 'Brush' : 'Rags'] : [],
+      parts: [], boardIds: p.boards.map(b => b.id)
+    })
+  }
   return steps
 }
 
@@ -126,8 +138,11 @@ export function stepsFromPlan(plan: { steps: { id: string; text: string; tool?: 
 
 /** A kids' project's steps, marked for the child's tier. */
 export function stepsFromKid(proj: KidProject, tier: Tier): ShopStep[] {
-  return proj.steps.map((s, i) => ({
-    key: `${proj.id}:${i}`, title: `Step ${i + 1}`, text: s.text, tools: s.tool ? [toolName(s.tool)] : [], parts: [],
+  // The project's own steps, then its finishing steps.
+  const fin = kidFinish(proj)
+  const all = [...proj.steps, ...(fin?.steps ?? [])]
+  return all.map((s, i) => ({
+    key: `${proj.id}:${i}`, title: i < proj.steps.length ? `Step ${i + 1}` : `Finish ${i - proj.steps.length + 1}`, text: s.text, tools: s.tool ? [toolName(s.tool)] : [], parts: [],
     ...(adultDoes(s.tool, tier) ? { adult: true } : {})
   }))
 }

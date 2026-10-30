@@ -10,6 +10,7 @@ contextBridge.exposeInMainWorld('aa', {
   exportCsv: (text: string, suggestedName: string) => ipcRenderer.invoke('aa:exportCsv', text, suggestedName),
   exportShape: (kind: 'dxf' | 'svg', text: string, suggestedName: string) => ipcRenderer.invoke('aa:exportShape', kind, text, suggestedName),
   printPdf: (name: string) => ipcRenderer.invoke('aa:printPdf', name),
+  openLink: (url: string) => ipcRenderer.invoke('aa:openLink', url),
   savePdf: (name: string) => ipcRenderer.invoke('aa:savePdf', name),
   print: (opts?: { landscape?: boolean; edgeToEdge?: boolean }) => ipcRenderer.invoke('aa:print', opts),
   keepAwake: (on: boolean) => ipcRenderer.invoke('aa:keepAwake', on),

@@ -7,6 +7,8 @@ import type { Project } from '../../model/types'
 import { shoppingList } from '../../optimize/shopping'
 import { useStock } from '../../optimize/stockStore'
 import { stepsFromDesign } from '../../shop/steps'
+import { finishById } from '../../finish/finishes'
+import { scheduleTime, stepText } from '../../finish/schedule'
 import { studio, useStudio } from '../../ui/store'
 import { PAPERS, SCALES, type Paper, type ScaleChoice } from '../sheet'
 import { template } from '../tiles'
@@ -31,7 +33,7 @@ export function DrawingsDialog() {
   const parts = useMemo(() => partList(project), [project])
   const [chosen, setChosen] = useState<string[]>(() => parts.map(q => q.boardId))
   const [tmpl, setTmpl] = useState<string[]>(() => shaped(project))
-  const [packet, setPacket] = useState({ cover: true, drawings: true, parts: true, cutList: true, buy: true, steps: true, templates: true })
+  const [packet, setPacket] = useState({ cover: true, drawings: true, parts: true, cutList: true, buy: true, steps: true, finish: true, templates: true })
   const [pages, setPages] = useState<PageSpec[] | null>(null)
   const [message, setMessage] = useState<{ text: string; bad?: boolean } | null>(null)
   const shop = useStock(s => s.items)
@@ -79,6 +81,7 @@ export function DrawingsDialog() {
       packet.cutList && 'Cut list',
       packet.buy && 'Shopping list',
       packet.steps && 'Steps',
+      packet.finish && project.finish && 'Finishing schedule',
       packet.templates && tmpl.length > 0 && 'Full-size templates'
     ].filter(Boolean) as string[]
     const set = { views: packet.drawings, exploded: packet.drawings, section: packet.drawings, parts: packet.parts ? 'all' as const : [] }
@@ -92,6 +95,7 @@ export function DrawingsDialog() {
     if (packet.cutList) out.push({ key: 'cut', kind: 'html', node: <CutListPage p={project} /> })
     if (packet.buy) out.push({ key: 'buy', kind: 'html', node: <BuyPage p={project} shop={shop} /> })
     if (packet.steps) out.push({ key: 'steps', kind: 'html', node: <StepsPage p={project} /> })
+    if (packet.finish && project.finish) out.push({ key: 'finish', kind: 'html', node: <FinishPage p={project} /> })
     if (packet.templates) out.push(...tiles(tmpl))
     return out
   }
@@ -160,6 +164,7 @@ export function DrawingsDialog() {
             {box(packet.cutList, v => setPacket({ ...packet, cutList: v }), 'Cut list')}
             {box(packet.buy, v => setPacket({ ...packet, buy: v }), 'Shopping list')}
             {box(packet.steps, v => setPacket({ ...packet, steps: v }), 'Steps')}
+            {project.finish && box(packet.finish, v => setPacket({ ...packet, finish: v }), 'Finishing schedule')}
             {box(packet.templates, v => setPacket({ ...packet, templates: v }), `Templates (${tmpl.length})`)}
           </>}
         </div>
@@ -251,6 +256,24 @@ function StepsPage({ p }: { p: Project }) {
             <div className="font-semibold">☐ {i + 1}. {s.title}</div>
             <div>{s.text}</div>
             {s.tools.length > 0 && <div className="text-[9pt] text-stone-600">Tools: {s.tools.join(', ')}</div>}
+          </li>
+        ))}
+      </ol>
+    </section>
+  )
+}
+
+function FinishPage({ p }: { p: Project }) {
+  const s = p.finish!
+  return (
+    <section className={pageStyle}>
+      <h2 className="mb-1 text-xl font-bold">Finishing schedule — {p.name}</h2>
+      <p className="mb-3 text-[10pt] text-stone-600">{s.name} · {scheduleTime(s).text}</p>
+      <ol className="flex flex-col gap-2">
+        {s.steps.map((st, i) => (
+          <li key={st.id} className="break-inside-avoid">
+            <div className="font-semibold">☐ {i + 1}. {st.title}{st.finishId ? ` — ${finishById(st.finishId)?.name ?? ''}` : ''}</div>
+            <div className="text-[10pt]">{stepText(st)}</div>
           </li>
         ))}
       </ol>

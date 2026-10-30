@@ -1,0 +1,49 @@
+{
+  "id": "finishing-basics",
+  "title": "Finishing basics",
+  "level": 2,
+  "cards": [
+    {
+      "image": "sandpaper",
+      "text": [
+        "Finishing starts with sanding. Sand with the grain until the wood feels smooth all over.",
+        "Wipe off all the dust before any finish goes on."
+      ]
+    },
+    {
+      "image": "finish",
+      "text": [
+        "Pick the right finish: water-based wipe-on finish for most projects, food-safe oil for things that touch food, and paste wax for a soft shine."
+      ]
+    },
+    {
+      "image": "finish",
+      "text": [
+        "Wear gloves. Put a little finish on a rag and wipe it along the grain in long strokes.",
+        "Thin coats are better than thick ones \u2014 thick coats drip and stay sticky."
+      ]
+    },
+    {
+      "image": "finish",
+      "text": [
+        "Let it dry. The can says how long \u2014 often 2 hours for water-based finish.",
+        "Rub lightly with very fine sandpaper and wipe off the dust, then add another coat."
+      ],
+      "tip": {
+        "kind": "try",
+        "text": "Try every finish on a scrap first, or make a finish sampler!"
+      }
+    },
+    {
+      "image": "finish",
+      "text": [
+        "Spray cans are for grown-ups: the mist is easy to breathe in and can catch fire.",
+        "Oily rags go to your grown-up to lay flat outside or put in water."
+      ],
+      "tip": {
+        "kind": "safety",
+        "text": "Open a window or work outside when you put on a finish."
+      }
+    }
+  ]
+}
