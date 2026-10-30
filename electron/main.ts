@@ -87,6 +87,31 @@ function register(): void {
     if (loaded.autosaveNewer) autosaveText = await readFile(loaded.autosavePath, 'utf8')
     return { path, text: loaded.text, autosaveNewer: loaded.autosaveNewer, autosaveText, backupPath: loaded.backupPath }
   })
+  // 3D files out (STL, OBJ+MTL, 3MF, GLB, STEP, DXF flat patterns) and reference models in.
+  const EXPORTS: Record<string, string> = { stl: 'STL mesh', obj: 'OBJ model', '3mf': '3MF model', glb: 'glTF binary', step: 'STEP model', dxf: 'DXF flat patterns' }
+  ipcMain.handle('aa:exportFile', async (_e, ext: string, data: Uint8Array | string, suggestedName: string, mtl?: string) => {
+    if (!EXPORTS[ext]) return null
+    const safe = String(suggestedName).replace(/[<>:"/\\|?*\u0000-\u001f]/g, '').trim() || 'Design'
+    const folder = defaultFolder(docsDir())
+    await mkdir(folder, { recursive: true })
+    const r = await dialog.showSaveDialog(win!, { defaultPath: join(folder, `${safe}.${ext}`), filters: [{ name: EXPORTS[ext], extensions: [ext] }] })
+    if (r.canceled || !r.filePath) return null
+    const path = r.filePath.toLowerCase().endsWith(`.${ext}`) ? r.filePath : `${r.filePath}.${ext}`
+    if (ext === 'obj' && typeof data === 'string' && mtl !== undefined) {
+      // The materials file sits beside the model, named to match.
+      const mtlName = `${basename(path).replace(/\.obj$/i, '')}.mtl`
+      await writeFile(join(path, '..', mtlName), mtl, 'utf8')
+      data = data.replace(/^mtllib .*$/m, `mtllib ${mtlName}`)
+    }
+    await writeFile(path, typeof data === 'string' ? data : Buffer.from(data))
+    return path
+  })
+  ipcMain.handle('aa:importModel', async () => {
+    const r = await dialog.showOpenDialog(win!, { defaultPath: defaultFolder(docsDir()), properties: ['openFile'], filters: [{ name: '3D models', extensions: ['stl', 'obj', '3mf', 'glb', 'gltf', 'step', 'stp'] }] })
+    if (r.canceled || !r.filePaths[0]) return null
+    const bytes = await readFile(r.filePaths[0])
+    return { name: basename(r.filePaths[0]), bytes: new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength) }
+  })
   ipcMain.handle('aa:saveProject', async (_e, path: string, text: string) => {
     await safeSave(path, text)
   })

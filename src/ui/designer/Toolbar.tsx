@@ -7,6 +7,7 @@ import { TEMPLATES } from '../../templates'
 import { studio, useStudio, type View } from '../store'
 import { duplicateSelection, groupBoardIds, groupBoards, rotateGroup, ungroup, wholeGroup } from '../../assemblies/ops'
 import { GroupNameDialog } from '../../assemblies/ui/GroupPanel'
+import { startImport } from '../../exchange/ui/ExchangeDialog'
 import { shop } from '../../shop/shopStore'
 import { designSession } from '../../shop/steps'
 
@@ -95,6 +96,14 @@ export function Toolbar() {
       <Btn onClick={() => void s.open()}>Open</Btn>
       <Btn onClick={() => void s.save()}>Save</Btn>
       <Btn onClick={() => void s.saveAs()}>Save As</Btn>
+      {!kidsMode && <Menu label="3D files">
+        {close => (
+          <>
+            <button role="menuitem" className={item} onClick={() => { s.setView({ exchange: { kind: 'export' } }); close() }}>Export…</button>
+            <button role="menuitem" className={item} onClick={() => { close(); void startImport() }}>Import reference model…</button>
+          </>
+        )}
+      </Menu>}
       <span className="mx-1 h-5 w-px bg-stone-300" />
       <Btn onClick={add}>Add board</Btn>
       {!kidsMode && <Menu label="Cabinet">

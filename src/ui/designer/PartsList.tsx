@@ -1,3 +1,4 @@
+import { ModelsList } from '../../exchange/ui/ModelsList'
 import { useMemo, useState } from 'react'
 import { renameBoard } from '../../model/ops'
 import type { Board, Group, Project } from '../../model/types'
@@ -155,6 +156,7 @@ function PartsTab() {
     <div className="min-h-0 flex-1 overflow-y-auto">
       <h2 className="sticky top-0 z-10 bg-stone-50 px-3 py-2 text-xs font-bold uppercase tracking-wide text-stone-500">Parts ({boards.length})</h2>
       <ul aria-label="Parts">{render(rows, 0)}</ul>
+      {!kids && <ModelsList />}
     </div>
   )
 }

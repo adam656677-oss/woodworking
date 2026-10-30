@@ -11,6 +11,7 @@ import { Toolbar } from './Toolbar'
 import { WarningsList } from './WarningsList'
 import { WoodLibraryDialog } from './WoodLibraryDialog'
 import { CabinetDialog } from '../../cabinet/ui/CabinetDialog'
+import { ExchangeDialog } from '../../exchange/ui/ExchangeDialog'
 import { SceneBoundary } from '../three/SceneBoundary'
 import { duplicateSelection, wholeGroup } from '../../assemblies/ops'
 import { GroupPanel } from '../../assemblies/ui/GroupPanel'
@@ -26,7 +27,7 @@ function isTyping(e: KeyboardEvent) {
 }
 
 export function Designer() {
-  const empty = useStudio(s => s.project.boards.length === 0 && !s.project.template && !s.project.references?.length)
+  const empty = useStudio(s => s.project.boards.length === 0 && !s.project.template && !s.project.references?.length && !s.project.models?.length)
   const selection = useStudio(s => s.selection)
   const error = useStudio(s => s.error)
   const recovery = useStudio(s => s.recovery)
@@ -118,6 +119,7 @@ export function Designer() {
       {cutListOpen && <CutListView />}
       {woodsOpen && <WoodLibraryDialog />}
       {!kidsMode && <CabinetDialog />}
+      {!kidsMode && <ExchangeDialog />}
     </div>
   )
 }

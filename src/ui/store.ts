@@ -60,6 +60,10 @@ export type StudioState = {
   openAmount: number
   /** The door / drawer / face-frame / shelf-pin maker that's open. */
   cabinet: 'door' | 'drawer' | 'frame' | 'pins' | null
+  /** The 3D export dialog, or a model being imported (asking its units). */
+  exchange: { kind: 'export' } | { kind: 'import'; name: string; bytes: Uint8Array } | null
+  /** The reference model whose settings are open. */
+  modelOpen: string | null
   /** Waiting for a click on the model to pin a note; then the point waiting for its text. */
   placingNote: boolean
   /** The Pictures panel (reference images). */
@@ -98,7 +102,7 @@ export type StudioState = {
   setHidden(ids: string[], hidden: boolean): void
   isolate(ids: string[] | null): void
   showAll(): void
-  setView(patch: Partial<Pick<StudioState, 'explode' | 'section' | 'showDims' | 'overallSize' | 'checksOpen' | 'placingNote' | 'pendingNote' | 'picturesOpen' | 'refPick' | 'openAmount' | 'cabinet'>>): void
+  setView(patch: Partial<Pick<StudioState, 'explode' | 'section' | 'showDims' | 'overallSize' | 'checksOpen' | 'placingNote' | 'pendingNote' | 'picturesOpen' | 'refPick' | 'openAmount' | 'cabinet' | 'exchange' | 'modelOpen'>>): void
   /** Pin the pending note with this text (null cancels). */
   finishNote(text: string | null): void
   /** Shop Mode progress is saved with the design but isn't an undo step. */
@@ -144,7 +148,7 @@ export function createStudioStore() {
     }
     const start = (project: Project, filePath: string | null, dirty: boolean) => {
       history = new History<Snapshot>({ project, selection: [] })
-      set({ filePath, screen: 'master', error: null, recovery: null, projectKey: get().projectKey + 1, hidden: [], isolated: null, explode: 0, section: null, placingNote: false, pendingNote: null, refPick: null, openAmount: 0, cabinet: null })
+      set({ filePath, screen: 'master', error: null, recovery: null, projectKey: get().projectKey + 1, hidden: [], isolated: null, explode: 0, section: null, placingNote: false, pendingNote: null, refPick: null, openAmount: 0, cabinet: null, exchange: null, modelOpen: null })
       sync(dirty)
     }
     const loadText = (text: string, path: string | null, backupPath: string | null, dirty: boolean) => {
@@ -207,6 +211,8 @@ export function createStudioStore() {
       checksOpen: null,
       openAmount: 0,
       cabinet: null,
+      exchange: null,
+      modelOpen: null,
       placingNote: false,
       picturesOpen: false,
       refPick: null,

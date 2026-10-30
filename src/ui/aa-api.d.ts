@@ -19,6 +19,10 @@ export type AaApi = {
   /** Remove the autosave for a file (null: the untitled autosave). */
   deleteAutosave(path: string | null): Promise<void>
   exportCsv(text: string, suggestedName: string): Promise<string | null>
+  /** Save a 3D file (OBJ also writes its .mtl beside it). Returns the path, or null when cancelled. */
+  exportFile(ext: string, data: Uint8Array | string, suggestedName: string, mtl?: string): Promise<string | null>
+  /** Pick a 3D model to bring in as a reference. */
+  importModel(): Promise<{ name: string; bytes: Uint8Array } | null>
   /** Save a shape for a CNC (DXF) or laser/vinyl cutter (SVG); returns where, or null if cancelled. */
   exportShape(kind: 'dxf' | 'svg', text: string, suggestedName: string): Promise<string | null>
   /** Print the page; landscape unless told otherwise. */

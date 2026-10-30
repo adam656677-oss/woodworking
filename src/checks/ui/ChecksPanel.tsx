@@ -7,7 +7,7 @@ import { dimensionLength, editAnnotation, removeAnnotation } from '../annotation
 import { interferences, weigh, type Interference } from '../solids'
 import { clashText, clearance, type Clash } from '../../cabinet/motion'
 
-const nameOf = (id: string) => studio.getState().project.boards.find(b => b.id === id)?.name ?? '?'
+const nameOf = (id: string) => { const p = studio.getState().project; return p.boards.find(b => b.id === id)?.name ?? p.models?.find(m => m.id === id)?.name ?? '?' }
 const lb = (v: number) => `${v < 10 ? v.toFixed(1) : Math.round(v)} lb`
 
 export function ChecksPanel() {

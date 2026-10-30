@@ -7,6 +7,7 @@ import type { Board, Project, Vec3 } from '../model/types'
 import { buildBoardGeometry } from '../ui/three/BoardMesh'
 import { boardForm } from '../ui/three/boardForm'
 import { densityOf } from './density'
+import { modelBox, modelGeometry, modelMatrix } from '../exchange/models'
 
 const evaluator = new Evaluator()
 evaluator.useGroups = false
@@ -104,6 +105,21 @@ export function interferences(p: Project, solids = localSolids(p)): Interference
       const r = evaluator.evaluate(brush(A), brush(B), INTERSECTION) as Brush
       const v = volumeAndCentroid(r.geometry).volume
       if (v > INTERFERENCE_MIN) out.push({ a: A.id, b: B.id, volume: v })
+    }
+  }
+  // Reference models (an appliance, say) count too, unless left out of the checks.
+  for (const m of p.models ?? []) {
+    if (m.noChecks) continue
+    const mb = modelBox(m)
+    const near = p.boards.filter(b => boxesOverlap(boxes.get(b.id)!, mb))
+    if (!near.length) continue
+    const br = new Brush(modelGeometry(m))
+    modelMatrix(m).decompose(br.position, br.quaternion, br.scale)
+    br.updateMatrixWorld()
+    for (const b of near) {
+      const r = evaluator.evaluate(brush(b), br, INTERSECTION) as Brush
+      const v = volumeAndCentroid(r.geometry).volume
+      if (v > INTERFERENCE_MIN) out.push({ a: b.id, b: m.id, volume: v })
     }
   }
   return out

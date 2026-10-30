@@ -90,6 +90,25 @@ export type Reference = {
   hidden?: boolean
 }
 
+/** An outside 3D model placed in the design as a reference (an appliance, hardware, an existing piece). */
+export type RefModel = {
+  id: string
+  name: string
+  /** The file type it came from (stl, obj, 3mf, glb, step). */
+  format: string
+  /** Its triangles in inches, low corner at its origin, packed (see exchange/models). */
+  data: string
+  position: Vec3
+  /** Degrees about X, Y, Z (as parts turn). */
+  rotation: Vec3
+  scale: number
+  opacity: number
+  locked?: boolean
+  hidden?: boolean
+  /** Left out of the interference and clearance checks. */
+  noChecks?: boolean
+}
+
 /** Shop Mode ticks and minutes, by step key. */
 export type ShopProgressData = { done: string[]; minutes: Record<string, number> }
 
@@ -153,7 +172,7 @@ export type TemplateState = { templateId: string; params: Record<string, number 
 
 export type Project = {
   /** 2 adds drawings; version 1 files are upgraded when opened. */
-  formatVersion: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8
+  formatVersion: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9
   name: string
   units: 'in'
   boards: Board[]
@@ -178,6 +197,8 @@ export type Project = {
   hardware?: HardwareUse[]
   /** This project's own hardware items, and price changes to built-in ones (same id). */
   hardwareItems?: HardwareItem[]
+  /** Outside 3D models to design around. */
+  models?: RefModel[]
 }
 
 export const SQUARE: EndCut = { miter: 0, bevel: 0 }

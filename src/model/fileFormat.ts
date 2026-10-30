@@ -4,8 +4,9 @@ import { EDGE_SIDES, FACES, PROFILE_KINDS, TURN_STYLES } from '../shaping/types'
 import { AXES3 } from '../formulas/types'
 import type { Project } from './types'
 import { pruneGroups } from '../assemblies/ops'
+import { isPackedMesh } from '../exchange/models'
 
-export const FORMAT_VERSION = 8
+export const FORMAT_VERSION = 9
 
 export class ProjectFileError extends Error {
   constructor(public code: 'corrupt' | 'newerVersion' | 'invalid', message: string) {
@@ -30,7 +31,9 @@ const MIGRATIONS: Record<number, Migration> = {
   // Version 7 adds reference pictures and Shop Mode progress (optional).
   6: raw => ({ ...raw, formatVersion: 7 }),
   // Version 8 adds hardware, stopped holes, edge grooves and door/drawer motion (all optional).
-  7: raw => ({ ...raw, formatVersion: 8 })
+  7: raw => ({ ...raw, formatVersion: 8 }),
+  // Version 9 adds reference models (optional).
+  8: raw => ({ ...raw, formatVersion: 9 })
 }
 
 export function serialize(p: Project): string {
@@ -242,6 +245,13 @@ function check(raw: any): Project {
   if (raw.hardware !== undefined) {
     if (!Array.isArray(raw.hardware) || !raw.hardware.every((h: any) => isObj(h) && isStr(h.id) && isStr(h.itemId) && isNum(h.qty) && h.qty > 0 &&
       (h.groupId === undefined || isStr(h.groupId)) && (h.boardId === undefined || isStr(h.boardId)) && (h.note === undefined || isStr(h.note)))) invalid('the hardware list is damaged')
+  }
+  if (raw.models !== undefined) {
+    // A damaged reference model is dropped; the design still opens.
+    const ok = (m: any) => isObj(m) && isStr(m.id) && isStr(m.name) && isStr(m.format) && isPackedMesh(m.data) && isVec(m.position) && isVec(m.rotation) &&
+      isNum(m.scale) && m.scale > 0 && isNum(m.opacity) && m.opacity >= 0 && m.opacity <= 1
+    raw.models = Array.isArray(raw.models) ? raw.models.filter(ok) : []
+    if (!raw.models.length) delete raw.models
   }
   if (raw.shopProgress !== undefined) {
     const sp = raw.shopProgress

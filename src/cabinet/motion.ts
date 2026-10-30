@@ -3,6 +3,7 @@ import * as THREE from 'three'
 import { ancestry, groupBoardIds, groupsOf } from '../assemblies/ops'
 import { boardMatrix, interferences, localSolids } from '../checks/solids'
 import { worldBox, type Box } from '../model/geometry'
+import { modelBox } from '../exchange/models'
 import type { Board, Group, Motion, Project, Vec3 } from '../model/types'
 
 /** The outermost group that moves this part, if any. */
@@ -57,16 +58,18 @@ export function clearance(p: Project): Clash[] {
     const stepsAt = (k: number) => moving.map(b => movedBoard(b, g.motion!, k / STEPS))
     const swept = union(Array.from({ length: STEPS + 1 }, (_, k) => stepsAt(k)).flat().map(worldBox))
     const others = p.boards.filter(b => !ids.has(b.id) && overlaps(worldBox(b), swept))
-    if (!others.length) continue
-    // Only moving parts against the rest: each pair checked on its own.
+    const models = (p.models ?? []).filter(m => !m.noChecks && overlaps(modelBox(m), swept))
+    if (!others.length && !models.length) continue
+    // Only moving parts against the rest (and any reference model in the way): each pair checked on its own.
     const pairsAt = (k: number) => {
       const out = new Set<string>()
       for (const mv of stepsAt(k)) {
         const box = worldBox(mv)
         for (const o of others) {
           if (!overlaps(box, worldBox(o))) continue
-          if (interferences({ ...p, boards: [mv, o], joints: [] }, solids).length) out.add(o.id)
+          if (interferences({ ...p, boards: [mv, o], joints: [], models: [] }, solids).length) out.add(o.id)
         }
+        for (const m of models) if (overlaps(box, modelBox(m)) && interferences({ ...p, boards: [mv], joints: [], models: [m] }, solids).length) out.add(m.id)
       }
       return [...out]
     }
@@ -88,7 +91,7 @@ export function clashText(p: Project, c: Clash): string {
   const g = groupsOf(p).find(x => x.id === c.groupId)?.name ?? '?'
   const b = p.boards.find(x => x.id === c.otherId)
   const owner = b ? [...ancestry(p, b.groupId)].reverse()[0]?.name : undefined
-  return `${g} hits ${owner ?? b?.name ?? '?'} at ${c.percent}% open`
+  return `${g} hits ${owner ?? b?.name ?? p.models?.find(m => m.id === c.otherId)?.name ?? '?'} at ${c.percent}% open`
 }
 
 export type { Vec3 }

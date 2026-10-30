@@ -50,5 +50,5 @@ export function boardFeet(t: number, w: number, l: number): number {
 }
 
 export function emptyProject(name: string, extraWoods: readonly Wood[] = []): Project {
-  return { formatVersion: 8, name, units: 'in', boards: [], joints: [], woods: cloneWoods([...BUILTIN_WOODS, ...extraWoods]), sketches: [] }
+  return { formatVersion: 9, name, units: 'in', boards: [], joints: [], woods: cloneWoods([...BUILTIN_WOODS, ...extraWoods]), sketches: [] }
 }
