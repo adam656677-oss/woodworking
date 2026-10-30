@@ -75,7 +75,10 @@ export function validate(project: Project): Warning[] {
       continue
     }
     // A joint only means something while its boards still meet the way it describes.
-    if (!contactBetween(project, j.hostBoardId, j.partnerBoardId) || !seatedInGroove(project, j)) {
+    // Frame-and-panel cuts (edge grooves, tenon cheeks, glass rabbets) are checked by their own seat, not by contact.
+    const gp = j.params as GrooveParams
+    const own = (j.type === 'dado' || j.type === 'rabbet') && (gp.face === 'left' || gp.face === 'right' || gp.standalone)
+    if ((!own && !contactBetween(project, j.hostBoardId, j.partnerBoardId)) || !seatedInGroove(project, j)) {
       const name = (id: string) => project.boards.find(b => b.id === id)?.name ?? '?'
       warnings.push({
         kind: 'badJoint',
@@ -103,7 +106,11 @@ function seatedInGroove(project: Project, j: Joint): boolean {
   const partner = project.boards.find(b => b.id === j.partnerBoardId)
   if (!host || !partner || !isAxisAligned(host) || !isAxisAligned(partner)) return true
   const p = j.params as GrooveParams
+  if (p.standalone) return true
   const local = boxInLocal(host, worldBox(partner))
+  // An edge groove: the partner reaches into it no further than its depth.
+  if (p.face === 'left') return local.max.x <= p.depth + TOUCH_TOL
+  if (p.face === 'right') return local.min.x >= host.width - p.depth - TOUCH_TOL
   const ax = (p.along ?? 'width') === 'width' ? 'y' : 'x'
   return local.min[ax] >= p.offset - TOUCH_TOL && local.max[ax] <= p.offset + p.width + TOUCH_TOL
 }

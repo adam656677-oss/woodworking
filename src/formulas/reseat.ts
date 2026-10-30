@@ -12,6 +12,8 @@ export function reseatGrooves(p: Project): Project {
     const partner = p.boards.find(b => b.id === j.partnerBoardId)
     if (!host || !partner) return j
     const g = j.params as GrooveParams
+    // Edge grooves (a door's panel groove) run the full length: nothing to re-measure.
+    if (g.face === 'left' || g.face === 'right' || g.standalone) return j
     const along = g.along ?? 'width'
     const pl = boxInLocal(host, worldBox(partner))
     const extent = along === 'width' ? host.length : host.width

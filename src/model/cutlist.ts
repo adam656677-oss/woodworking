@@ -34,8 +34,8 @@ type Group = CutListRow & { woodId: string; names: string[]; base: string; canon
 // The cuts on a board in its own coordinates. Two boards with the same cuts after turning one over or
 // end-for-end are the same part in the shop; a board whose cuts match only in a mirror is its mirror twin.
 type Features = {
-  grooves: { type: string; along: 'width' | 'length'; a: number; b: number; depth: number; face: 'top' | 'bottom' }[]
-  holes: { u: number; v: number; d: number }[]
+  grooves: { type: string; along: 'width' | 'length'; a: number; b: number; depth: number; face: 'top' | 'bottom' | 'left' | 'right' }[]
+  holes: { u: number; v: number; d: number; depth?: number; face?: 'top' | 'bottom' }[]
   ends: { start: { miter: number; bevel: number }; end: { miter: number; bevel: number } }
   edges: { left: number; right: number }
 }
@@ -51,7 +51,7 @@ function featuresOf(project: Project, b: Board): Features {
     })
   return {
     grooves,
-    holes: b.holes.map(h => ({ u: h.u, v: h.v, d: h.diameter })),
+    holes: b.holes.map(h => ({ u: h.u, v: h.v, d: h.diameter, ...(h.depth !== undefined ? { depth: h.depth, face: h.face ?? 'top' } : {}) })),
     ends: { start: { ...b.endCuts.start }, end: { ...b.endCuts.end } },
     edges: { ...b.edgeBevels }
   }
@@ -63,7 +63,7 @@ function reflect(f: Features, axis: 'x' | 'y' | 'z', b: Board): Features {
   const L = b.length
   if (axis === 'x') {
     return {
-      grooves: f.grooves.map(g => (g.along === 'length' ? { ...g, a: W - g.b, b: W - g.a } : g)),
+      grooves: f.grooves.map(g => (g.face === 'left' || g.face === 'right' ? { ...g, face: g.face === 'left' ? 'right' : 'left' } : g.along === 'length' ? { ...g, a: W - g.b, b: W - g.a } : g)),
       holes: f.holes.map(h => ({ ...h, u: W - h.u })),
       ends: { start: { ...f.ends.start, miter: -f.ends.start.miter }, end: { ...f.ends.end, miter: -f.ends.end.miter } },
       edges: { left: f.edges.right, right: f.edges.left }
@@ -78,8 +78,8 @@ function reflect(f: Features, axis: 'x' | 'y' | 'z', b: Board): Features {
     }
   }
   return {
-    grooves: f.grooves.map(g => ({ ...g, face: g.face === 'top' ? 'bottom' : 'top' })),
-    holes: f.holes,
+    grooves: f.grooves.map(g => (g.face === 'left' || g.face === 'right' ? { ...g, a: b.thickness - g.b, b: b.thickness - g.a } : { ...g, face: g.face === 'top' ? 'bottom' : 'top' })),
+    holes: f.holes.map(h => (h.face ? { ...h, face: h.face === 'top' ? 'bottom' : 'top' } : h)),
     ends: { start: { ...f.ends.start, bevel: -f.ends.start.bevel }, end: { ...f.ends.end, bevel: -f.ends.end.bevel } },
     edges: { left: -f.edges.left, right: -f.edges.right }
   }
@@ -87,7 +87,7 @@ function reflect(f: Features, axis: 'x' | 'y' | 'z', b: Board): Features {
 
 function signature(f: Features): string {
   const grooves = f.grooves.map(g => [g.type, g.along, r6(g.a), r6(g.b), r6(g.depth), g.face].join(':')).sort()
-  const holes = f.holes.map(h => [r6(h.u), r6(h.v), r6(h.d)].join(':')).sort()
+  const holes = f.holes.map(h => [r6(h.u), r6(h.v), r6(h.d), h.depth === undefined ? '' : r6(h.depth), h.face ?? ''].join(':')).sort()
   const z = (n: number) => r6(n) || 0
   return JSON.stringify([grooves, holes, [f.ends.start.miter, f.ends.start.bevel, f.ends.end.miter, f.ends.end.bevel].map(z), [f.edges.left, f.edges.right].map(z)])
 }

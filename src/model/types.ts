@@ -23,7 +23,12 @@ export type Wood = {
 }
 
 /** A drilled hole. u runs along the width, v along the length, from the board's origin corner. */
-export type Hole = { diameter: number; u: number; v: number }
+export type Hole = {
+  diameter: number; u: number; v: number
+  /** A stopped hole this deep, drilled from `face` (top when not given); through when absent. */
+  depth?: number
+  face?: 'top' | 'bottom'
+}
 
 /**
  * An angled end. Degrees from square (0 = square cut), -60..60.
@@ -89,7 +94,18 @@ export type Reference = {
 export type ShopProgressData = { done: string[]; minutes: Record<string, number> }
 
 /** A group of parts (an assembly such as a drawer or a door); groups nest through parentId. */
-export type Group = { id: string; name: string; parentId?: string; link?: string }
+export type Group = { id: string; name: string; parentId?: string; link?: string; motion?: Motion }
+
+/** How a door swings (about a vertical hinge line) or a drawer slides. */
+export type Motion =
+  | { kind: 'swing'; origin: Vec3; maxDeg: number; dir: 1 | -1 }
+  | { kind: 'slide'; dir: Vec3; travel: number }
+
+/** One line of the hardware list: an item (built-in or the project's own) and where it goes. */
+export type HardwareUse = { id: string; itemId: string; qty: number; groupId?: string; boardId?: string; note?: string }
+export type HardwareKind = 'hinge' | 'slide' | 'pull' | 'screw' | 'pin' | 'glass' | 'other'
+/** A hardware item; `price` is per piece (per square foot for glass). */
+export type HardwareItem = { id: string; name: string; kind: HardwareKind; price: number }
 
 export type JointType = 'butt' | 'dado' | 'rabbet' | 'pocketScrew' | 'miter'
 
@@ -98,7 +114,16 @@ export type ButtParams = { fastener: 'glue' | 'screws' | 'nails'; count: number 
  * A dado or rabbet in the host. along 'width' (default): runs across the board, `offset` from the start end.
  * along 'length': runs down the board, `offset` from the left edge.
  */
-export type GrooveParams = { width: number; depth: number; offset: number; face: 'top' | 'bottom'; along?: 'width' | 'length' }
+export type GrooveParams = {
+  width: number; depth: number; offset: number; face: 'top' | 'bottom' | 'left' | 'right'; along?: 'width' | 'length'
+  /** A cut that stands on its own (a door's glass rabbet): the partner is the part it's on the same frame as, not one sitting in it. */
+  standalone?: boolean
+}
+/**
+ * A groove in a board's edge (face 'left' = the x = 0 edge, 'right' = the x = width edge, such as a door stile's
+ * panel groove): it runs the full length; `offset` and `width` are across the thickness, `depth` goes into the edge.
+ */
+export const isEdgeGroove = (p: GrooveParams) => p.face === 'left' || p.face === 'right'
 export type PocketParams = { count: number; spacing: number; screwLength: number }
 export type MiterParams = { angle: number; fastener: 'glue' | 'nails' | 'splines' }
 
@@ -128,7 +153,7 @@ export type TemplateState = { templateId: string; params: Record<string, number 
 
 export type Project = {
   /** 2 adds drawings; version 1 files are upgraded when opened. */
-  formatVersion: 1 | 2 | 3 | 4 | 5 | 6 | 7
+  formatVersion: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8
   name: string
   units: 'in'
   boards: Board[]
@@ -149,6 +174,10 @@ export type Project = {
   references?: Reference[]
   /** Shop Mode progress for this design's generated steps. */
   shopProgress?: ShopProgressData
+  /** Hinges, slides, pulls, screws… used in this design. */
+  hardware?: HardwareUse[]
+  /** This project's own hardware items, and price changes to built-in ones (same id). */
+  hardwareItems?: HardwareItem[]
 }
 
 export const SQUARE: EndCut = { miter: 0, bevel: 0 }

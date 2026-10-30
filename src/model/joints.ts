@@ -24,6 +24,10 @@ function isGroove(j: Joint): j is Joint & { params: GrooveParams } {
 }
 
 function grooveBox(host: Board, p: GrooveParams): { min: Vec3; max: Vec3 } {
+  if (p.face === 'left' || p.face === 'right') {
+    const x0 = p.face === 'left' ? 0 : host.width - p.depth
+    return { min: { x: x0, y: 0, z: p.offset }, max: { x: x0 + p.depth, y: host.length, z: p.offset + p.width } }
+  }
   const z0 = p.face === 'top' ? host.thickness - p.depth : 0
   const z1 = p.face === 'top' ? host.thickness : p.depth
   if ((p.along ?? 'width') === 'width') {
@@ -76,7 +80,9 @@ export function cutGeometry(project: Project): Cut[] {
   }
   for (const b of project.boards) {
     for (const h of b.holes) {
-      cuts.push({ boardId: b.id, kind: 'hole', center: { x: h.u, y: h.v, z: 0 }, diameter: h.diameter, depth: b.thickness })
+      const depth = h.depth !== undefined ? Math.min(h.depth, b.thickness) : b.thickness
+      const z = h.depth !== undefined && (h.face ?? 'top') === 'top' ? b.thickness - depth : 0
+      cuts.push({ boardId: b.id, kind: 'hole', center: { x: h.u, y: h.v, z }, diameter: h.diameter, depth })
     }
     cuts.push(...endAndEdgeCuts(b), ...taperCuts(b), ...profileCuts(b))
   }
@@ -129,6 +135,11 @@ export function validateJoint(project: Project, joint: Joint): string | null {
     const name = joint.type
     if (!(p.width > 0)) return `The ${name} width must be more than 0`
     if (!(p.depth > 0)) return `The ${name} depth must be more than 0`
+    if (p.face === 'left' || p.face === 'right') {
+      if (p.depth > host.width / 2 + EPS) return `The groove is deeper than half of ${host.name}'s width`
+      if (p.offset < -EPS || p.offset + p.width > host.thickness + EPS) return `The groove is wider than ${host.name} is thick`
+      return null
+    }
     if (p.depth > host.thickness / 2 + EPS) return `The ${name} is deeper than half of ${host.name} (${formatInches(host.thickness / 2, { sixtyFourths: true })} max)`
     const extent = (p.along ?? 'width') === 'width' ? host.length : host.width
     if (p.offset < -EPS || p.offset + p.width > extent + EPS) return `The ${name} runs past the end of ${host.name}`
@@ -184,6 +195,10 @@ export function jointNotes(project: Project, boardId: string): string[] {
   for (const j of project.joints) {
     if (isGroove(j) && j.hostBoardId === boardId) {
       const p = j.params
+      if (p.face === 'left' || p.face === 'right') {
+        notes.push(`${formatInches(p.width)} groove × ${formatInches(p.depth)} deep in the edge${Math.abs(p.offset * 2 + p.width - b.thickness) < 1e-6 ? ', centred' : `, ${formatInches(p.offset)} from the face`}`)
+        continue
+      }
       const base = `${formatInches(p.width)} ${j.type} × ${formatInches(p.depth)} deep`
       const along = p.along ?? 'width'
       if (j.type === 'rabbet') {
@@ -206,9 +221,19 @@ export function jointNotes(project: Project, boardId: string): string[] {
       notes.push(p.count > 1 ? `${base}, ${formatInches(p.spacing)} apart` : base)
     }
   }
+  // Many alike stopped holes (shelf pins) are one line; others each get their own.
+  const alike = new Map<string, number>()
+  for (const h of b.holes) if (h.depth !== undefined) { const k = `${h.diameter}:${h.depth}`; alike.set(k, (alike.get(k) ?? 0) + 1) }
+  const counted = new Set<string>()
   for (const h of b.holes) {
+    const deep = h.depth !== undefined ? `, ${formatInches(h.depth)} deep` : ''
+    const k = `${h.diameter}:${h.depth}`
+    if (h.depth !== undefined && (alike.get(k) ?? 0) > 3) {
+      if (!counted.has(k)) { counted.add(k); notes.push(`${alike.get(k)} × ${formatInches(h.diameter)} holes${deep} (shelf pins)`) }
+      continue
+    }
     const where = Math.abs(h.u - b.width / 2) < 1e-6 ? 'centered' : `${formatInches(h.u)} from edge`
-    notes.push(`${formatInches(h.diameter)} hole, ${formatInches(h.v)} from end, ${where}`)
+    notes.push(`${formatInches(h.diameter)} hole${deep}, ${formatInches(h.v)} from end, ${where}`)
   }
   notes.push(...angleNotes(b))
   const withBoth = notes.map(n => {

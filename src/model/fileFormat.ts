@@ -5,7 +5,7 @@ import { AXES3 } from '../formulas/types'
 import type { Project } from './types'
 import { pruneGroups } from '../assemblies/ops'
 
-export const FORMAT_VERSION = 7
+export const FORMAT_VERSION = 8
 
 export class ProjectFileError extends Error {
   constructor(public code: 'corrupt' | 'newerVersion' | 'invalid', message: string) {
@@ -28,7 +28,9 @@ const MIGRATIONS: Record<number, Migration> = {
   // Version 6 adds dimensions and notes on the model (optional).
   5: raw => ({ ...raw, formatVersion: 6 }),
   // Version 7 adds reference pictures and Shop Mode progress (optional).
-  6: raw => ({ ...raw, formatVersion: 7 })
+  6: raw => ({ ...raw, formatVersion: 7 }),
+  // Version 8 adds hardware, stopped holes, edge grooves and door/drawer motion (all optional).
+  7: raw => ({ ...raw, formatVersion: 8 })
 }
 
 export function serialize(p: Project): string {
@@ -94,8 +96,8 @@ function jointParamsOk(type: string, p: Record<string, any>): boolean {
       return oneOf(p.fastener, ['glue', 'screws', 'nails']) && isNum(p.count)
     case 'dado':
     case 'rabbet':
-      return isNum(p.width) && isNum(p.depth) && isNum(p.offset) && oneOf(p.face, ['top', 'bottom']) &&
-        (p.along === undefined || oneOf(p.along, ['width', 'length']))
+      return isNum(p.width) && isNum(p.depth) && isNum(p.offset) && oneOf(p.face, ['top', 'bottom', 'left', 'right']) &&
+        (p.along === undefined || oneOf(p.along, ['width', 'length'])) && (p.standalone === undefined || typeof p.standalone === 'boolean')
     case 'pocketScrew':
       return isNum(p.count) && isNum(p.spacing) && isNum(p.screwLength)
     case 'miter':
@@ -122,7 +124,8 @@ function check(raw: any): Project {
     if (!isVec(b.position) || !isVec(b.rotation)) invalid(`board "${name}" has no valid position`)
     if (!isObj(b.endCuts) || !isEnd(b.endCuts.start) || !isEnd(b.endCuts.end)) invalid(`board "${name}" has damaged end cuts`)
     if (!isObj(b.edgeBevels) || !isNum(b.edgeBevels.left) || !isNum(b.edgeBevels.right)) invalid(`board "${name}" has damaged edge bevels`)
-    if (!Array.isArray(b.holes) || !b.holes.every((h: any) => isObj(h) && isNum(h.diameter) && h.diameter > 0 && isNum(h.u) && isNum(h.v))) {
+    if (!Array.isArray(b.holes) || !b.holes.every((h: any) => isObj(h) && isNum(h.diameter) && h.diameter > 0 && isNum(h.u) && isNum(h.v) &&
+      (h.depth === undefined || (isNum(h.depth) && h.depth > 0)) && (h.face === undefined || oneOf(h.face, ['top', 'bottom'])))) {
       invalid(`board "${name}" has damaged holes`)
     }
     if (b.grain !== 'length' && b.grain !== 'width') invalid(`board "${name}" has an unknown grain direction`)
@@ -225,6 +228,20 @@ function check(raw: any): Project {
       isNum(r.width) && r.width > 0 && isNum(r.height) && r.height > 0 && isVec(r.position) && isNum(r.opacity) && r.opacity >= 0 && r.opacity <= 1
     raw.references = Array.isArray(raw.references) ? raw.references.filter(ok) : []
     if (!raw.references.length) delete raw.references
+  }
+  // A damaged door or drawer motion is dropped (it only drives the Open view).
+  for (const g of raw.groups ?? []) {
+    const m = g.motion
+    if (m === undefined) continue
+    const ok = isObj(m) && (m.kind === 'swing' ? isVec(m.origin) && isNum(m.maxDeg) && (m.dir === 1 || m.dir === -1) : m.kind === 'slide' ? isVec(m.dir) && isNum(m.travel) && m.travel >= 0 : false)
+    if (!ok) delete g.motion
+  }
+  if (raw.hardwareItems !== undefined) {
+    if (!Array.isArray(raw.hardwareItems) || !raw.hardwareItems.every((h: any) => isObj(h) && isStr(h.id) && isStr(h.name) && isStr(h.kind) && isNum(h.price) && h.price >= 0)) invalid('a hardware item is damaged')
+  }
+  if (raw.hardware !== undefined) {
+    if (!Array.isArray(raw.hardware) || !raw.hardware.every((h: any) => isObj(h) && isStr(h.id) && isStr(h.itemId) && isNum(h.qty) && h.qty > 0 &&
+      (h.groupId === undefined || isStr(h.groupId)) && (h.boardId === undefined || isStr(h.boardId)) && (h.note === undefined || isStr(h.note)))) invalid('the hardware list is damaged')
   }
   if (raw.shopProgress !== undefined) {
     const sp = raw.shopProgress
