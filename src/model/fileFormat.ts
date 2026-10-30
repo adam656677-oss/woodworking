@@ -6,7 +6,7 @@ import type { Project } from './types'
 import { pruneGroups } from '../assemblies/ops'
 import { isPackedMesh } from '../exchange/models'
 
-export const FORMAT_VERSION = 9
+export const FORMAT_VERSION = 10
 
 export class ProjectFileError extends Error {
   constructor(public code: 'corrupt' | 'newerVersion' | 'invalid', message: string) {
@@ -33,7 +33,9 @@ const MIGRATIONS: Record<number, Migration> = {
   // Version 8 adds hardware, stopped holes, edge grooves and door/drawer motion (all optional).
   7: raw => ({ ...raw, formatVersion: 8 }),
   // Version 9 adds reference models (optional).
-  8: raw => ({ ...raw, formatVersion: 9 })
+  8: raw => ({ ...raw, formatVersion: 9 }),
+  // Version 10 adds edge banding, cutting settings and lumber prices by length (all optional).
+  9: raw => ({ ...raw, formatVersion: 10 })
 }
 
 export function serialize(p: Project): string {
@@ -246,6 +248,11 @@ function check(raw: any): Project {
     if (!Array.isArray(raw.hardware) || !raw.hardware.every((h: any) => isObj(h) && isStr(h.id) && isStr(h.itemId) && isNum(h.qty) && h.qty > 0 &&
       (h.groupId === undefined || isStr(h.groupId)) && (h.boardId === undefined || isStr(h.boardId)) && (h.note === undefined || isStr(h.note)))) invalid('the hardware list is damaged')
   }
+  for (const b of raw.boards) {
+    const bd = b.banding
+    if (bd !== undefined && !(isObj(bd) && isStr(bd.bandId) && Array.isArray(bd.edges) && bd.edges.every((e: unknown) => oneOf(e, ['left', 'right', 'start', 'end'])))) delete b.banding
+  }
+  if (raw.cutSettings !== undefined && !isObj(raw.cutSettings)) delete raw.cutSettings
   if (raw.models !== undefined) {
     // A damaged reference model is dropped; the design still opens.
     const ok = (m: any) => isObj(m) && isStr(m.id) && isStr(m.name) && isStr(m.format) && isPackedMesh(m.data) && isVec(m.position) && isVec(m.rotation) &&

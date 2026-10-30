@@ -19,6 +19,8 @@ export type Wood = {
   availableLengths?: number[]
   pricePerBoardFoot?: number
   pricePerSheet?: number
+  /** Lumber: price of one board by its length in inches ("96": 7.48). */
+  pricePerPiece?: Record<string, number>
   builtIn: boolean
 }
 
@@ -67,6 +69,26 @@ export type Board = {
   groupId?: string
   /** Shared by the corresponding parts of linked copies. */
   link?: string
+  /** Edge banding on these edges (sheet goods). */
+  banding?: Banding
+}
+
+/** Edge banding: which edges (left/right = along the length, start/end = the ends) and which banding. */
+export type Banding = { edges: ('left' | 'right' | 'start' | 'end')[]; bandId: string }
+
+/** Cutting allowances for one material. */
+export type StockSettings = { kerf: number; edgeTrim: number; endTrim: number; allowance: number }
+/** Layout and buying settings kept with the project. */
+export type CutSettings = {
+  byWood?: Record<string, Partial<StockSettings>>
+  /** Extra hardwood bought for waste, 0..1 (20% when not set). */
+  hardwoodWaste?: number
+  /** Sales tax, percent. */
+  tax?: number
+  /** Place parts on the shop's offcuts and boards first. */
+  useStock?: boolean
+  /** The random-width hardwood boards to plan with. */
+  hardwoodBoard?: { width: number; length: number }
 }
 
 /** A dimension or note kept on the model (world inches). */
@@ -113,7 +135,7 @@ export type RefModel = {
 export type ShopProgressData = { done: string[]; minutes: Record<string, number> }
 
 /** A group of parts (an assembly such as a drawer or a door); groups nest through parentId. */
-export type Group = { id: string; name: string; parentId?: string; link?: string; motion?: Motion }
+export type Group = { id: string; name: string; parentId?: string; link?: string; motion?: Motion; oneSheet?: boolean }
 
 /** How a door swings (about a vertical hinge line) or a drawer slides. */
 export type Motion =
@@ -172,7 +194,7 @@ export type TemplateState = { templateId: string; params: Record<string, number 
 
 export type Project = {
   /** 2 adds drawings; version 1 files are upgraded when opened. */
-  formatVersion: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9
+  formatVersion: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10
   name: string
   units: 'in'
   boards: Board[]
@@ -199,6 +221,8 @@ export type Project = {
   hardwareItems?: HardwareItem[]
   /** Outside 3D models to design around. */
   models?: RefModel[]
+  /** Cutting allowances, waste and tax for layouts and the shopping list. */
+  cutSettings?: CutSettings
 }
 
 export const SQUARE: EndCut = { miter: 0, bevel: 0 }

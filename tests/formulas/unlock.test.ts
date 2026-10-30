@@ -8,7 +8,8 @@ import { applyTemplate, unlock, type ParamValue } from '../../src/templates'
 
 const ok = (r: Project | { error: string }): Project => { if ('error' in r) throw new Error(r.error); return r }
 const live = (id: string, params: Record<string, ParamValue>) => applyTemplate(emptyProject('T'), id, params)
-const rows = (p: Project) => cutList(p).rows
+// Rows without the part ids (different designs have different ids).
+const rows = (p: Project) => cutList(p).rows.map(({ boardIds: _b, ...r }) => r)
 
 function sameBoards(a: Project, b: Project) {
   expect(a.boards.length).toBe(b.boards.length)

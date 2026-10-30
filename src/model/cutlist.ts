@@ -8,6 +8,10 @@ import { edgeNotes, edgeSignature } from '../shaping/edges'
 import type { Board, GrooveParams, Project } from './types'
 import { formatInches } from './units'
 import { boardFeet, findWood } from './woods'
+import { bandingNote, cutSize } from '../optimize/banding'
+
+/** Banding (which edges, which band) makes parts different in the shop. */
+const bandSignature = (b: Board) => (b.banding ? [[...b.banding.edges].sort(), b.banding.bandId] : null)
 
 export type CutListRow = {
   qty: number
@@ -18,6 +22,11 @@ export type CutListRow = {
   woodName: string
   grain: 'length' | 'width'
   notes: string[]
+  /** The parts in this row (in design order). */
+  boardIds: string[]
+  /** Cut size when edge banding takes some off (finished size stays in width/length). */
+  cutWidth?: number
+  cutLength?: number
 }
 
 export type CutListTotals = {
@@ -129,20 +138,26 @@ export function cutList(project: Project): { rows: CutListRow[]; totals: CutList
   const groups = new Map<string, Group>()
   for (const b of project.boards) {
     const f = featuresOf(project, b)
-    const base = JSON.stringify([b.woodId, b.thickness, b.width, b.length, b.grain, fastenersOn(project, b), b.outline ?? null, turningSignature(project, b), taperSignature(b), edgeSignature(b)])
+    const base = JSON.stringify([b.woodId, b.thickness, b.width, b.length, b.grain, fastenersOn(project, b), b.outline ?? null, turningSignature(project, b), taperSignature(b), edgeSignature(b), bandSignature(b)])
     const canon = canonical(f, b)
     const key = JSON.stringify([base, canon])
     const g = groups.get(key)
     if (g) {
       g.qty += 1
+      g.boardIds.push(b.id)
       if (!g.names.includes(b.name)) g.names.push(b.name)
     } else {
       const wood = findWood(project, b.woodId)
       groups.set(key, {
         qty: 1, part: '', thickness: b.thickness, width: b.width, length: b.length,
         woodName: wood?.name ?? 'Unknown wood', grain: b.grain, notes: [...(b.outline ? [SHAPED_NOTE] : []), ...(b.turning ? [TURN_NOTE(b.turning)] : []), ...(b.taper && !b.turning && !taperProblem(b, b.taper) ? [TAPER_NOTE(b, b.taper)] : []), ...edgeNotes(b), ...jointNotes(project, b.id)], woodId: b.woodId, names: [b.name],
-        base, canon, mirror: canonical(reflect(f, 'z', b), b)
+        base, canon, mirror: canonical(reflect(f, 'z', b), b), boardIds: [b.id]
       })
+      const band = bandingNote(b)
+      const g2 = groups.get(key)!
+      if (band) g2.notes = [band, ...g2.notes]
+      const c = cutSize(b)
+      if (c.width !== b.width || c.length !== b.length) { g2.cutWidth = c.width; g2.cutLength = c.length }
     }
   }
   const all = [...groups.values()]
