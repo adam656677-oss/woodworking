@@ -32,6 +32,7 @@ export function GroupPanel({ group }: { group: Group }) {
         {count} parts · {formatInches(box.max.x - box.min.x)} wide × {formatInches(box.max.y - box.min.y)} deep × {formatInches(box.max.z - box.min.z)} high
         {linked > 1 && <><br /><span className="font-semibold text-amber-800">🔗 Linked — {linked} copies stay the same</span></>}
       </p>
+      <label className="flex items-center gap-1 text-xs"><input type="checkbox" checked={!!group.oneSheet} onChange={e => apply(p => ({ ...p, groups: (p.groups ?? []).map(g => (g.id === group.id ? { ...g, oneSheet: e.target.checked || undefined } : g)) }))} />Cut from one sheet (grain matched)</label>
       <div className="grid grid-cols-3 gap-2">
         {(['x', 'y', 'z'] as const).map(a => (
           <InchInput key={a} label={`Group ${a.toUpperCase()}`} allowZero value={box.min[a]} onChange={v => apply(p => moveGroup(p, group.id, a, v))} />

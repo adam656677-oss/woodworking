@@ -16,6 +16,7 @@ import { useState } from 'react'
 import { TurningSection } from '../../shaping/ui/TurningSection'
 import { TaperSection } from '../../shaping/ui/TaperSection'
 import { EdgesSection } from '../../shaping/ui/EdgesSection'
+import { BandingSection } from '../../optimize/ui/BandingSection'
 import { TurningSheet } from '../../shaping/ui/TurningSheet'
 import { TaperSheet } from '../../shaping/ui/TaperSheet'
 
@@ -175,6 +176,7 @@ export function PropertiesPanel() {
       {!kidsMode && <TurningSection key={`t${board.id}`} board={board} onSheet={() => setSheet('turning')} />}
       {!kidsMode && <TaperSection key={`p${board.id}`} board={board} onSheet={() => setSheet('taper')} />}
       <EdgesSection key={`e${board.id}`} board={board} kids={kidsMode} />
+      {!kidsMode && <BandingSection key={`b${board.id}`} board={board} />}
       {sheet === 'turning' && board.turning && <TurningSheet board={board} onClose={() => setSheet(null)} />}
       {sheet === 'taper' && board.taper && <TaperSheet board={board} onClose={() => setSheet(null)} />}
       {!kidsMode && <details open={board.endCuts.start.miter !== 0 || board.endCuts.end.miter !== 0 || undefined}>

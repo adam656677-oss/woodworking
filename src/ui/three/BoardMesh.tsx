@@ -1,5 +1,6 @@
 import type { ThreeEvent } from '@react-three/fiber'
 import { forwardRef, useMemo } from 'react'
+import { bandOf } from '../../optimize/banding'
 import * as THREE from 'three'
 import { Brush, Evaluator, SUBTRACTION } from 'three-bvh-csg'
 import type { Cut, PlaneCut } from '../../model/joints'
@@ -125,9 +126,34 @@ export const BoardMesh = forwardRef<THREE.Group, Props>(function BoardMesh({ boa
           <meshBasicMaterial color="#8d6e63" side={THREE.BackSide} clippingPlanes={clip} />
         </mesh>
       )}
+      {board.banding && !shape && !turned && <BandStrips board={board} clip={clip} />}
       <lineSegments geometry={outline} raycast={() => null}>
         <lineBasicMaterial color={selected ? '#e65100' : '#5d4037'} clippingPlanes={clip ?? []} />
       </lineSegments>
     </group>
   )
 })
+
+/** Edge banding drawn as a thin coloured strip on each banded edge (a little proud so it shows). */
+function BandStrips({ board, clip }: { board: Board; clip?: THREE.Plane[] }) {
+  const band = bandOf(board.banding!.bandId)
+  const t = Math.max(band?.thickness ?? 0.02, 0.03)
+  const W = board.width, L = board.length, T = board.thickness
+  const boxes: [number, number, number, number, number, number][] = []
+  for (const e of board.banding!.edges) {
+    if (e === 'left') boxes.push([0, L / 2, T / 2, t, L, T])
+    if (e === 'right') boxes.push([W, L / 2, T / 2, t, L, T])
+    if (e === 'start') boxes.push([W / 2, 0, T / 2, W, t, T])
+    if (e === 'end') boxes.push([W / 2, L, T / 2, W, t, T])
+  }
+  return (
+    <>
+      {boxes.map((b, i) => (
+        <mesh key={i} position={[b[0], b[1], b[2]]} raycast={() => null}>
+          <boxGeometry args={[b[3], b[4], b[5]]} />
+          <meshStandardMaterial color={band?.colour ?? '#e3c9a0'} roughness={0.6} clippingPlanes={clip ?? []} />
+        </mesh>
+      ))}
+    </>
+  )
+}
