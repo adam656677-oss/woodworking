@@ -183,6 +183,7 @@ export function Toolbar() {
       {!kidsMode && <Btn onClick={() => s.set({ woodsOpen: true })}>Woods</Btn>}
       {!kidsMode && <Btn onClick={() => s.setView({ picturesOpen: true })}>🖼 Pictures</Btn>}
       <Btn className="bg-amber-100 font-semibold" onClick={() => s.set({ cutListOpen: true })}>Cut List</Btn>
+      <Btn onClick={() => s.set({ drawingsOpen: true })}>{kidsMode ? 'Print my plan' : 'Drawings'}</Btn>
       <Btn disabled={boards.length === 0} className="font-semibold" title="Big-text steps for the bench"
         onClick={() => shop.getState().open({ ...designSession(studio.getState().project, pr => studio.getState().setShopProgress(pr)), kid: kidsMode })}>🪚 Shop Mode</Btn>
       {!kidsMode && (

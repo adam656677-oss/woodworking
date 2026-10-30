@@ -40,7 +40,6 @@ export type Template = { name: string; size: string; tiling: Tiling; pages: stri
 
 /** A part's full-size template: a cover page (how to print and check it, and the page map) and its tiles. */
 export function template(p: Project, boardId: string, no: number, lines?: Lines): Template {
-  // (the page map redraws the outline smaller with heavier lines)
   const b = p.boards.find(x => x.id === boardId)!
   const l = lines ?? viewLines(p, FACE, { ids: [boardId], local: true, hidden: false })
   const w = l.max[0] - l.min[0], h = l.max[1] - l.min[1]

@@ -15,3 +15,18 @@ html, body, #root { height: 100%; margin: 0; }
   .label-page { page: labels; margin: 0 !important; }
 }
 @page labels { size: 8.5in 11in; margin: 0; }
+/* Drawing sheets and templates fill the paper exactly; their own margins are drawn in. */
+@page sheet-letter { size: 11in 8.5in; margin: 0; }
+@page sheet-tabloid { size: 17in 11in; margin: 0; }
+@page portrait-letter { size: 8.5in 11in; margin: 0; }
+@page flow { size: 8.5in 11in; margin: 0.5in; }
+@media print {
+  body.printing-drawings > :not(.drawings-print) { display: none !important; }
+  html:has(body.printing-drawings), body.printing-drawings { height: auto !important; overflow: visible !important; }
+  body.printing-drawings .drawings-print, body.printing-drawings .drawings-print * { visibility: visible; }
+  .drawings-print { position: static !important; display: block !important; overflow: visible !important; }
+  .drawings-print .packet-inner { display: block !important; overflow: visible !important; }
+  .drawings-print .no-print { display: none !important; }
+  .drawings-print .drawing-page { box-shadow: none !important; margin: 0 !important; break-after: page; overflow: hidden; }
+  .drawings-print .flow-page { page: flow; overflow: visible; }
+}

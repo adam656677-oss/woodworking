@@ -9,7 +9,7 @@ import { formatInches } from '../model/units'
 import type { Project, Vec3 } from '../model/types'
 import { viewLines, VIEWS, type Lines, type View } from './lines'
 import {
-  balloon, chain, dimension, dimText, drawArea, fitScale, mapper, PAPERS, scaleText, svgPage, table, text, titleBlock, viewSize, viewSvg,
+  balloon, chain, dimension, isEven, dimText, drawArea, fitScale, mapper, PAPERS, scaleText, svgPage, table, text, titleBlock, viewSize, viewSvg,
   type Paper, type ScaleChoice
 } from './sheet'
 
@@ -157,7 +157,7 @@ export function partSheet(c: Ctx, boardId: string, no: number, qty: number): She
   const sheetV = (v: number) => mFace(0, v)[1]
   // Hole positions: along the length above the face, across on its right.
   const holeU = holes.map(h => sheetU(h.center.y)), holeV = holes.map(h => sheetV(-h.center.x))
-  const many = new Set(holeU.map(v => v.toFixed(3))).size > 12 && !evenly(holeU)
+  const many = new Set(holeU.map(v => v.toFixed(3))).size > 12 && !isEven(holeU, s)
   if (holes.length && !many) {
     body += chain(left, holeU, s, (a, z, t, lv) => dimension([a, topY], [z, topY], 0.3 + lv * 0.3, t))
     body += chain(0, holeV.map(v => bottomY - v), s, (a, z, t, lv) => dimension([right, bottomY - a], [right, bottomY - z], -0.3 - lv * 0.3, t))
@@ -202,13 +202,6 @@ export function partSheet(c: Ctx, boardId: string, no: number, qty: number): She
   return sheet(c, `Part P${no} — ${b.name}`, scaleText(s), body)
 }
 
-function evenly(xs: number[]): boolean {
-  const v = [...new Set(xs.map(x => Math.round(x * 1e4) / 1e4))].sort((a, b) => a - b)
-  if (v.length < 3) return false
-  const d = v[1] - v[0]
-  return v.every((x, i) => i === 0 || Math.abs(x - v[i - 1] - d) < 1e-3)
-}
-
 export function wrap(t: string, n: number): string[] {
   const out: string[] = []
   let cur = ''
@@ -240,4 +233,43 @@ export function drawingSheets(p: Project, set: DrawingSet, opts: SheetOpts): She
   const out = jobs.map(j => j(c))
   for (const g of c.solids.values()) g.dispose()
   return out
+}
+
+/** The packet's first page: the picture, overall size and what's in the packet. */
+export function coverSheet(p: Project, opts: SheetOpts, contents: string[], sheetNo: string): Sheet {
+  const A = drawArea(opts.paper)
+  const solids = localSolids(p)
+  const l = viewLines(p, VIEWS.iso, { hidden: false, solids })
+  for (const g of solids.values()) g.dispose()
+  const picW = A.w * 0.6
+  let body = fitted(l, { x: A.x + 0.3, y: A.y + 0.3, w: picW - 0.6, h: A.h - 0.6 }).svg
+  const xs = p.boards.map(worldBox)
+  const size = xs.length ? {
+    w: Math.max(...xs.map(b => b.max.x)) - Math.min(...xs.map(b => b.min.x)),
+    d: Math.max(...xs.map(b => b.max.y)) - Math.min(...xs.map(b => b.min.y)),
+    h: Math.max(...xs.map(b => b.max.z)) - Math.min(...xs.map(b => b.min.z))
+  } : { w: 0, d: 0, h: 0 }
+  const x = A.x + picW + 0.2
+  let y = A.y + 0.5
+  const put = (t: string, size = 0.14, bold = false) => { body += text(x, y, t, { size, bold }); y += size * 1.7 }
+  put(p.name, 0.36, true)
+  put('Plan packet', 0.18)
+  y += 0.1
+  put(`${formatInches(size.w)} wide × ${formatInches(size.d)} deep × ${formatInches(size.h)} high`)
+  const rows = cutList(p).rows
+  put(`${rows.reduce((n, r) => n + r.qty, 0)} parts`)
+  y += 0.2
+  put('In this packet', 0.15, true)
+  for (const c of contents) put(`•  ${c}`, 0.13)
+  return { paper: opts.paper, title: 'Cover', svg: svgPage(PAPERS[opts.paper].w, PAPERS[opts.paper].h, body + titleBlock(opts.paper, { project: p.name, title: 'Plan packet', scale: 'Not to scale', sheet: sheetNo, date: opts.date })) }
+}
+
+/** The design's picture alone, as an SVG sized to fit w × h inches (the kids' packet). */
+export function pictureSvg(p: Project, w: number, h: number): string {
+  if (!p.boards.length) return ''
+  const solids = localSolids(p)
+  const l = viewLines(p, VIEWS.iso, { hidden: false, solids })
+  for (const g of solids.values()) g.dispose()
+  const f = fitted(l, { x: 0.1, y: 0.1, w: w - 0.2, h: h - 0.2 })
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}in" height="${h}in" viewBox="0 0 ${w} ${h}">${f.svg.replace(/stroke-width="[\d.]+"/g, 'stroke-width="0.03"')}</svg>`
 }

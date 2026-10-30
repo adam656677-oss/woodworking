@@ -9,6 +9,7 @@ contextBridge.exposeInMainWorld('aa', {
   deleteAutosave: (path: string | null) => ipcRenderer.invoke('aa:deleteAutosave', path),
   exportCsv: (text: string, suggestedName: string) => ipcRenderer.invoke('aa:exportCsv', text, suggestedName),
   exportShape: (kind: 'dxf' | 'svg', text: string, suggestedName: string) => ipcRenderer.invoke('aa:exportShape', kind, text, suggestedName),
+  savePdf: (name: string) => ipcRenderer.invoke('aa:savePdf', name),
   print: (opts?: { landscape?: boolean; edgeToEdge?: boolean }) => ipcRenderer.invoke('aa:print', opts),
   keepAwake: (on: boolean) => ipcRenderer.invoke('aa:keepAwake', on),
   exportFile: (ext: string, data: Uint8Array | string, suggestedName: string, mtl?: string) => ipcRenderer.invoke('aa:exportFile', ext, data, suggestedName, mtl),

@@ -162,6 +162,19 @@ export function table(x: number, y: number, widths: number[], head: string[], ro
   return { svg: s, h: rh * all.length }
 }
 
+/** Three or more positions (sheet inches at 1:scale) evenly spaced, allowing the 1/64" the design snaps to. */
+export function isEven(xs: number[], scale: number): boolean {
+  const v = [...new Set(xs.map(x => Math.round(x * 1e4) / 1e4))].sort((a, b) => a - b)
+  if (v.length < 3) return false
+  const d = (v[v.length - 1] - v[0]) / (v.length - 1)
+  return d > 1e-6 && v.every((x, i) => Math.abs(x - (v[0] + i * d)) * scale <= 1 / 64 + 1e-3)
+}
+/** A spacing in inches, or in millimetres when it's on the 32 mm system (shelf-pin holes). */
+export function spacingText(d: number): string {
+  const mm = d * 25.4
+  return mm >= 31 && Math.abs(mm - 32 * Math.round(mm / 32)) < 0.3 && Math.abs(d * 32 - Math.round(d * 32)) > 0.15 ? `${Math.round(mm)} mm` : dimText(d)
+}
+
 /**
  * Dimensions for a row of positions along one direction (sheet inches), measured from `start`:
  * three or more equally spaced positions get one dimension to the first and an "N × spacing (eq. sp.)" note;
@@ -170,11 +183,10 @@ export function table(x: number, y: number, widths: number[], head: string[], ro
 export function chain(start: number, at: number[], scale: number, place: (a: number, b: number, label: string, level: number) => string): string {
   const xs = [...new Set(at.map(v => Math.round(v * 1e4) / 1e4))].sort((a, b) => a - b)
   if (!xs.length) return ''
-  const steps = xs.slice(1).map((v, i) => v - xs[i])
-  const even = xs.length >= 3 && steps.every(d => Math.abs(d - steps[0]) < 1e-3 / scale + 1e-4)
-  if (even) {
+  if (isEven(xs, scale)) {
+    const n = xs.length - 1, span = (xs[n] - xs[0]) * scale
     return place(start, xs[0], dimText((xs[0] - start) * scale), 0) +
-      place(xs[0], xs[xs.length - 1], `${steps.length} × ${dimText(steps[0] * scale)} = ${dimText((xs[xs.length - 1] - xs[0]) * scale)} (eq. sp.)`, 1)
+      place(xs[0], xs[n], `${n} × ${spacingText(span / n)} = ${dimText(span)} (eq. sp.)`, 1)
   }
   let s = ''
   let prev = start

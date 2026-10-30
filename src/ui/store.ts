@@ -34,6 +34,8 @@ export type StudioState = {
   view: View
   measuring: boolean
   cutListOpen: boolean
+  /** The drawings and printing dialog. */
+  drawingsOpen: boolean
   woodsOpen: boolean
   canUndo: boolean
   canRedo: boolean
@@ -97,7 +99,7 @@ export type StudioState = {
   updateUserWood(id: string, patch: Partial<Wood>): Promise<void>
   removeUserWood(id: string): Promise<void>
   setError(msg: string | null): void
-  set(patch: Partial<Pick<StudioState, 'view' | 'measuring' | 'cutListOpen' | 'woodsOpen'>>): void
+  set(patch: Partial<Pick<StudioState, 'view' | 'measuring' | 'cutListOpen' | 'drawingsOpen' | 'woodsOpen'>>): void
   /** Hide or show parts in the 3D view. */
   setHidden(ids: string[], hidden: boolean): void
   isolate(ids: string[] | null): void
@@ -196,6 +198,7 @@ export function createStudioStore() {
       view: '3d',
       measuring: false,
       cutListOpen: false,
+      drawingsOpen: false,
       woodsOpen: false,
       canUndo: false,
       canRedo: false,

@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useMemo } from 'react'
 import { deleteBoards } from '../../model/ops'
 import { studio, useStudio } from '../store'
+import { DrawingsDialog } from '../../drawings/ui/DrawingsDialog'
 import { CutListView } from './CutListView'
 import { JointPanel } from './JointPanel'
 import { PartsList } from './PartsList'
@@ -32,6 +33,7 @@ export function Designer() {
   const error = useStudio(s => s.error)
   const recovery = useStudio(s => s.recovery)
   const cutListOpen = useStudio(s => s.cutListOpen)
+  const drawingsOpen = useStudio(s => s.drawingsOpen)
   const woodsOpen = useStudio(s => s.woodsOpen)
   const kidsMode = useStudio(s => s.kidsMode)
   const project = useStudio(s => s.project)
@@ -117,6 +119,7 @@ export function Designer() {
         </aside>
       </div>
       {cutListOpen && <CutListView />}
+      {drawingsOpen && <DrawingsDialog />}
       {woodsOpen && <WoodLibraryDialog />}
       {!kidsMode && <CabinetDialog />}
       {!kidsMode && <ExchangeDialog />}

@@ -176,6 +176,17 @@ function register(): void {
     // Label sheets: no printer margins, so the labels land where the sheet's die cuts are.
     await new Promise<void>(resolve => win!.webContents.print({ landscape, ...(opts?.edgeToEdge ? { margins: { marginType: 'none' as const } } : {}) }, () => resolve()))
   })
+  ipcMain.handle('aa:savePdf', async (_e, suggestedName: string) => {
+    const r = await dialog.showSaveDialog(win!, {
+      defaultPath: join(defaultFolder(docsDir()), `${String(suggestedName).replace(/[\\/:*?"<>|]/g, '-')}.pdf`),
+      filters: [{ name: 'PDF', extensions: ['pdf'] }]
+    })
+    if (r.canceled || !r.filePath) return null
+    // Each page's own size and orientation come from the page's CSS (@page rules).
+    const pdf = await win!.webContents.printToPDF({ preferCSSPageSize: true, printBackground: true })
+    await writeFile(r.filePath, pdf)
+    return r.filePath
+  })
   ipcMain.handle('aa:loadUserWoods', async () => {
     try {
       return JSON.parse(await readFile(join(app.getPath('userData'), 'woods.json'), 'utf8'))
