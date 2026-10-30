@@ -5,6 +5,7 @@ import { formatInches } from '../../model/units'
 import { studio, useStudio } from '../../ui/store'
 import { dimensionLength, editAnnotation, removeAnnotation } from '../annotations'
 import { interferences, weigh, type Interference } from '../solids'
+import { clashText, clearance, type Clash } from '../../cabinet/motion'
 
 const nameOf = (id: string) => studio.getState().project.boards.find(b => b.id === id)?.name ?? '?'
 const lb = (v: number) => `${v < 10 ? v.toFixed(1) : Math.round(v)} lb`
@@ -13,7 +14,7 @@ export function ChecksPanel() {
   const open = useStudio(s => s.checksOpen)
   if (!open) return null
   const close = () => studio.getState().setView({ checksOpen: null })
-  const title = open === 'interference' ? 'Interference' : open === 'weight' ? 'Weight & balance' : 'Dimensions & notes'
+  const title = open === 'interference' ? 'Interference' : open === 'weight' ? 'Weight & balance' : open === 'clearance' ? 'Door & drawer clearance' : 'Dimensions & notes'
   return (
     <section aria-label={title} className="mb-3 flex flex-col gap-2 rounded border border-sky-300 bg-sky-50 p-2 text-sm">
       <div className="flex items-center justify-between">
@@ -23,6 +24,7 @@ export function ChecksPanel() {
       {open === 'interference' && <InterferenceCheck />}
       {open === 'weight' && <WeightCheck />}
       {open === 'notes' && <NotesList />}
+      {open === 'clearance' && <ClearanceCheck />}
     </section>
   )
 }
@@ -124,5 +126,37 @@ function AnnotationText({ a }: { a: Annotation }) {
       onBlur={() => { setTyping(false); if (text !== cur) studio.getState().apply(p => editAnnotation(p, a.id, text)) }}
       onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
       className="min-w-0 flex-1 rounded border border-transparent px-1 hover:border-stone-300" />
+  )
+}
+
+/** Swings every door and opens every drawer in ten steps, looking for anything in the way. */
+function ClearanceCheck() {
+  const project = useStudio(s => s.project)
+  const [result, setResult] = useState<{ for: typeof project; hits: Clash[] } | null>(null)
+  const [busy, setBusy] = useState(false)
+  const movers = (project.groups ?? []).filter(g => g.motion).length
+  const fresh = result && result.for === project ? result.hits : null
+  const run = () => {
+    setBusy(true)
+    setTimeout(() => { const p = studio.getState().project; setResult({ for: p, hits: clearance(p) }); setBusy(false) }, 0)
+  }
+  if (!movers) return <p className="text-xs text-stone-600">Add a door or drawer (Cabinet ▾) to check that it opens clear.</p>
+  return (
+    <>
+      <p className="text-xs text-stone-600">Opens each of the {movers} door{movers === 1 ? '' : 's'} and drawer{movers === 1 ? '' : 's'} in ten steps and looks for anything in the way.</p>
+      <button onClick={run} disabled={busy} className="self-start rounded bg-sky-700 px-3 py-1 text-xs font-semibold text-white disabled:opacity-50">{busy ? 'Checking…' : 'Check clearance'}</button>
+      {result && !fresh && <p className="text-xs text-stone-500">The design has changed — check again.</p>}
+      {fresh && fresh.length === 0 && <p role="status" className="text-xs font-semibold text-green-800">✓ Every door and drawer opens clear.</p>}
+      {fresh && fresh.length > 0 && (
+        <ul aria-label="Clearance problems" className="flex flex-col gap-1">
+          {fresh.map(c => (
+            <li key={`${c.groupId}-${c.otherId}`}>
+              <button onClick={() => { studio.getState().setView({ openAmount: c.percent / 100 }); studio.getState().select([c.otherId]) }}
+                className="w-full rounded bg-red-50 px-2 py-1 text-left text-xs text-red-800 hover:bg-red-100">{clashText(project, c)}</button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </>
   )
 }

@@ -97,6 +97,15 @@ export function Toolbar() {
       <Btn onClick={() => void s.saveAs()}>Save As</Btn>
       <span className="mx-1 h-5 w-px bg-stone-300" />
       <Btn onClick={add}>Add board</Btn>
+      {!kidsMode && <Menu label="Cabinet">
+        {close => (
+          <>
+            {([['door', 'Door…'], ['drawer', 'Drawer…'], ['frame', 'Face frame…'], ['pins', 'Shelf pins…']] as const).map(([k, l]) => (
+              <button key={k} role="menuitem" className={item} disabled={k === 'pins' && (selection.length < 1 || selection.length > 2)} onClick={() => { s.setView({ cabinet: k }); close() }}>{l}</button>
+            ))}
+          </>
+        )}
+      </Menu>}
       <Btn disabled={!sel} onClick={() => { let ids: string[] = []; s.apply(p => { const r = duplicateSelection(p, selection, !kidsMode); ids = r.ids; return r.project }); s.select(ids) }}>Duplicate</Btn>
       {!kidsMode && <Menu label="Mirror">
         {close => (['x', 'y', 'z'] as const).map(ax => (
@@ -158,7 +167,7 @@ export function Toolbar() {
       <Btn onClick={() => window.dispatchEvent(new Event('aa:zoom-fit'))}>Fit</Btn>
       <span className="mx-1 h-5 w-px bg-stone-300" />
       {!kidsMode && <Menu label="Checks">
-        {close => ([['interference', 'Interference'], ['weight', 'Weight & balance'], ['notes', 'Dimensions & notes']] as const).map(([k, l]) => (
+        {close => ([['interference', 'Interference'], ['weight', 'Weight & balance'], ['clearance', 'Door & drawer clearance'], ['notes', 'Dimensions & notes']] as const).map(([k, l]) => (
           <button key={k} role="menuitem" className={item} onClick={() => { s.setView({ checksOpen: k }); close() }}>{l}</button>
         ))}
       </Menu>}

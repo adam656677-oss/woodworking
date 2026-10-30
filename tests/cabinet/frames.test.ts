@@ -76,3 +76,26 @@ test('deleting a door takes its hardware with it', () => {
   expect(gone.hardware).toBeUndefined()
   void addBoard
 })
+
+test('the opening between two cabinet sides, and inside a frame', async () => {
+  const { openingFrom } = await import('../../src/cabinet/build')
+  const { applyTemplate } = await import('../../src/templates')
+  const shelf = applyTemplate(emptyProject('T'), 'bookshelf', { shelves: 0, back: false })
+  const sides = shelf.boards.filter(b => b.name === 'Side').map(b => b.id)
+  const o = ok(openingFrom(shelf, sides))
+  expect([o.x, o.width, o.y, o.depth]).toEqual([0.71875, 30 - 2 * 0.71875, 0, 10])
+  const f = ok(addFaceFrame(emptyProject('T'), { x: 0, y: 0, z: 0, width: 20, height: 30 }, FRAME_DEFAULTS)).project
+  const inner = ok(openingFrom(f, f.boards.map(b => b.id)))
+  expect([inner.x, inner.z, inner.width, inner.height]).toEqual([1.5, 1.5, 17, 27])
+  expect(openingFrom(f, [f.boards[0].id])).toEqual({ error: 'Select the two sides (or the four parts) around the opening' })
+})
+
+test('copying a door copies its hardware and moves its hinge line with it', async () => {
+  const { copyGroup } = await import('../../src/assemblies/ops')
+  const p = ok(addDoors(emptyProject('T'), { x: 0, y: 0, z: 0, width: 15, height: 30 }, { ...DOOR_DEFAULTS, style: 'slab', panelWood: 'ply-3-4' })).project
+  const c = ok(copyGroup(p, p.groups![0].id, false))
+  const copy = c.project.groups!.find(g => g.id === c.id)!
+  expect(hardwareList(c.project).rows.find(r => r.itemId === 'hinge-full')!.qty).toBe(4)
+  const shift = worldBox(c.project.boards[1]).min.x - worldBox(c.project.boards[0]).min.x
+  expect(copy.motion!.kind === 'swing' && copy.motion!.origin.x).toBe(-0.5 + shift)
+})

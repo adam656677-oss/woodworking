@@ -11,6 +11,7 @@ import { MoveGizmo } from './MoveGizmo'
 import { ViewControls } from './ViewControls'
 import { designBox, explodeOffsets } from '../../checks/explode'
 import { pickOnModel } from '../../checks/pick'
+import { moverOf, swingDeg } from '../../cabinet/motion'
 import { addDimension } from '../../checks/annotations'
 import { Annotations3D } from '../../checks/ui/Annotations3D'
 import { References3D } from '../../shop/ui/References3D'
@@ -26,6 +27,7 @@ export default function Scene() {
   const explode = useStudio(s => s.explode)
   const section = useStudio(s => s.section)
   const kidsMode = useStudio(s => s.kidsMode)
+  const openAmount = useStudio(s => s.openAmount)
   const offsets = useMemo(() => explodeOffsets(project, explode), [project, explode])
   const clip = useMemo(() => {
     const box = section ? designBox(project.boards) : null
@@ -68,8 +70,8 @@ export default function Scene() {
   }, [measuring])
   useEffect(() => {
     // No move arrows on a hidden part.
-    setSelectedGroup(explode === 0 && selection.length === 1 && shown.some(b => b.id === selection[0]) ? groups.current.get(selection[0]) ?? null : null)
-  }, [selection, project, shown, explode])
+    setSelectedGroup(explode === 0 && openAmount === 0 && selection.length === 1 && shown.some(b => b.id === selection[0]) ? groups.current.get(selection[0]) ?? null : null)
+  }, [selection, project, shown, explode, openAmount])
 
   const onSelect = (id: string) => (e: ThreeEvent<MouseEvent>) => {
     // Picking scale points on a picture: the click goes through the parts to the picture.
@@ -111,25 +113,40 @@ export default function Scene() {
       <directionalLight position={[-40, -60, 90]} intensity={1.6} />
       <directionalLight position={[50, 40, 30]} intensity={0.5} />
       <gridHelper args={[gridSize, gridSize, '#c8bba8', '#e3dacd']} rotation={[Math.PI / 2, 0, 0]} position={[gridSize / 2 - 12, gridSize / 2 - 12, -0.01]} />
-      {shown.map(b => (
-        <BoardMesh
-          key={b.id}
-          ref={g => {
-            if (g) groups.current.set(b.id, g)
-            else groups.current.delete(b.id)
-          }}
-          board={b}
-          cuts={cutsByBoard.get(b.id) ?? []}
-          kind={kindOf(b.woodId)}
-          shape={forms.get(b.id)?.shape}
-          turned={forms.get(b.id)?.turned}
-          selected={selection.includes(b.id)}
-          warned={warned.has(b.id)}
-          onSelect={onSelect(b.id)}
-          offset={offsets.get(b.id)}
-          clip={clip}
-        />
-      ))}
+      {shown.map(b => {
+        // Doors swing about their hinge line and drawers slide out when "Open doors & drawers" is up.
+        const mover = openAmount > 0 ? moverOf(project, b) : undefined
+        const m = mover?.motion
+        const ex = offsets.get(b.id)
+        const slide = m?.kind === 'slide' ? { x: m.dir.x * m.travel * openAmount, y: m.dir.y * m.travel * openAmount, z: m.dir.z * m.travel * openAmount } : null
+        const offset = slide ? { x: (ex?.x ?? 0) + slide.x, y: (ex?.y ?? 0) + slide.y, z: (ex?.z ?? 0) + slide.z } : ex
+        const mesh = (
+          <BoardMesh
+            key={b.id}
+            ref={g => {
+              if (g) groups.current.set(b.id, g)
+              else groups.current.delete(b.id)
+            }}
+            board={b}
+            cuts={cutsByBoard.get(b.id) ?? []}
+            kind={kindOf(b.woodId)}
+            shape={forms.get(b.id)?.shape}
+            turned={forms.get(b.id)?.turned}
+            selected={selection.includes(b.id)}
+            warned={warned.has(b.id)}
+            onSelect={onSelect(b.id)}
+            offset={offset}
+            clip={clip}
+          />
+        )
+        if (m?.kind !== 'swing') return mesh
+        const o = m.origin
+        return (
+          <group key={b.id} position={[o.x, o.y, o.z]} rotation={[0, 0, (swingDeg(m, openAmount) * Math.PI) / 180]}>
+            <group position={[-o.x, -o.y, -o.z]}>{mesh}</group>
+          </group>
+        )
+      })}
       {selectedGroup && !measuring && <MoveGizmo key={selection[0]} object={selectedGroup} boardId={selection[0]} />}
       <MeasureTool points={points} onKeep={kidsMode || points.length < 2 ? undefined : () => {
         const [a, b] = points

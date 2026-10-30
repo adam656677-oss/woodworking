@@ -224,8 +224,12 @@ export function copyGroup(p: Project, gid: string, linked: boolean): { project: 
     if (x.id === gid) { if (link) c.link = link; else delete c.link }
     return c
   })
-  const groups = [...groupsOf(p).map(x => (x.id === gid && link ? { ...x, link } : x)), ...newGroups]
-  return { project: { ...p, boards, joints: [...p.joints, ...joints], groups }, id: gmap.get(gid)! }
+  // The copy gets its own hinges, slides and pulls; a door's motion moves with it.
+  const hw = (p.hardware ?? []).filter(h => (h.groupId && gmap.has(h.groupId)) || (h.boardId && bmap.has(h.boardId)))
+    .map(h => ({ ...h, id: newId('p'), ...(h.groupId && gmap.has(h.groupId) ? { groupId: gmap.get(h.groupId) } : {}), ...(h.boardId && bmap.has(h.boardId) ? { boardId: bmap.get(h.boardId) } : {}) }))
+  const moved = newGroups.map(x => (x.motion ? { ...x, motion: x.motion.kind === 'swing' ? { ...x.motion, origin: { ...x.motion.origin, x: snap64(x.motion.origin.x + shift) } } : x.motion } : x))
+  const allGroups = [...groupsOf(p).map(x => (x.id === gid && link ? { ...x, link } : x)), ...moved]
+  return { project: { ...p, boards, joints: [...p.joints, ...joints], groups: allGroups, ...(hw.length ? { hardware: [...(p.hardware ?? []), ...hw] } : {}) }, id: gmap.get(gid)! }
 }
 
 /** Makes a linked copy independent (its parts keep their current sizes). */

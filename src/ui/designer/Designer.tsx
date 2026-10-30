@@ -10,6 +10,7 @@ import { TemplatePanel } from './TemplatePanel'
 import { Toolbar } from './Toolbar'
 import { WarningsList } from './WarningsList'
 import { WoodLibraryDialog } from './WoodLibraryDialog'
+import { CabinetDialog } from '../../cabinet/ui/CabinetDialog'
 import { SceneBoundary } from '../three/SceneBoundary'
 import { duplicateSelection, wholeGroup } from '../../assemblies/ops'
 import { GroupPanel } from '../../assemblies/ui/GroupPanel'
@@ -116,6 +117,7 @@ export function Designer() {
       </div>
       {cutListOpen && <CutListView />}
       {woodsOpen && <WoodLibraryDialog />}
+      {!kidsMode && <CabinetDialog />}
     </div>
   )
 }

@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { cutList, cutListCsv } from '../../model/cutlist'
 import { formatInches } from '../../model/units'
 import { studio, useStudio } from '../store'
+import { HardwareList } from '../../cabinet/ui/HardwareList'
 
 const bf = (n: number) => `${Number(n.toFixed(2))} bd ft`
 
@@ -61,6 +62,7 @@ export function CutListView() {
           {Object.entries(totals.sheetsByWood).map(([w, n]) => <span key={w}><strong>{w}:</strong> {n} sheet{n === 1 ? '' : 's'} (estimate)</span>)}
           {totals.cost !== undefined && <span><strong>Estimated cost:</strong> ${totals.cost.toFixed(2)}</span>}
         </section>
+        <HardwareList />
       </div>
     </div>
   )

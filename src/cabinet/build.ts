@@ -81,3 +81,27 @@ export function edgeRabbet(host: Board, partner: Board, edge: 'left' | 'right', 
 
 export const joint = (type: 'butt' | 'pocketScrew', host: Board, partner: Board, params: Joint['params']): Joint =>
   ({ id: newId('j'), type, hostBoardId: host.id, partnerBoardId: partner.id, params })
+
+/**
+ * The clear space framed by the selected parts: between two cabinet sides, or inside the four parts of a frame.
+ * Across and up, it runs from the parts on the low side to those on the high side (or over where they all
+ * overlap); front to back it's the parts' full depth, from their front.
+ */
+export function openingFrom(p: Project, ids: string[]): Opening | { error: string } {
+  const boxes = p.boards.filter(b => ids.includes(b.id)).map(worldBox)
+  if (boxes.length < 2) return { error: 'Select the two sides (or the four parts) around the opening' }
+  const all = {
+    min: { x: Math.min(...boxes.map(b => b.min.x)), y: Math.min(...boxes.map(b => b.min.y)), z: Math.min(...boxes.map(b => b.min.z)) },
+    max: { x: Math.max(...boxes.map(b => b.max.x)), y: Math.max(...boxes.map(b => b.max.y)), z: Math.max(...boxes.map(b => b.max.z)) }
+  }
+  const span = (a: 'x' | 'z'): [number, number] | null => {
+    const c = (all.min[a] + all.max[a]) / 2
+    const low = boxes.filter(b => b.max[a] <= c + 1e-9), high = boxes.filter(b => b.min[a] >= c - 1e-9)
+    if (low.length && high.length) return [Math.max(...low.map(b => b.max[a])), Math.min(...high.map(b => b.min[a]))]
+    const lo = Math.max(...boxes.map(b => b.min[a])), hi = Math.min(...boxes.map(b => b.max[a]))
+    return hi > lo ? [lo, hi] : null
+  }
+  const x = span('x'), z = span('z')
+  if (!x || !z || x[1] - x[0] <= 0 || z[1] - z[0] <= 0) return { error: "Those parts don't frame an opening" }
+  return { x: snap64(x[0]), y: snap64(all.min.y), z: snap64(z[0]), width: snap64(x[1] - x[0]), height: snap64(z[1] - z[0]), depth: snap64(all.max.y - all.min.y) }
+}

@@ -9,12 +9,20 @@ export function ViewTools() {
   const showDims = useStudio(s => s.showDims)
   const overall = useStudio(s => s.overallSize)
   const set = studio.getState().setView
+  const openable = useStudio(s => (s.project.groups ?? []).some(g => g.motion))
+  const open = useStudio(s => s.openAmount)
   return (
     <div role="toolbar" aria-label="View tools" className="absolute left-2 top-2 z-10 flex flex-wrap items-center gap-3 rounded border border-stone-300 bg-white/90 px-2 py-1 text-xs shadow">
       <label className="flex items-center gap-1">Explode
         <input type="range" aria-label="Explode" min={0} max={100} value={Math.round(explode * 100)} onChange={e => set({ explode: Number(e.target.value) / 100 })} className="w-24" />
         <span className="w-8 text-right">{Math.round(explode * 100)}%</span>
       </label>
+      {openable && (
+        <label className="flex items-center gap-1">Open doors &amp; drawers
+          <input type="range" aria-label="Open doors and drawers" min={0} max={100} value={Math.round(open * 100)} onChange={e => set({ openAmount: Number(e.target.value) / 100 })} className="w-24" />
+          <span className="w-8 text-right">{Math.round(open * 100)}%</span>
+        </label>
+      )}
       <label className="flex items-center gap-1">Section
         <select aria-label="Section" value={section?.axis ?? 'off'} onChange={e => set({ section: e.target.value === 'off' ? null : { axis: e.target.value as 'x' | 'y' | 'z', at: section?.at ?? 0.5, flip: section?.flip ?? false } })} className="rounded border border-stone-300">
           <option value="off">Off</option>
