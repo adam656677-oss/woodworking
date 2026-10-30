@@ -49,7 +49,8 @@ function clipped(world: THREE.BufferGeometry, c: Clip): THREE.BufferGeometry | n
 }
 
 export type Seg = { a: [number, number]; b: [number, number]; hidden: boolean; boardId: string }
-export type Lines = { segs: Seg[]; min: [number, number]; max: [number, number] }
+/** `cut` holds the triangles of the faces a section cuts through (to shade them). */
+export type Lines = { segs: Seg[]; min: [number, number]; max: [number, number]; cut?: [number, number][][] }
 
 const dot = (p: THREE.Vector3, d: Vec3) => p.x * d.x + p.y * d.y + p.z * d.z
 
@@ -63,6 +64,7 @@ export function viewLines(p: Project, view: View, opts: { ids?: string[]; offset
   const solids = opts.solids ?? localSolids(p)
   const meshes: THREE.Mesh[] = []
   const edges: { id: string; pos: Float32Array }[] = []
+  const cutTris: THREE.Vector3[][] = []
   for (const b of boards) {
     const g = solids.get(b.id)!
     // A part sheet draws the part in its own coordinates (x across, y along, z through).
@@ -75,14 +77,21 @@ export function viewLines(p: Project, view: View, opts: { ids?: string[]; offset
       world.dispose()
       if (!cut) continue
       world = cut
+      // The cut faces: triangles lying on the section plane.
+      const clip = opts.clip
+      const pos = world.getAttribute('position'), idx = world.getIndex()
+      const n = idx ? idx.count : pos.count
+      const at = (i: number) => new THREE.Vector3().fromBufferAttribute(pos, idx ? idx.getX(i) : i)
+      for (let i = 0; i + 2 < n; i += 3) {
+        const tri = [at(i), at(i + 1), at(i + 2)]
+        if (tri.every(q => Math.abs(q[clip.axis] - clip.at) < 1e-4)) cutTris.push(tri)
+      }
     }
     world.computeBoundsTree()
     const mesh = new THREE.Mesh(world, new THREE.MeshBasicMaterial({ side: THREE.DoubleSide }))
     mesh.updateMatrixWorld()
     meshes.push(mesh)
-    const e = new THREE.EdgesGeometry(world, opts.angle ?? 20)
-    edges.push({ id: b.id, pos: e.getAttribute('position').array as Float32Array })
-    e.dispose()
+    edges.push({ id: b.id, pos: featureEdges(world, opts.angle ?? 20) })
   }
   const dir = new THREE.Vector3(view.toViewer.x, view.toViewer.y, view.toViewer.z).normalize()
   const ray = new THREE.Raycaster()
@@ -122,7 +131,7 @@ export function viewLines(p: Project, view: View, opts: { ids?: string[]; offset
   let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity
   for (const s of kept) for (const q of [s.a, s.b]) { x0 = Math.min(x0, q[0]); y0 = Math.min(y0, q[1]); x1 = Math.max(x1, q[0]); y1 = Math.max(y1, q[1]) }
   if (!kept.length) { x0 = y0 = x1 = y1 = 0 }
-  return { segs: mergeSegs(kept), min: [x0, y0], max: [x1, y1] }
+  return { segs: mergeSegs(kept), min: [x0, y0], max: [x1, y1], ...(opts.clip ? { cut: cutTris.map(t => t.map(P)) } : {}) }
 }
 
 /** Joins collinear pieces end to end and drops duplicates (two faces share an edge). */
@@ -140,4 +149,56 @@ function mergeSegs(segs: Seg[]): Seg[] {
     out.push(s)
   }
   return out
+}
+
+/**
+ * The edges worth drawing: where faces meet at more than `angle` degrees, and open edges — except open edges that
+ * are only a seam in a flat face (cut-up meshes have T-junctions, where one face's edge runs along another's side).
+ * The geometry must have its bounds tree built.
+ */
+function featureEdges(g: THREE.BufferGeometry, angle: number): Float32Array {
+  const pos = g.getAttribute('position'), idx = g.getIndex()
+  const n = idx ? idx.count : pos.count
+  const vi = (i: number) => (idx ? idx.getX(i) : i)
+  const P = (i: number) => new THREE.Vector3().fromBufferAttribute(pos, vi(i))
+  const key = (v: THREE.Vector3) => `${Math.round(v.x * 1e4)},${Math.round(v.y * 1e4)},${Math.round(v.z * 1e4)}`
+  const normals: THREE.Vector3[] = []
+  const edges = new Map<string, { a: THREE.Vector3; b: THREE.Vector3; tris: number[]; third: THREE.Vector3 }>()
+  for (let t = 0; t * 3 + 2 < n; t++) {
+    const v = [P(t * 3), P(t * 3 + 1), P(t * 3 + 2)]
+    const nrm = v[1].clone().sub(v[0]).cross(v[2].clone().sub(v[0]))
+    const len = nrm.length()
+    normals.push(len > 1e-12 ? nrm.divideScalar(len) : nrm)
+    if (len < 1e-9) continue
+    for (let k = 0; k < 3; k++) {
+      const a = v[k], b = v[(k + 1) % 3]
+      const ka = key(a), kb = key(b)
+      if (ka === kb) continue
+      const kk = ka < kb ? `${ka}|${kb}` : `${kb}|${ka}`
+      const e = edges.get(kk)
+      if (e) e.tris.push(t)
+      else edges.set(kk, { a, b, tris: [t], third: v[(k + 2) % 3] })
+    }
+  }
+  const cos = Math.cos((angle * Math.PI) / 180)
+  const bvh = (g as any).boundsTree
+  const out: number[] = []
+  const hit = { point: new THREE.Vector3(), distance: 0, faceIndex: 0 }
+  for (const e of edges.values()) {
+    let keep: boolean
+    if (e.tris.length === 2) keep = normals[e.tris[0]].dot(normals[e.tris[1]]) < cos
+    else if (e.tris.length === 1 && bvh) {
+      // Just past the edge, away from its own triangle: is there more of the same flat face?
+      const nrm = normals[e.tris[0]]
+      const dir = e.b.clone().sub(e.a)
+      const mid = e.a.clone().add(e.b).multiplyScalar(0.5)
+      const away = nrm.clone().cross(dir).normalize()
+      if (away.dot(e.third.clone().sub(mid)) > 0) away.negate()
+      const q = mid.addScaledVector(away, 2e-3)
+      const r = bvh.closestPointToPoint(q, hit)
+      keep = !(r && r.distance < 1e-4 && Math.abs(normals[r.faceIndex]?.dot(nrm) ?? 0) > 0.9999)
+    } else keep = true
+    if (keep) out.push(e.a.x, e.a.y, e.a.z, e.b.x, e.b.y, e.b.z)
+  }
+  return new Float32Array(out)
 }
