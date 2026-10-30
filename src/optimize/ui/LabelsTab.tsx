@@ -6,8 +6,8 @@ import { labelPositions, labelsFor, LABEL_SHEETS, qrModules, type Label, type La
 function Qr({ text, size }: { text: string; size: number }) {
   const { size: n, dark } = useMemo(() => qrModules(text), [text])
   return (
-    <svg width={`${size}in`} height={`${size}in`} viewBox={`-2 -2 ${n + 4} ${n + 4}`} aria-label="QR code" shapeRendering="crispEdges">
-      <rect x={-2} y={-2} width={n + 4} height={n + 4} fill="#fff" />
+    <svg width={`${size}in`} height={`${size}in`} viewBox={`-4 -4 ${n + 8} ${n + 8}`} aria-label="QR code" shapeRendering="crispEdges">
+      <rect x={-4} y={-4} width={n + 8} height={n + 8} fill="#fff" />
       <path d={dark.map(([x, y]) => `M${x} ${y}h1v1h-1z`).join('')} fill="#000" />
     </svg>
   )
@@ -52,7 +52,7 @@ export function LabelsTab() {
         <span className="text-xs text-stone-500">{labels.length} label{labels.length === 1 ? '' : 's'} on {pages} page{pages === 1 ? '' : 's'}. Print at 100% (no scaling).</span>
       </div>
       {Array.from({ length: pages }, (_, pg) => (
-        <div key={pg} data-testid="label-page" className="relative mx-auto bg-white shadow print:shadow-none" style={{ width: '8.5in', height: '11in', breakAfter: 'page' }}>
+        <div key={pg} data-testid="label-page" className="label-page relative mx-auto overflow-hidden bg-white shadow print:mx-0 print:shadow-none" style={{ width: '8.5in', height: '11in', breakAfter: 'page' }}>
           {labels.map((l, i) => (pos[i].page === pg ? <div key={i} className="absolute" style={{ left: `${pos[i].x}in`, top: `${pos[i].y}in` }}><LabelBox l={l} sheet={sheet} /></div> : null))}
         </div>
       ))}

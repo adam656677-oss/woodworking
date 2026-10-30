@@ -5,6 +5,9 @@ import { formatInches } from '../model/units'
 import { bandOf, cutSize } from './banding'
 import { partNumbers } from './pieces'
 
+/** The QR text uses | between fields, so a | in a name becomes / . */
+const bar = (t: string) => t.replace(/\|/g, '/')
+
 export type LabelSheet = { id: '5160' | '5163'; name: string; cols: number; rows: number; w: number; h: number; top: number; left: number; pitchX: number; pitchY: number }
 export const LABEL_SHEETS: Record<LabelSheet['id'], LabelSheet> = {
   '5160': { id: '5160', name: 'Avery 5160 (30 per sheet, 2-5/8" × 1")', cols: 3, rows: 10, w: 2.625, h: 1, top: 0.5, left: 0.1875, pitchX: 2.75, pitchY: 1 },
@@ -27,7 +30,7 @@ export function labelsFor(p: Project): Label[] {
     return {
       no, name: b.name, size: `${formatInches(b.length)} × ${formatInches(b.width)} × ${formatInches(b.thickness)}`, wood, grain: b.grain, project: p.name,
       ...(banding ? { banding } : {}),
-      qr: `AAWS|${p.name}|P${no}|${b.name}|${plain(c.length)} x ${plain(c.width)} x ${plain(b.thickness)}`
+      qr: `AAWS|${bar(p.name)}|P${no}|${bar(b.name)}|${plain(c.length)} x ${plain(c.width)} x ${plain(b.thickness)}`
     }
   })
 }

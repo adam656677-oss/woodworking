@@ -72,7 +72,9 @@ export function changeWood(p: Project, id: string, woodId: string): Project {
     const old = findWood(p, b.woodId)
     // A shaped part's size is its drawing's, whatever wood it is cut from.
     const fullWidth = !b.outline && old?.kind === 'lumber' && wood.kind === 'lumber' && Math.abs(b.width - old.width) < 1e-9
-    return { ...b, woodId, thickness: wood.thickness, width: fullWidth ? snap64(wood.width) : b.width }
+    // Edge banding is for sheet goods; it goes when the part moves to solid wood.
+    const { banding, ...rest } = b
+    return { ...rest, ...(banding && wood.kind === 'sheet' ? { banding } : {}), woodId, thickness: wood.thickness, width: fullWidth ? snap64(wood.width) : b.width }
   })
 }
 
@@ -153,6 +155,7 @@ export function mirrorBoards(p: Project, ids: string[], axis: Axis): Project {
       return {
         ...b,
         ...(b.taper ? { taper: { ...b.taper, faces: b.taper.faces.map(sw) } } : {}),
+        ...(b.banding ? { banding: { ...b.banding, edges: b.banding.edges.map(sw) } } : {}),
         ...(b.edges ? { edges: b.edges.map(e => ({ ...e, face: sw(e.face), sides: e.sides.map(sw) })) } : {}),
         position: { ...b.position, [axis]: clean(b.position[axis] + shift) },
         endCuts: { start: flip(b.endCuts.start), end: flip(b.endCuts.end) }

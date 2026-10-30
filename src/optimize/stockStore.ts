@@ -1,7 +1,7 @@
 // The shop's stock on hand: sheets, offcuts and boards (with defects), kept in the app's data folder.
 import { createStore, useStore } from 'zustand'
 import { newId } from '../model/ids'
-import type { ShopStockItem } from './layout'
+import { stockAfterUse, type ShopStockItem } from './layout'
 
 const isItem = (v: any): v is ShopStockItem => v && typeof v === 'object' && typeof v.id === 'string' && typeof v.woodId === 'string' &&
   ['sheet', 'offcut', 'board'].includes(v.kind) && typeof v.width === 'number' && v.width > 0 && typeof v.length === 'number' && v.length > 0 &&
@@ -15,7 +15,7 @@ type State = {
   update(id: string, patch: Partial<Omit<ShopStockItem, 'id'>>): void
   remove(id: string): void
   /** After cutting: the pieces used go, and what's left of each becomes an offcut. */
-  markUsed(used: { id: string; left?: { width: number; length: number } }[]): void
+  markUsed(used: { stockId: string; left?: { width: number; length: number } }[]): void
 }
 
 export const stock = createStore<State>()((set, get) => {
@@ -30,16 +30,7 @@ export const stock = createStore<State>()((set, get) => {
     add: item => save([...get().items, { ...item, id: newId('p') }]),
     update: (id, patch) => save(get().items.map(i => (i.id === id ? { ...i, ...patch } : i))),
     remove: id => save(get().items.filter(i => i.id !== id)),
-    markUsed: used => {
-      const ids = new Set(used.map(u => u.id))
-      const left = used.filter(u => u.left && u.left.width >= 1 && u.left.length >= 1)
-      const items = get().items.flatMap(i => {
-        if (!ids.has(i.id)) return [i]
-        const l = left.find(u => u.id === i.id)?.left
-        return l ? [{ ...i, id: newId('p'), kind: 'offcut' as const, width: l.width, length: l.length, defects: undefined }] : []
-      })
-      save(items)
-    }
+    markUsed: used => save(stockAfterUse(get().items, used, () => newId('p')))
   }
 })
 export const useStock = <T,>(sel: (s: State) => T) => useStore(stock, sel)

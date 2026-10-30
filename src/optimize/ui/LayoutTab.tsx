@@ -67,7 +67,7 @@ function Num({ label, value, onSet }: { label: string; value: number; onSet(v: n
   useEffect(() => setT(formatInches(value)), [value])
   return (
     <label className="flex flex-col text-xs text-stone-600">{label}
-      <input aria-label={label} value={t} onChange={e => setT(e.target.value)} onBlur={() => { const r = parseInches(t, { allowZero: true }); if (r.ok) onSet(r.value); else setT(formatInches(value)) }}
+      <input aria-label={label} value={t} onChange={e => setT(e.target.value)} onBlur={() => { const r = parseInches(t, { allowZero: true }); if (r.ok) { if (Math.abs(r.value - value) > 1e-9) onSet(r.value) } else setT(formatInches(value)) }}
         onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }} className="w-20 rounded border border-stone-300 px-1 print:border-0" />
     </label>
   )
@@ -104,7 +104,7 @@ function WoodSection({ l }: { l: WoodLayout }) {
           // Each used stock piece goes; its biggest offcut stays as a new offcut.
           stock.getState().markUsed(usedShop.map(sh => {
             const big = [...sh.offcuts].sort((a, b) => b.w * b.l - a.w * a.l)[0]
-            return { id: sh.stock.fromShop!, ...(big && items.some(i => i.id === sh.stock.fromShop) ? { left: { width: big.w, length: big.l } } : {}) }
+            return { stockId: sh.stock.id, ...(big && items.some(i => i.id === sh.stock.fromShop) ? { left: { width: big.w, length: big.l } } : {}) }
           }))
         }}>Mark my stock as used (keep the biggest offcuts)</button>
       )}

@@ -140,14 +140,38 @@ export function shopStockFor(items: ShopStockItem[], w: Wood, edgeTrim: number, 
   const out: Stock[] = []
   for (const it of items.filter(i => i.woodId === w.id)) {
     const label = it.kind === 'sheet' ? 'Your sheet' : it.kind === 'offcut' ? 'Your offcut' : 'Your board'
-    const defects = [...(it.defects ?? [])].sort((a, b) => a.from - b.from)
-    let at = 0
-    const segs: [number, number][] = []
-    for (const d of defects) { if (d.from > at) segs.push([at, d.from]); at = Math.max(at, d.to) }
-    if (at < it.length) segs.push([at, it.length])
-    segs.forEach(([a, b], k) => out.push({ id: `${it.id}${segs.length > 1 ? `#${k + 1}` : ''}`, label: `${label} ${formatInches(it.width)} × ${formatInches(it.length)}${segs.length > 1 ? ` (clear ${formatInches(a)}–${formatInches(b)})` : ''}`, w: it.width, l: b - a, edgeTrim: it.kind === 'offcut' ? 0 : edgeTrim, endTrim: it.kind === 'offcut' ? 0 : endTrim, fromShop: it.id }))
+    const segs = stretches(it)
+    for (const { id, from: a, to: b } of segs) out.push({ id, label: `${label} ${formatInches(it.width)} × ${formatInches(it.length)}${segs.length > 1 ? ` (clear ${formatInches(a)}–${formatInches(b)})` : ''}`, w: it.width, l: b - a, edgeTrim: it.kind === 'offcut' ? 0 : edgeTrim, endTrim: it.kind === 'offcut' ? 0 : endTrim, fromShop: it.id })
   }
   return out
+}
+
+/** The clear stretches of a stock item, with their stock ids (as shopStockFor names them). */
+function stretches(it: ShopStockItem): { id: string; from: number; to: number }[] {
+  const defects = [...(it.defects ?? [])].sort((a, b) => a.from - b.from)
+  let at = 0
+  const segs: [number, number][] = []
+  for (const d of defects) { if (d.from > at) segs.push([at, d.from]); at = Math.max(at, d.to) }
+  if (at < it.length) segs.push([at, it.length])
+  return segs.map(([a, b], k) => ({ id: `${it.id}${segs.length > 1 ? `#${k + 1}` : ''}`, from: a, to: b }))
+}
+
+/**
+ * Shop stock after cutting: each clear stretch that was used goes, leaving its offcut (if any); the stretches of
+ * the same board that weren't used stay as boards.
+ */
+export function stockAfterUse(items: ShopStockItem[], used: { stockId: string; left?: { width: number; length: number } }[], id: () => string = () => Math.random().toString(36).slice(2)): ShopStockItem[] {
+  const byStock = new Map(used.map(u => [u.stockId, u]))
+  return items.flatMap(it => {
+    const segs = stretches(it)
+    if (!segs.some(s => byStock.has(s.id))) return [it]
+    return segs.flatMap(s => {
+      const u = byStock.get(s.id)
+      if (!u) return [{ id: id(), woodId: it.woodId, kind: it.kind, width: it.width, length: s.to - s.from, ...(it.note ? { note: it.note } : {}) }]
+      const l = u.left
+      return l && l.width >= 1 && l.length >= 1 ? [{ id: id(), woodId: it.woodId, kind: 'offcut' as const, width: l.width, length: l.length }] : []
+    })
+  })
 }
 
 /** Layouts for every wood in the design. */
@@ -171,6 +195,8 @@ export function layoutAll(p: Project, shop: ShopStockItem[] = []): WoodLayout[] 
       const glued: Piece[] = []
       const split = mine.flatMap(q => {
         if (q.w <= usable + EPS) return [q]
+        // Too narrow a board to rip glue-up strips from: the packer reports the part as too big.
+        if (usable - 0.125 <= 0.25) return [q]
         glued.push(q)
         const n = Math.ceil(q.w / (usable - 0.125))
         return Array.from({ length: n }, (_, i) => ({ ...q, name: `${q.name} (strip ${i + 1} of ${n})`, w: q.w / n + 0.125 }))
@@ -183,5 +209,6 @@ export function layoutAll(p: Project, shop: ShopStockItem[] = []): WoodLayout[] 
 
 /** Rough thickness to buy for a surfaced thickness: 3/4" → 4/4 (1"), 1" → 5/4, 1-3/4" → 8/4. */
 export function roughThickness(t: number): number {
-  return Math.ceil((t + 0.1875) * 4 - 1e-9) / 4
+  // Rough hardwood comes 4/4 and up.
+  return Math.max(1, Math.ceil((t + 0.1875) * 4 - 1e-9) / 4)
 }

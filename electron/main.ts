@@ -171,9 +171,10 @@ function register(): void {
     if (!on) release()
   })
   releaseAwake = release
-  ipcMain.handle('aa:print', async (_e, opts?: { landscape?: boolean }) => {
+  ipcMain.handle('aa:print', async (_e, opts?: { landscape?: boolean; edgeToEdge?: boolean }) => {
     const landscape = opts?.landscape ?? true
-    await new Promise<void>(resolve => win!.webContents.print({ landscape }, () => resolve()))
+    // Label sheets: no printer margins, so the labels land where the sheet's die cuts are.
+    await new Promise<void>(resolve => win!.webContents.print({ landscape, ...(opts?.edgeToEdge ? { margins: { marginType: 'none' as const } } : {}) }, () => resolve()))
   })
   ipcMain.handle('aa:loadUserWoods', async () => {
     try {

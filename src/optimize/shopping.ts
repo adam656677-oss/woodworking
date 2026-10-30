@@ -22,7 +22,7 @@ export function shoppingList(p: Project, shop: ShopStockItem[] = []): ShoppingLi
       const byLen = new Map<number, number>()
       for (const b of l.result.boards) byLen.set(b.length, (byLen.get(b.length) ?? 0) + 1)
       for (const [len, n] of [...byLen].sort((a, b) => a[0] - b[0])) {
-        const each = w.pricePerPiece?.[String(len)] ?? (w.pricePerBoardFoot !== undefined ? money((w.thickness < 1 ? 1 : 2) * w.width * len / 144 * w.pricePerBoardFoot) : undefined)
+        const each = w.pricePerPiece?.[String(len)] ?? (w.pricePerBoardFoot !== undefined ? money(Math.ceil(w.thickness + 0.25) * Math.ceil(w.width + 0.25) * len / 144 * w.pricePerBoardFoot) : undefined)
         lines.push({ section: 'wood', what: `${w.name} × ${len / 12}'`, qty: n, unit: 'board', ...(each !== undefined ? { each, total: money(n * each) } : {}) })
       }
     } else {

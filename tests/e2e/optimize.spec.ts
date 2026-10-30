@@ -21,6 +21,12 @@ test('bookshelf: the layout shows the plywood sheets with numbered cuts; the sho
     await shot(win, 'buy')
     await dlg.getByRole('tab', { name: 'Labels' }).click()
     await expect(dlg.getByTestId('label-page')).toHaveCount(1)
+    // Printed, the label page starts at the paper's corner with nothing above it.
+    await win.emulateMedia({ media: 'print' })
+    const box = await dlg.getByTestId('label-page').boundingBox()
+    expect(Math.abs(box!.x)).toBeLessThan(2)
+    expect(Math.abs(box!.y)).toBeLessThan(2)
+    await win.emulateMedia({ media: 'screen' })
     await expect(dlg.getByLabel('QR code')).toHaveCount(8)
     await shot(win, 'labels')
     await expect(dlg.getByRole('button', { name: 'Print labels' })).toBeVisible()

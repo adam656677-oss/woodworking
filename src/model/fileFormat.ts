@@ -252,7 +252,22 @@ function check(raw: any): Project {
     const bd = b.banding
     if (bd !== undefined && !(isObj(bd) && isStr(bd.bandId) && Array.isArray(bd.edges) && bd.edges.every((e: unknown) => oneOf(e, ['left', 'right', 'start', 'end'])))) delete b.banding
   }
-  if (raw.cutSettings !== undefined && !isObj(raw.cutSettings)) delete raw.cutSettings
+  if (raw.cutSettings !== undefined) {
+    // Each setting is checked on its own; a damaged one falls back to the default.
+    const c = raw.cutSettings
+    if (!isObj(c)) delete raw.cutSettings
+    else {
+      if (c.hardwoodWaste !== undefined && !(isNum(c.hardwoodWaste) && c.hardwoodWaste >= 0 && c.hardwoodWaste <= 2)) delete c.hardwoodWaste
+      if (c.tax !== undefined && !(isNum(c.tax) && c.tax >= 0)) delete c.tax
+      if (c.useStock !== undefined && typeof c.useStock !== 'boolean') delete c.useStock
+      if (c.hardwoodBoard !== undefined && !(isObj(c.hardwoodBoard) && isNum(c.hardwoodBoard.width) && c.hardwoodBoard.width > 1.25 && isNum(c.hardwoodBoard.length) && c.hardwoodBoard.length > 0)) delete c.hardwoodBoard
+      if (c.byWood !== undefined && !isObj(c.byWood)) delete c.byWood
+      else if (c.byWood) for (const [k, v] of Object.entries(c.byWood)) {
+        if (!isObj(v)) { delete c.byWood[k]; continue }
+        for (const f of Object.keys(v)) if (!(isNum((v as any)[f]) && (v as any)[f] >= 0 && (v as any)[f] < 12)) delete (v as any)[f]
+      }
+    }
+  }
   if (raw.models !== undefined) {
     // A damaged reference model is dropped; the design still opens.
     const ok = (m: any) => isObj(m) && isStr(m.id) && isStr(m.name) && isStr(m.format) && isPackedMesh(m.data) && isVec(m.position) && isVec(m.rotation) &&

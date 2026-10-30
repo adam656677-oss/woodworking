@@ -22,20 +22,20 @@ export function CutListView() {
   }
 
   return (
-    <div role="dialog" aria-label="Cut list" className="print-area fixed inset-0 z-30 flex items-start justify-center overflow-y-auto bg-black/40 p-6 print:bg-white print:p-0">
-      <div className="w-[1000px] rounded-xl bg-white p-6 shadow-xl print:w-full print:shadow-none">
-        <div className="mb-4 flex items-center justify-between">
+    <div role="dialog" aria-label="Cut list" className={`print-area ${tab === 'labels' ? 'labels-print' : ''} fixed inset-0 z-30 flex items-start justify-center overflow-y-auto bg-black/40 p-6 print:bg-white print:p-0`}>
+      <div className="print-sheet w-[1000px] rounded-xl bg-white p-6 shadow-xl print:w-full print:shadow-none">
+        <div className="print-header mb-4 flex items-center justify-between">
           <div>
             <h2 className="text-xl font-bold">Cut list — {project.name}</h2>
             <p className="text-xs text-stone-500">A&amp;A Woodworking · finished sizes · lengths are long point to long point</p>
           </div>
           <div className="flex gap-2 print:hidden">
-            <button className="rounded border px-3 py-1 text-sm hover:bg-stone-100" onClick={() => void window.aa.print(tab === 'labels' ? { landscape: false } : undefined)}>{tab === 'labels' ? 'Print labels' : 'Print'}</button>
+            <button className="rounded border px-3 py-1 text-sm hover:bg-stone-100" onClick={() => void window.aa.print(tab === 'labels' ? { landscape: false, edgeToEdge: true } : undefined)}>{tab === 'labels' ? 'Print labels' : 'Print'}</button>
             <button className="rounded border px-3 py-1 text-sm hover:bg-stone-100" onClick={() => void saveCsv()}>Save as CSV</button>
             <button className="rounded bg-amber-700 px-3 py-1 text-sm text-white" onClick={() => s.set({ cutListOpen: false })}>Close</button>
           </div>
         </div>
-        {message && <p className="mb-2 text-xs text-green-700 print:hidden">{message}</p>}
+        {message && <p className="print-message mb-2 text-xs text-green-700 print:hidden">{message}</p>}
         {!s.kidsMode && (
           <nav role="tablist" className="mb-3 flex gap-1 border-b border-stone-300 print:hidden">
             {([['cut', 'Cut list'], ['layout', 'Layout'], ['buy', 'Buy'], ['labels', 'Labels']] as const).map(([k, l]) => (

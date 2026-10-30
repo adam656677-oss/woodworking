@@ -9,4 +9,9 @@ html, body, #root { height: 100%; margin: 0; }
   body * { visibility: hidden; }
   .print-area, .print-area * { visibility: visible; }
   .print-area { position: absolute !important; top: 0; left: 0; right: 0; bottom: auto; display: block !important; overflow: visible !important; }
+  /* Label sheets print edge to edge, exactly the size of the Avery sheet, with nothing above them. */
+  .labels-print .print-header, .labels-print nav, .labels-print .print-message { display: none !important; }
+  .labels-print .print-sheet { padding: 0 !important; width: auto !important; border-radius: 0 !important; }
+  .label-page { page: labels; margin: 0 !important; }
 }
+@page labels { size: 8.5in 11in; margin: 0; }
