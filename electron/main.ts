@@ -186,6 +186,14 @@ function register(): void {
     await mkdir(app.getPath('userData'), { recursive: true })
     await safeSave(join(app.getPath('userData'), 'woods.json'), JSON.stringify(woods, null, 2))
   })
+  // The shop's stock on hand (sheets, offcuts, boards), shared by every project.
+  ipcMain.handle('aa:loadStock', async () => {
+    try { return JSON.parse(await readFile(join(app.getPath('userData'), 'stock.json'), 'utf8')) } catch { return [] }
+  })
+  ipcMain.handle('aa:saveStock', async (_e, items: unknown) => {
+    await mkdir(app.getPath('userData'), { recursive: true })
+    await safeSave(join(app.getPath('userData'), 'stock.json'), JSON.stringify(items, null, 2))
+  })
   // ---- Kids' Workshop ----
   const kidsDir = async () => {
     const d = app.getPath('userData')
