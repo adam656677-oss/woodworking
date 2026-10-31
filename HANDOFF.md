@@ -4,12 +4,8 @@ Last updated: 2026-10-31. Written by Claude (Opus) for whichever agent picks thi
 
 ## 0. If you got this as a zip (no git)
 
-The zip **A&A-Woodworking-Studio-code.zip** contains the whole project with Pieces 15 and 16 already combined into
-it. The two merged cleanly, and all 738 unit tests pass. So you can skip the merge steps in §1 and §5: start with
-the fixes in §3 and §4, then build (§5 step 3).
-
-- Run `npm ci` first.
-- To keep using git, run `git init`, then `git add -A`, then `git commit -m start`.
+`aa-woodworking-studio-source.zip` is the finished 1.0.0 code. Run `npm ci` first. To keep using git, run
+`git init`, `git add -A`, `git commit -m start`.
 
 ## 1. Where things stand
 
