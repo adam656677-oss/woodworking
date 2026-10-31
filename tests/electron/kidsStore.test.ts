@@ -114,3 +114,32 @@ describe('more than one child', () => {
     expect(photoName('k1234abcd', 'birdhouse')).toBe('k1234abcd-birdhouse.jpg')
   })
 })
+
+describe('more than one child — safety', () => {
+  test('a damaged children list uses its backup copy, and never sends one child\'s saves into another\'s record', async () => {
+    await saveProgress(dir, { ...newProgress(), childName: 'Andrew', openedLessons: ['a1'] })
+    const bella = await addProfile(dir, 'Bella')
+    await switchProfile(dir, bella)
+    await switchProfile(dir, bella) // saves the list twice, so its .bak is good
+    await writeFile(join(dir, 'kids-profiles.json'), '{ damaged')
+    const p = await loadProfiles(dir)
+    expect(p.profiles.map(x => x.name)).toEqual(['Andrew', 'Bella'])
+    await writeFile(join(dir, 'kids-profiles.json.bak'), 'also damaged')
+    await expect(loadProfiles(dir)).rejects.toThrow(/damaged/)
+    await expect(saveProgress(dir, { ...newProgress(), childName: 'Bella', openedLessons: ['b1'] })).rejects.toThrow()
+    expect(JSON.parse(await readFile(join(dir, 'kids-progress.json'), 'utf8')).openedLessons).toEqual(['a1'])
+  })
+  test('a save goes to the child it belongs to, even after a switch', async () => {
+    await saveProgress(dir, { ...newProgress(), childName: 'Andrew' })
+    const bella = await addProfile(dir, 'Bella')
+    await switchProfile(dir, bella)
+    await saveProgress(dir, { ...newProgress(), childName: 'Andrew', openedLessons: ['late'] }, 'main')
+    expect((await loadProgress(dir, 'main')).progress.openedLessons).toEqual(['late'])
+    expect((await loadProgress(dir, bella)).progress.openedLessons).toEqual([])
+    await expect(saveProgress(dir, newProgress(), 'k00000000')).rejects.toThrow()
+  })
+  test('a new child starts at the beginner tool level', async () => {
+    const id = await addProfile(dir, 'Riley')
+    expect((await loadProgress(dir, id)).progress.tier).toBe('beginner')
+  })
+})

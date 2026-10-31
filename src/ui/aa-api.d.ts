@@ -41,9 +41,11 @@ export type AaApi = {
   /** Saves a PNG picture (a data URL) where the user picks; the path, or null if cancelled. */
   savePng(name: string, dataUrl: string): Promise<string | null>
   /** Backs up everything (app data and the projects folder) to a file the user picks. */
-  backup(): Promise<{ path: string; files: number } | null>
+  backup(): Promise<{ path: string; files: number; skipped: string[] } | null>
   /** Restores from a backup file the user picks; replaced files are kept aside in a _before-restore folder. */
-  restore(): Promise<{ files: number; keptUser: string | null; keptDocs: string | null } | null>
+  restore(pin: string): Promise<{ files: number; keptUser: string | null; keptDocs: string | null } | null>
+  /** Opens a folder a restore set replaced files aside in. */
+  showFolder?(path: string): Promise<void>
   savePackage(name: string, pkg: import('../family/package').ProjectPackage): Promise<string | null>
   openPackage(): Promise<import('../family/package').ProjectPackage | null>
   /** Makes that PDF in a temporary folder and opens it in the system's PDF viewer to print; false if it couldn't. */
@@ -59,7 +61,8 @@ export type AaApi = {
   onSaveRequest(cb: () => void): void
   closeAfterSave(saved: boolean): void
   kidsLoad(): Promise<{ progress: Progress; notice: string | null }>
-  kidsSave(p: Progress): Promise<void>
+  /** Saves progress to the child it belongs to (the one working now when not given). */
+  kidsSave(p: Progress, profile?: string): Promise<void>
   kidsPinIsSet(): Promise<boolean>
   /** Rejects with 'PIN must be 4 digits' for anything else. */
   kidsSetPin(pin: string): Promise<void>
@@ -74,7 +77,7 @@ export type AaApi = {
   /** Every child's progress (parent PIN), or null if the PIN was wrong. */
   kidsFamily(pin: string): Promise<{ id: string; name: string; progress: import('../kids/progress').Progress }[] | null>
   /** Opens a file picker; returns the saved photo's file name, or null if cancelled. */
-  kidsAddPhoto(projectId: string): Promise<string | null>
+  kidsAddPhoto(projectId: string, profile?: string): Promise<string | null>
   kidsPhotoUrl(name: string): Promise<string | null>
   plansList(): Promise<{ folder: string; plan: Plan | null; error?: string; notice?: string }[]>
   plansLoad(folder: string): Promise<{ plan: Plan; notice: string | null }>

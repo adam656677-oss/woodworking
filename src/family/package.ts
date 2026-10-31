@@ -1,7 +1,7 @@
 // Project packages: a design with its shop journal (notes, time, costs, photos) to hand to someone else.
 import { deserialize, serialize } from '../model/fileFormat'
 import type { Project } from '../model/types'
-import { entryFor, type JournalEntry } from '../tools/store'
+import { entryFor, entryOk, type JournalEntry } from '../tools/store'
 
 export type ProjectPackage = { format: 'aa-package'; version: 1; name: string; project: string; journal: JournalEntry[]; from?: string; note?: string }
 
@@ -13,8 +13,8 @@ export function makePackage(p: Project, file: string | null, journal: JournalEnt
 /** What's inside a package, checked: the design (opened like a file) and journal entries renamed to fit in. */
 export function openPackage(pkg: ProjectPackage, newId: () => string): { project: Project; text: string; journal: JournalEntry[] } {
   const project = deserialize(pkg.project)
-  const ok = (e: any): e is JournalEntry => e && typeof e.date === 'string' && typeof e.notes === 'string' && typeof e.minutes === 'number' && e.minutes >= 0 &&
-    Array.isArray(e.photos) && e.photos.every((x: unknown) => typeof x === 'string' && x.startsWith('data:image/')) && Array.isArray(e.costs)
+  // The journal's own check, with the ids and project this copy will give them.
+  const ok = (e: any): e is JournalEntry => !!e && typeof e === 'object' && entryOk({ ...e, id: 'x', project: project.name, file: undefined })
   const journal = pkg.journal.filter(ok).map(e => ({ ...e, id: newId(), project: project.name, file: undefined, notes: pkg.from ? `${e.notes}${e.notes ? ' ' : ''}(from ${pkg.from})` : e.notes }))
   return { project, text: pkg.project, journal: journal.map(({ file: _f, ...e }) => e) }
 }

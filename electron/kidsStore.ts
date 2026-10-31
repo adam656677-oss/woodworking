@@ -19,11 +19,23 @@ const validId = (id: unknown): id is string => typeof id === 'string' && (id ===
 /** A finished-project photo's file name; children after the first get their id in front. */
 export const photoName = (profile: string, projectId: string) => (profile === 'main' ? `${projectId}.jpg` : `${profile}-${projectId}.jpg`)
 
+const goodProfiles = (v: any): v is Profiles => validId(v?.active) && Array.isArray(v.profiles) && v.profiles.length > 0 && v.profiles.every((p: any) => validId(p?.id) && typeof p.name === 'string') && v.profiles.some((p: any) => p.id === v.active)
+
+/**
+ * The children. No list yet means one child (a workshop from before profiles). A list that can't be read is never
+ * taken as "one child" — that would send a second child's saves into the first child's record: the backup copy is
+ * used, and if that can't be read either, this throws and nothing is saved.
+ */
 export async function loadProfiles(dir: string): Promise<Profiles> {
-  try {
-    const v = JSON.parse(await readFile(profilesPath(dir), 'utf8'))
-    if (validId(v?.active) && Array.isArray(v.profiles) && v.profiles.length && v.profiles.every((p: any) => validId(p?.id) && typeof p.name === 'string') && v.profiles.some((p: any) => p.id === v.active)) return v
-  } catch { /* none yet */ }
+  let text: string | null = null
+  try { text = await readFile(profilesPath(dir), 'utf8') } catch (e) {
+    if ((e as NodeJS.ErrnoException).code !== 'ENOENT') throw new Error("The list of children couldn't be read right now. Try again in a moment.")
+  }
+  if (text !== null) {
+    try { const v = JSON.parse(text); if (goodProfiles(v)) return v } catch { /* damaged: try the backup */ }
+    try { const v = JSON.parse(await readFile(`${profilesPath(dir)}.bak`, 'utf8')); if (goodProfiles(v)) return v } catch { /* no good backup */ }
+    throw new Error("The list of children is damaged. Restore a backup, or ask for help; nothing was changed.")
+  }
   const first = await readProgress(progressFile(dir, 'main')) ?? await readProgress(`${progressFile(dir, 'main')}.bak`)
   return { active: 'main', profiles: [{ id: 'main', name: first?.childName ?? '' }] }
 }
@@ -33,7 +45,8 @@ export async function addProfile(dir: string, name: string): Promise<string> {
   const p = await loadProfiles(dir)
   const id = `k${randomBytes(4).toString('hex')}`
   const n = name.trim().slice(0, 40)
-  await safeSave(progressFile(dir, id), JSON.stringify({ ...newProgress(), childName: n }, null, 2))
+  // A new child starts with hand tools only; the parent raises it when they're ready.
+  await safeSave(progressFile(dir, id), JSON.stringify({ ...newProgress(), childName: n, tier: 'beginner' }, null, 2))
   await saveProfiles(dir, { ...p, profiles: [...p.profiles, { id, name: n }] })
   return id
 }
@@ -94,12 +107,15 @@ export async function loadProgress(dir: string, profile?: string): Promise<{ pro
   return { progress: newProgress(), notice: "Progress couldn't be read and was started fresh." }
 }
 
-export async function saveProgress(dir: string, p: Progress): Promise<void> {
+/** Saves a child's progress: the child it belongs to (the one working now when not given). */
+export async function saveProgress(dir: string, p: Progress, profile?: string): Promise<void> {
   if (!isProgress(p)) throw new Error('Progress is not valid and was not saved')
   const profiles = await loadProfiles(dir)
-  await safeSave(progressFile(dir, profiles.active), JSON.stringify(p, null, 2))
+  const who = profile ?? profiles.active
+  if (!profiles.profiles.some(x => x.id === who)) throw new Error('That child is not in the list; progress was not saved')
+  await safeSave(progressFile(dir, who), JSON.stringify(p, null, 2))
   // Keep the family list's name in step (only once there is a list).
-  const me = profiles.profiles.find(x => x.id === profiles.active)
+  const me = profiles.profiles.find(x => x.id === who)
   if (me && me.name !== p.childName && (await exists(profilesPath(dir)))) await saveProfiles(dir, { ...profiles, profiles: profiles.profiles.map(x => (x.id === me.id ? { ...x, name: p.childName } : x)) })
 }
 

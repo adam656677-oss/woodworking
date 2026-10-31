@@ -81,7 +81,8 @@ export type StudioState = {
   /** Open the full Master Shop designer (kids' limits off; the current project stays). */
   enterMasterShop(): void
   /** Open a design given as text (a plan's attached design) in the Master Shop, as an unsaved copy. */
-  openDesignText(text: string): void
+  /** Opens a design from text (asking first about unsaved work); `onOpened` runs once it has replaced the current one. */
+  openDesignText(text: string, opts?: { dirty?: boolean; onOpened?: () => void }): void
   apply(fn: (p: Project) => Project | OpError): void
   undo(): void
   redo(): void
@@ -238,9 +239,12 @@ export function createStudioStore() {
         return true
       },
       enterMasterShop: () => set({ kidsMode: false, screen: 'master' }),
-      openDesignText: text => {
+      openDesignText: (text, opts) => {
         set({ kidsMode: false })
-        void guard(() => loadText(text, null, null, false))
+        void guard(() => {
+          loadText(text, null, null, !!opts?.dirty)
+          if (!get().error) opts?.onOpened?.()
+        })
       },
 
       apply: fn => {

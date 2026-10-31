@@ -20,7 +20,8 @@ export type Inventory = { tools: ToolItem[]; hardware: HardwareStock[]; finishes
 const isObj = (v: unknown): v is Record<string, any> => !!v && typeof v === 'object' && !Array.isArray(v)
 const num = (v: unknown) => typeof v === 'number' && Number.isFinite(v) && v >= 0
 const str = (v: unknown) => typeof v === 'string'
-const entryOk = (e: any): e is JournalEntry => isObj(e) && str(e.id) && str(e.date) && str(e.project) && str(e.notes) && num(e.minutes) &&
+/** A journal entry this app can read (used on load, and for entries in a shared package). */
+export const entryOk = (e: any): e is JournalEntry => isObj(e) && str(e.id) && str(e.date) && str(e.project) && str(e.notes) && num(e.minutes) &&
   (e.file === undefined || str(e.file)) && Array.isArray(e.photos) && e.photos.every((p: unknown) => str(p) && (p as string).startsWith('data:image/')) &&
   Array.isArray(e.costs) && e.costs.every((c: any) => isObj(c) && str(c.what) && num(c.amount))
 export function cleanInventory(raw: unknown): Inventory {

@@ -213,15 +213,23 @@ function register(): void {
     const day = new Date().toISOString().slice(0, 10)
     const r = await dialog.showSaveDialog(win!, { defaultPath: join(docsDir(), `A&A Woodworking backup ${day}.aabackup`), filters: BACKUP })
     if (r.canceled || !r.filePath) return null
-    const files = await collectBackup(app.getPath('userData'), defaultFolder(docsDir()))
+    const { files, skipped } = await collectBackup(app.getPath('userData'), defaultFolder(docsDir()))
     await writeBackup(r.filePath, files)
-    return { path: r.filePath, files: files.length }
+    return { path: r.filePath, files: files.length, skipped }
   })
-  ipcMain.handle('aa:restore', async () => {
+  // Restoring replaces the kids' progress and PIN too, so it needs the parent PIN when one is set.
+  ipcMain.handle('aa:restore', async (_e, pin: string) => {
+    const d = await kidsDir()
+    if ((await pinIsSet(d)) && !(await checkPin(d, pin))) throw new Error('That PIN is not right.')
     const r = await dialog.showOpenDialog(win!, { defaultPath: docsDir(), filters: BACKUP, properties: ['openFile'] })
     if (r.canceled || !r.filePaths[0]) return null
     await mkdir(defaultFolder(docsDir()), { recursive: true })
     return restoreBackup(r.filePaths[0], app.getPath('userData'), defaultFolder(docsDir()))
+  })
+  // Opens a folder a restore set files aside in (only those).
+  ipcMain.handle('aa:showFolder', async (_e, path: string) => {
+    const ok = typeof path === 'string' && /[\\/]_before-restore-[\w-]+$/.test(path) && (path.startsWith(app.getPath('userData')) || path.startsWith(defaultFolder(docsDir())))
+    if (ok) await shell.openPath(path)
   })
   ipcMain.handle('aa:savePackage', async (_e, name: string, pkg: Package) => {
     const r = await dialog.showSaveDialog(win!, { defaultPath: join(defaultFolder(docsDir()), `${safeName(name)}.aapkg`), filters: PACKAGE })
@@ -308,7 +316,7 @@ function register(): void {
   }
   const PHOTO_MAX = 1600
   ipcMain.handle('kids:load', async () => loadProgress(await kidsDir()))
-  ipcMain.handle('kids:save', async (_e, p: Progress) => saveProgress(await kidsDir(), p))
+  ipcMain.handle('kids:save', async (_e, p: Progress, profile?: string) => saveProgress(await kidsDir(), p, typeof profile === 'string' ? profile : undefined))
   ipcMain.handle('kids:pinIsSet', async () => pinIsSet(await kidsDir()))
   ipcMain.handle('kids:setPin', async (_e, pin: string) => setPin(await kidsDir(), pin))
   ipcMain.handle('kids:checkPin', async (_e, pin: string) => checkPin(await kidsDir(), pin))
@@ -331,8 +339,10 @@ function register(): void {
     const d = await kidsDir()
     return (await checkPin(d, pin)) ? familyProgress(d) : null
   })
-  ipcMain.handle('kids:addPhoto', async (_e, projectId: string) => {
+  ipcMain.handle('kids:addPhoto', async (_e, projectId: string, profile?: string) => {
     if (!/^[a-z0-9-]+$/.test(projectId)) return null
+    const profiles = await loadProfiles(await kidsDir())
+    const who = typeof profile === 'string' && profiles.profiles.some(x => x.id === profile) ? profile : profiles.active
     const r = await dialog.showOpenDialog(win!, { properties: ['openFile'], filters: [{ name: 'Photos', extensions: PHOTO_TYPES }] })
     if (r.canceled || !r.filePaths[0]) return null
     let img = await loadPhoto(r.filePaths[0]).catch(() => nativeImage.createEmpty())
@@ -342,7 +352,7 @@ function register(): void {
     if (scale < 1) img = img.resize({ width: Math.round(width * scale), height: Math.round(height * scale), quality: 'best' })
     const folder = join(await kidsDir(), 'kids-photos')
     await mkdir(folder, { recursive: true })
-    const name = photoName((await loadProfiles(await kidsDir())).active, projectId)
+    const name = photoName(who, projectId)
     await writeFile(join(folder, name), img.toJPEG(85))
     return name
   })

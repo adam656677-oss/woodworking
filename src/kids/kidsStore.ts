@@ -54,10 +54,12 @@ export function createKidsStore() {
     let loadFailed = false
     const update = async (fn: (p: Progress) => Progress) => {
       const next = fn(get().progress)
+      // The child this progress belongs to, so a save can't land in another child's record mid-switch.
+      const owner = get().profiles.profiles.length ? get().profiles.active : undefined
       set({ progress: next })
       if (loadFailed) return
       try {
-        await api().kidsSave(next)
+        await api().kidsSave(next, owner)
       } catch {
         set({ notice: "That change couldn't be saved. It will show until the app closes; ask your grown-up to check the computer." })
       }
@@ -75,19 +77,20 @@ export function createKidsStore() {
         if (p) set({ profiles: p })
       },
       switchChild: async id => {
+        // Until the new child's progress is loaded, saves keep going to the old child (profiles.active is still theirs).
         await api().kidsSwitch(id)
         const { progress, notice } = await api().kidsLoad()
         loadFailed = false
-        set({ progress, notice, page: { name: 'home' } })
-        await get().refreshProfiles()
+        const list = await api().kidsProfiles?.().catch(() => null)
+        set({ progress, notice, page: { name: 'home' }, ...(list ? { profiles: list } : { profiles: { ...get().profiles, active: id } }) })
       },
 
       load: async () => {
         if (get().loaded) return
         try {
+          await get().refreshProfiles()
           const { progress, notice } = await api().kidsLoad()
           set({ progress, notice, loaded: true })
-          await get().refreshProfiles()
         } catch {
           loadFailed = true
           set({ progress: newProgress(), notice: "Saved progress couldn't be opened, so the workshop started fresh. Nothing new will be saved until the app is restarted.", loaded: true })

@@ -87,13 +87,14 @@ function Settings({ pin, onPinChanged }: { pin: string; onPinChanged(pin: string
 
   const addPhoto = async (projectId: string) => {
     try {
-      const name = await window.aa.kidsAddPhoto(projectId)
+      const name = await window.aa.kidsAddPhoto(projectId, kids.getState().profiles.active)
       if (name) await k.setPhoto(projectId, name)
     } catch (e) {
       setMessage((e as Error).message.replace(/^Error invoking remote method '[^']+': (Error: )?/, ''))
     }
   }
 
+  const many = kids.getState().profiles.profiles.length > 1
   if (changing) return <Setup title="Change name or PIN" onDone={p => { onPinChanged(p); setChanging(false) }} />
 
   return (
@@ -113,6 +114,7 @@ function Settings({ pin, onPinChanged }: { pin: string; onPinChanged(pin: string
         <p className="mt-1 text-base text-stone-600">Table saw, miter saw, router, lathe, band saw and planer are always grown-up only.</p>
       </section>
       <FamilyPanel pin={pin} />
+      {many && <p className="rounded-xl bg-sky-100 p-3 text-lg">The settings below are for <b>{progress.childName || 'the child working now'}</b>. To change another child's, pick them on the workshop's front page.</p>}
       <section>
         <h2 className="mb-2 text-2xl font-bold">Games</h2>
         <label className="flex items-center gap-3 text-lg"><input type="checkbox" aria-label="Games on" checked={!progress.gamesOff} onChange={e => void k.setGames(e.target.checked, pin)} className="h-5 w-5" />Show the Games (tape measure, hazards, woods, joints, lathe)</label>

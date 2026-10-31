@@ -47,8 +47,8 @@ export async function openShared(): Promise<string | null> {
     if (!pkg) return null
     const r = openPackage(pkg, () => newId('r'))
     if (!tools.getState().loaded) await tools.getState().load()
-    for (const e of r.journal) { const { id: _i, ...rest } = e; tools.getState().addEntry(rest) }
-    studio.getState().openDesignText(r.text)
+    // The journal entries join only once the design has really opened (not if the unsaved-work question is cancelled).
+    studio.getState().openDesignText(r.text, { dirty: true, onOpened: () => { for (const e of r.journal) { const { id: _i, ...rest } = e; tools.getState().addEntry(rest) } } })
     return pkg.note ? `${pkg.from ? `From ${pkg.from}: ` : ''}${pkg.note}` : pkg.from ? `Shared by ${pkg.from}.` : 'Opened.'
   } catch (e) {
     studio.getState().setError(clean(e))

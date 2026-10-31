@@ -26,7 +26,7 @@ async function exists(fs: FsLike, p: string): Promise<boolean> {
 const wait = (ms: number) => new Promise(r => setTimeout(r, ms))
 
 /** OneDrive sync and antivirus scanners hold files open for a moment; those errors clear on a retry. */
-async function renameWithRetry(fs: FsLike, from: string, to: string, delayMs: number): Promise<void> {
+export async function renameWithRetry(fs: FsLike, from: string, to: string, delayMs: number): Promise<void> {
   for (let attempt = 1; ; attempt++) {
     try {
       await fs.rename(from, to)

@@ -27,3 +27,10 @@ test('bad journal entries in a package are left out; a broken design is refused'
   expect(openPackage(bad, () => 'i').journal).toEqual([])
   expect(() => openPackage({ ...pkg, project: '{"formatVersion":99}' }, () => 'i')).toThrow()
 })
+
+test('package journal entries must pass the journal\'s own check (costs too)', () => {
+  const { template: _t, ...p } = applyTemplate(emptyProject('Bookshelf'), 'bookshelf', {})
+  const pkg = makePackage(p, null, [])
+  const bad = { ...pkg, journal: [e({ costs: [{ what: 7, amount: 'lots' }, null] as never }), e({})] }
+  expect(openPackage(bad, () => 'i').journal).toHaveLength(1)
+})

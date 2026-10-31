@@ -27,7 +27,7 @@ export function FamilyPanel({ pin }: { pin: string }) {
   }
   const remove = async (id: string) => {
     setRemoving(null)
-    try { await window.aa.kidsRemoveProfile(id, pin) } catch (e) { return setMsg((e as Error).message.replace(/^Error invoking remote method '[^']+': (Error: )?/, '')) }
+    try { if (!(await window.aa.kidsRemoveProfile(id, pin))) return setMsg('That PIN is not right.') } catch (e) { return setMsg((e as Error).message.replace(/^Error invoking remote method '[^']+': (Error: )?/, '')) }
     if (id === active) await kids.getState().switchChild((await window.aa.kidsProfiles()).active)
     await reload()
   }
