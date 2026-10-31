@@ -1,5 +1,6 @@
 // The Deep Library: species, wood movement and shelf sag calculators, glues, techniques and safety, lumber
 // grades and sizes, drill-press speeds and the glossary.
+import { openHelper } from '../../smart/ui/SmartDialogs'
 import { useMemo, useState } from 'react'
 import { formatInches, parseInches } from '../../model/units'
 import { studio, type Screen } from '../../ui/store'
@@ -31,6 +32,7 @@ export function Library() {
       <header className="flex flex-wrap items-center gap-4 border-b border-stone-300 bg-white px-4 py-2">
         <button className="rounded border px-3 py-1 text-sm hover:bg-stone-100" onClick={() => studio.getState().goto(backTo)}>← Back</button>
         <h1 className="text-xl font-bold text-stone-800">Library</h1>
+        <button className="rounded border px-3 py-1 text-sm hover:bg-stone-100" onClick={() => openHelper('woodId')}>✨ What wood is this?</button>
         <nav role="tablist" className="flex flex-wrap gap-1">
           {TABS.map(([k, l]) => <button key={k} role="tab" aria-selected={page === k} onClick={() => setPage(k)} className={`px-3 py-1 text-sm ${page === k ? 'border-b-2 border-amber-700 font-semibold' : 'text-stone-600'}`}>{l}</button>)}
         </nav>

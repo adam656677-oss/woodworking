@@ -1,3 +1,4 @@
+import { SmartHelpers } from '../smart/ui/SmartDialogs'
 import { useEffect } from 'react'
 import { UnsavedDialog } from './common/UnsavedDialog'
 import { ShopMode } from '../shop/ui/ShopMode'
@@ -43,6 +44,7 @@ export default function App() {
       {screen === 'kids' ? <KidsShell /> : screen === 'master' ? <Designer /> : screen === 'plans' ? <PlansShell /> : screen === 'draw' ? <DrawingBoard /> : screen === 'finish' ? <FinishingSchool /> : screen === 'library' ? <Library /> : screen === 'joints' ? <JointDesigner /> : screen === 'tools' ? <ShopTools /> : <Home />}
       <UnsavedDialog />
       <ShopMode />
+      {screen !== 'kids' && <SmartHelpers />}
     </>
   )
 }

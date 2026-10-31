@@ -15,6 +15,7 @@ import { startImport } from '../../exchange/ui/ExchangeDialog'
 import { shop } from '../../shop/shopStore'
 import { designSession } from '../../shop/steps'
 import { openShared, ShareDialog } from '../../family/ui/ShareDialog'
+import { openHelper } from '../../smart/ui/SmartDialogs'
 import { KidsLookButton } from '../../render/ui/RenderControls'
 
 function Btn(props: React.ButtonHTMLAttributes<HTMLButtonElement> & { active?: boolean }) {
@@ -104,6 +105,16 @@ export function Toolbar() {
       <Btn onClick={() => void s.open()}>Open</Btn>
       <Btn onClick={() => void s.save()}>Save</Btn>
       <Btn onClick={() => void s.saveAs()}>Save As</Btn>
+      {!kidsMode && <Menu label="✨ Helpers">
+        {close => (
+          <>
+            <button role="menuitem" className={item} onClick={() => { close(); openHelper('describe') }}>Describe a project…</button>
+            <button role="menuitem" className={item} onClick={() => { close(); openHelper('photoPlan') }}>Photo → plan…</button>
+            <button role="menuitem" className={item} onClick={() => { close(); openHelper('woodId') }}>What wood is this?…</button>
+            <button role="menuitem" className={item} onClick={() => { close(); openHelper('settings') }}>Settings…</button>
+          </>
+        )}
+      </Menu>}
       {!kidsMode && <Menu label="Share">
         {close => (
           <>

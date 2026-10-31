@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, nativeImage, net, powerSaveBlocker, shell } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, nativeImage, net, powerSaveBlocker, safeStorage, shell } from 'electron'
 import { copyFile, mkdir, readFile, writeFile } from 'node:fs/promises'
 import { basename, join } from 'node:path'
 import { autosavePath, defaultFolder, deleteAutosave, load, loadJson, safeSave, writeAutosave } from './fileStore'
@@ -10,6 +10,7 @@ import type { Plan } from '../src/plans/types'
 import { configureOcr, ocrImage } from './ocr'
 import { heicToRgba, isHeic } from './heic'
 import { capturePage } from './webCapture'
+import { ask as aiAsk, readKey, readSettings, writeKey, writeSettings, type Task } from './ai'
 import { collectBackup, readPackage, restoreBackup, writeBackup, writePackage, type Package } from './backup'
 import type { Progress } from '../src/kids/progress'
 
@@ -206,6 +207,23 @@ function register(): void {
     return true
   })
   // A picture of the 3D view (PNG data URL from the page).
+  // Smart Helpers: the key stays in this process (the page only learns whether there is one).
+  const aiDir = async () => { const d = app.getPath('userData'); await mkdir(d, { recursive: true }); return d }
+  // Tests on machines without a key store use a stand-in (never set in the installed app).
+  const crypt = process.env.AA_TEST_PLAIN_KEY ? { isEncryptionAvailable: () => true, encryptString: (t: string) => Buffer.from(t), decryptString: (b: Buffer) => b.toString() } : safeStorage
+  ipcMain.handle('smart:status', async () => {
+    const d = await aiDir()
+    return { hasKey: !!(await readKey(d, crypt)), model: (await readSettings(d)).model, canStore: crypt.isEncryptionAvailable() }
+  })
+  ipcMain.handle('smart:setKey', async (_e, key: string | null) => writeKey(await aiDir(), crypt, typeof key === 'string' ? key : null))
+  ipcMain.handle('smart:setModel', async (_e, model: string) => writeSettings(await aiDir(), { model: String(model ?? '').slice(0, 80) }))
+  ipcMain.handle('smart:ask', async (_e, t: Task) => {
+    const d = await aiDir()
+    const key = await readKey(d, crypt)
+    if (!key) throw new Error('Add an Anthropic API key in Smart Helpers settings (on the Home screen) to use this.')
+    if (!t || !['photoPlan', 'woodId', 'describe'].includes(t.task)) throw new Error('Unknown helper')
+    return aiAsk(t, key, (await readSettings(d)).model, process.env.AA_AI_URL || 'https://api.anthropic.com')
+  })
   // Family & sharing: a whole backup (app data + the projects folder) and project packages.
   const BACKUP = [{ name: 'A&A Woodworking backup', extensions: ['aabackup'] }]
   const PACKAGE = [{ name: 'A&A Woodworking project package', extensions: ['aapkg'] }]

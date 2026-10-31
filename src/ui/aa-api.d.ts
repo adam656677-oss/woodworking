@@ -40,6 +40,12 @@ export type AaApi = {
   savePdf(name: string): Promise<string | null>
   /** Saves a PNG picture (a data URL) where the user picks; the path, or null if cancelled. */
   savePng(name: string, dataUrl: string): Promise<string | null>
+  /** Smart Helpers: whether a key is stored (never the key itself), and the model. */
+  smartStatus(): Promise<{ hasKey: boolean; model: string; canStore: boolean }>
+  smartSetKey(key: string | null): Promise<void>
+  smartSetModel(model: string): Promise<void>
+  /** One online helper request (only when the user presses its button); the helper's JSON answer, unchecked. */
+  smartAsk(task: { task: 'photoPlan'; image: string; known: string } | { task: 'woodId'; image: string } | { task: 'describe'; text: string; templates: string }): Promise<unknown>
   /** Backs up everything (app data and the projects folder) to a file the user picks. */
   backup(): Promise<{ path: string; files: number; skipped: string[] } | null>
   /** Restores from a backup file the user picks; replaced files are kept aside in a _before-restore folder. */
