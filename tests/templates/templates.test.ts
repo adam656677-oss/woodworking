@@ -113,3 +113,30 @@ test('out-of-range parameters are clamped and reported', () => {
   const z = applyTemplate(emptyProject('Shelf'), 'bookshelf', { shelves: 0 })
   expect(cutList(z).rows.find(r => r.part.startsWith('Top'))!.qty).toBe(2)
 })
+
+describe('every template', () => {
+  test('unlocking keeps every part the same size and place (the formulas rebuild the design exactly)', async () => {
+    const { worldBox } = await import('../../src/model/geometry')
+    for (const t of TEMPLATES) {
+      const variants: Record<string, string | boolean | number>[] = [{}, ...t.params.filter(p => p.kind === 'bool').map(p => ({ [p.key]: !p.default })), ...t.params.filter(p => p.kind === 'choice').flatMap(p => p.options!.map(o => ({ [p.key]: o }))),
+        ...t.params.filter(p => p.kind === 'count' || p.kind === 'inches').flatMap(p => [{ [p.key]: p.min! }, { [p.key]: p.max! }])]
+      for (const v of variants) {
+        const live = applyTemplate(emptyProject(t.name), t.id, v)
+        const open = unlock(live)
+        expect([t.id, v, open.boards.length]).toEqual([t.id, v, live.boards.length])
+        live.boards.forEach((b, i) => {
+          const a = worldBox(b), c = worldBox(open.boards[i])
+          for (const k of ['x', 'y', 'z'] as const) {
+            expect([t.id, v, b.name, k, Math.round(c.min[k] * 64) / 64, Math.round(c.max[k] * 64) / 64]).toEqual([t.id, v, b.name, k, Math.round(a.min[k] * 64) / 64, Math.round(a.max[k] * 64) / 64])
+          }
+        })
+      }
+    }
+  })
+  test('every template has no warnings at its defaults and with each option', () => {
+    for (const t of TEMPLATES) {
+      const variants: Record<string, string | boolean>[] = [{}, ...t.params.filter(p => p.kind === 'bool').map(p => ({ [p.key]: !p.default })), ...t.params.filter(p => p.kind === 'choice').flatMap(p => p.options!.map(o => ({ [p.key]: o })))]
+      for (const v of variants) expect([t.id, v, validate(applyTemplate(emptyProject(t.name), t.id, v)).map(w => w.message)]).toEqual([t.id, v, []])
+    }
+  })
+})

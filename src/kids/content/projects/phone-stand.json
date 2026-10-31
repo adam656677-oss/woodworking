@@ -1,0 +1,44 @@
+{
+  "id": "phone-stand",
+  "name": "Phone stand",
+  "level": 2,
+  "stars": 1,
+  "minutes": 60,
+  "kind": "useful",
+  "picture": "phone-stand",
+  "blurb": "A desk stand that holds a phone or tablet up so you can watch or video-call.",
+  "tools": [
+    "tape-measure",
+    "square",
+    "pencil",
+    "hand-saw",
+    "miter-box",
+    "drill",
+    "screwdriver",
+    "glue",
+    "clamps",
+    "sandpaper"
+  ],
+  "steps": [
+    {
+      "text": "Cut the base and the back from the 1x4, and the lip from the 1x2.",
+      "tool": "hand-saw"
+    },
+    {
+      "text": "Glue the lip along the front edge of the base and clamp it.",
+      "tool": "clamps"
+    },
+    {
+      "text": "Drill two holes up through the base for the back.",
+      "tool": "drill"
+    },
+    {
+      "text": "Screw the back on from underneath.",
+      "tool": "screwdriver"
+    },
+    {
+      "text": "Sand all the edges smooth.",
+      "tool": "sandpaper"
+    }
+  ]
+}

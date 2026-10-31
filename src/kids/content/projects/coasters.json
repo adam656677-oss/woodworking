@@ -1,0 +1,41 @@
+{
+  "id": "coasters",
+  "name": "Coaster set",
+  "level": 1,
+  "stars": 1,
+  "minutes": 45,
+  "kind": "gift",
+  "picture": "coasters",
+  "blurb": "Four square coasters to keep drinks off the table \u2014 a great first gift.",
+  "tools": [
+    "tape-measure",
+    "square",
+    "pencil",
+    "hand-saw",
+    "miter-box",
+    "sandpaper",
+    "finish-rag"
+  ],
+  "steps": [
+    {
+      "text": "Mark four 3-1/2 inch squares along the 1x4.",
+      "tool": "tape-measure"
+    },
+    {
+      "text": "Draw square lines across at each mark.",
+      "tool": "square"
+    },
+    {
+      "text": "Cut the squares in the miter box.",
+      "tool": "hand-saw"
+    },
+    {
+      "text": "Sand every face and round the sharp edges a little.",
+      "tool": "sandpaper"
+    },
+    {
+      "text": "Wipe on a water-based clear finish and let it dry.",
+      "tool": "finish-rag"
+    }
+  ]
+}

@@ -1,0 +1,43 @@
+{
+  "id": "bookends",
+  "name": "Bookends",
+  "level": 2,
+  "stars": 2,
+  "minutes": 75,
+  "kind": "useful",
+  "picture": "bookends",
+  "blurb": "A pair of L-shaped bookends to keep books standing up on a shelf.",
+  "tools": [
+    "tape-measure",
+    "square",
+    "pencil",
+    "hand-saw",
+    "miter-box",
+    "drill",
+    "screwdriver",
+    "sandpaper",
+    "paintbrush"
+  ],
+  "steps": [
+    {
+      "text": "Cut two bases and two uprights, each 6 inches long, from the 1x6.",
+      "tool": "hand-saw"
+    },
+    {
+      "text": "Drill two holes through each base, near one end.",
+      "tool": "drill"
+    },
+    {
+      "text": "Stand an upright on the end of each base and screw it on from underneath.",
+      "tool": "screwdriver"
+    },
+    {
+      "text": "Sand the corners round.",
+      "tool": "sandpaper"
+    },
+    {
+      "text": "Paint them your favourite colour.",
+      "tool": "paintbrush"
+    }
+  ]
+}

@@ -82,7 +82,11 @@ export function contactBetween(project: Project, aId: string, bId: string): Cont
 
   // The board touching with its end (or edge) is the partner; the one touching with its face (or edge) hosts.
   const order: Part[] = ['end', 'edge', 'face']
-  const [partner, host, pPart, hPart] = order.indexOf(pa) <= order.indexOf(pb) ? [a, b, pa, pb] : [b, a, pb, pa]
+  // Two edges or two ends: neither is the natural host, so the one on the low side (left, front, bottom) hosts,
+  // whichever order the two are asked about in.
+  const same = pa === pb && (pa === 'edge' || pa === 'end')
+  const aFirst = same ? A.min[t] > B.min[t] : order.indexOf(pa) <= order.indexOf(pb)
+  const [partner, host, pPart, hPart] = aFirst ? [a, b, pa, pb] : [b, a, pb, pa]
   const hb = worldBox(host)
   const pbx = worldBox(partner)
 

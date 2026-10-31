@@ -227,6 +227,27 @@ export const ART: Record<string, () => JSX.Element> = {
     <path d="M12 30 v-16 M52 30 v-16" stroke={DARK} strokeWidth={4} />
     <path d="M12 16 h40" stroke={DARK} strokeWidth={5} />
     <path d="M22 30 l-4 -10 M40 30 l6 -12" stroke={STEEL} strokeWidth={3} />
+  </>),
+  coasters: s(<>
+    {[[6, 30], [22, 22], [38, 30], [22, 40]].map(([x, y], i) => <g key={i}><rect x={x} y={y} width={20} height={14} rx={2} fill={i % 2 ? '#d9a85f' : WOOD} stroke={DARK} strokeWidth={2} /><ellipse cx={x + 10} cy={y + 7} rx={6} ry={3} fill="none" stroke={DARK} strokeWidth={1} opacity={0.5} /></g>)}
+    <path d="M30 6 h10 v14 h-10 z" fill="#fff" stroke={INK} strokeWidth={2} /><path d="M40 10 h4 v6 h-4" fill="none" stroke={INK} strokeWidth={2} />
+  </>),
+  bookends: s(<>
+    <path d="M6 54 h18 M6 54 v-30 h4 v30" fill={WOOD} stroke={DARK} strokeWidth={2} />
+    <rect x={6} y={50} width={18} height={4} fill={WOOD} stroke={DARK} strokeWidth={2} /><rect x={6} y={22} width={4} height={30} fill={WOOD} stroke={DARK} strokeWidth={2} />
+    <rect x={40} y={50} width={18} height={4} fill={WOOD} stroke={DARK} strokeWidth={2} /><rect x={54} y={22} width={4} height={30} fill={WOOD} stroke={DARK} strokeWidth={2} />
+    {[[12, RED], [19, BLUE], [26, YEL], [33, '#4caf50'], [40, RED], [47, BLUE]].map(([x, c], i) => <rect key={i} x={x as number} y={24 + (i % 3) * 2} width={6} height={26 - (i % 3) * 2} fill={c as string} stroke={INK} strokeWidth={1} />)}
+  </>),
+  planter: s(<>
+    <path d="M10 30 h44 l-4 26 h-36 z" fill={WOOD} stroke={DARK} strokeWidth={2} />
+    <path d="M14 38 h36 M15 47 h34" stroke={DARK} strokeWidth={1} opacity={0.5} />
+    <path d="M22 30 q-6 -14 2 -20 q4 10 -2 20 M32 30 q0 -16 8 -22 q2 12 -8 22 M42 30 q6 -12 12 -12 q-2 10 -12 12" fill="#4caf50" stroke="#2e7d32" strokeWidth={1.5} />
+  </>),
+  'phone-stand': s(<>
+    <path d="M10 50 h40 v6 h-40 z" fill={WOOD} stroke={DARK} strokeWidth={2} />
+    <path d="M44 50 v-26 h6 v26" fill={WOOD} stroke={DARK} strokeWidth={2} />
+    <rect x={10} y={46} width={6} height={4} fill="#d9a85f" stroke={DARK} strokeWidth={1.5} />
+    <rect x={18} y={14} width={20} height={34} rx={3} fill={INK} transform="rotate(14 28 31)" /><rect x={21} y={18} width={14} height={24} rx={1} fill="#bfe3f7" transform="rotate(14 28 31)" />
   </>)
 }
 

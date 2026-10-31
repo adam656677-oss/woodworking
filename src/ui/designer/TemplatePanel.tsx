@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { findTemplate, unlock, updateTemplateParams } from '../../templates'
+import { findTemplate, unlock, updateTemplateParams, woodAllowed } from '../../templates'
 import { studio, useStudio } from '../store'
 import { InchInput } from './InchInput'
 
@@ -37,7 +37,7 @@ export function TemplatePanel() {
               </label>
             )
           }
-          const options = p.kind === 'wood' ? woods.map(w => ({ value: w.id, label: w.name })) : (p.options ?? []).map(o => ({ value: o, label: o }))
+          const options = p.kind === 'wood' ? woods.filter(w => woodAllowed(p, w)).map(w => ({ value: w.id, label: w.name })) : (p.options ?? []).map(o => ({ value: o, label: o }))
           return (
             <label key={p.key} className="flex flex-col gap-0.5 text-xs text-stone-600">
               {p.label}

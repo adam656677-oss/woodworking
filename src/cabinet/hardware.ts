@@ -20,6 +20,7 @@ export const HARDWARE: readonly HardwareItem[] = Object.freeze([
   { id: 'screw-8-114', name: 'Wood screws #8 × 1-1/4"', kind: 'screw', price: 0.08 },
   { id: 'pocket-114', name: 'Pocket screws 1-1/4" coarse', kind: 'screw', price: 0.07 },
   { id: 'pin-5mm', name: 'Shelf pins 5 mm', kind: 'pin', price: 0.25 },
+  { id: 'tabletop-fastener', name: 'Tabletop fasteners (figure-8)', kind: 'other', price: 0.6 },
   { id: 'pin-14', name: 'Shelf pins 1/4"', kind: 'pin', price: 0.25 },
   { id: 'glass-18', name: 'Glass 1/8" (per sq ft)', kind: 'glass', price: 9 }
 ])

@@ -13,11 +13,11 @@ test('quiz sizes per level are 8, 6, 6, 6', () => {
   expect(LEVELS.map(l => QUIZZES[l.quiz].questions.length)).toEqual([8, 6, 6, 6])
 })
 
-test('the five starter projects in order, then the finish sampler', () => {
-  expect(PROJECTS.map(p => p.id)).toEqual(['pencil-holder', 'tic-tac-toe', 'birdhouse', 'picture-frame', 'toolbox', 'finish-sampler'])
+test('the five starter projects in order, then the others by level and name', () => {
+  expect(PROJECTS.map(p => p.id)).toEqual(['pencil-holder', 'tic-tac-toe', 'birdhouse', 'picture-frame', 'toolbox', 'coasters', 'bookends', 'finish-sampler', 'phone-stand', 'planter'])
 })
 
-test.each(['pencil-holder', 'tic-tac-toe', 'birdhouse', 'picture-frame', 'toolbox'])('%s builds with no warnings and only butt joints', id => {
+test.each(['pencil-holder', 'tic-tac-toe', 'birdhouse', 'picture-frame', 'toolbox', 'bookends', 'planter', 'phone-stand'])('%s builds with no warnings and only butt joints', id => {
   const d = designFor(id)
   expect(d.boards.length).toBeGreaterThan(1)
   expect(validate(d)).toEqual([])
@@ -95,4 +95,10 @@ test('picture frame: glued corners with mending plates on the back — no drilli
 
 test('toolbox: pilot holes go through the ends (the ends hold the screws)', () => {
   expect(findProject('toolbox')!.steps.map(s => s.text)).toContain('Drill pilot holes through the ends.')
+})
+
+test('the coaster set: four separate squares, nothing joined', () => {
+  const d = designFor('coasters')
+  expect(d.boards).toHaveLength(4)
+  expect(validate(d)).toEqual([])
 })

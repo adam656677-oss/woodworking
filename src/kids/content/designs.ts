@@ -117,7 +117,56 @@ function finishSampler(p: Project): Built {
   return { boards: [board], joints: [] }
 }
 
+function coasters(p: Project): Built {
+  // Four 3-1/2" squares from a 1x4, laid out side by side for the picture.
+  const w = woodOf(p.woods, '1x4')
+  return { boards: [0, 1, 2, 3].map(i => makeBoard('Coaster', w, 3.5, 3.5, ORIENT.flatX, { x: i * 4.5, y: 0, z: 0 })), joints: [] }
+}
+
+function bookends(p: Project): Built {
+  // Each bookend: a 6" base and a 6" upright standing on its end, screwed up from underneath. Two of them.
+  const w = woodOf(p.woods, '1x6')
+  const boards: Board[] = [], joints: Joint[] = []
+  for (const x of [0, 10]) {
+    const base = makeBoard('Base', w, 5.5, 6, ORIENT.flatY, { x, y: 0, z: 0 })
+    const upright = makeBoard('Upright', w, 5.5, 6, ORIENT.uprightX, { x, y: 0, z: 0.75 })
+    boards.push(base, upright)
+    joints.push(butt(base, upright, screws(2)))
+  }
+  return { boards, joints }
+}
+
+function planter(p: Project): Built {
+  // A box from 1x6: ends between the sides, a bottom inside with drain holes, all screwed for the outdoors.
+  const w = woodOf(p.woods, '1x6')
+  const L = 14
+  const front = makeBoard('Side', w, 5.5, L, ORIENT.wallX, { x: 0, y: 0, z: 0 })
+  const back = makeBoard('Side', w, 5.5, L, ORIENT.wallX, { x: 0, y: 6.25, z: 0 })
+  const endA = makeBoard('End', w, 5.5, 5.5, ORIENT.wallY, { x: 0, y: 0.75, z: 0 })
+  const endB = makeBoard('End', w, 5.5, 5.5, ORIENT.wallY, { x: L - 0.75, y: 0.75, z: 0 })
+  const holes = [3, 6.25, 9.5].map(v => ({ diameter: 0.5, u: 2.75, v }))
+  const bottom = makeBoard('Bottom', w, 5.5, L - 1.5, ORIENT.flatX, { x: 0.75, y: 0.75, z: 0 }, { holes })
+  return {
+    boards: [front, back, endA, endB, bottom],
+    joints: [
+      butt(front, endA, screws(2)), butt(front, endB, screws(2)), butt(back, endA, screws(2)), butt(back, endB, screws(2)),
+      butt(front, bottom, screws(3)), butt(back, bottom, screws(3))
+    ]
+  }
+}
+
+function phoneStand(p: Project): Built {
+  // A 1x4 base, a 1x2 lip glued on at the front to stop the phone sliding, and a 1x4 back to lean on.
+  const w4 = woodOf(p.woods, '1x4')
+  const w2 = woodOf(p.woods, '1x2')
+  const base = makeBoard('Base', w4, 3.5, 5.5, ORIENT.flatY, { x: 0, y: 0, z: 0 })
+  const lip = makeBoard('Lip', w2, 1.5, 3.5, ORIENT.flatX, { x: 0, y: 0, z: 0.75 })
+  const back = makeBoard('Back', w4, 3.5, 5, ORIENT.uprightX, { x: 0, y: 4.75, z: 0.75 })
+  return { boards: [base, lip, back], joints: [butt(base, lip, GLUE), butt(base, back, screws(2))] }
+}
+
 export const DESIGNS: Record<string, (p: Project) => Built> = {
+  coasters, bookends, planter, 'phone-stand': phoneStand,
   'pencil-holder': pencilHolder,
   'tic-tac-toe': ticTacToe,
   birdhouse,
