@@ -4,7 +4,14 @@ import { createStore, useStore } from 'zustand'
 import { newId } from '../model/ids'
 
 export type Cost = { what: string; amount: number }
-export type JournalEntry = { id: string; date: string; project: string; notes: string; minutes: number; photos: string[]; costs: Cost[] }
+/** `project` is the project's name when logged (or GENERAL); `file` its saved file, which keeps entries with it through renames. */
+export type JournalEntry = { id: string; date: string; project: string; file?: string; notes: string; minutes: number; photos: string[]; costs: Cost[] }
+/** Entries not about any one project. */
+export const GENERAL = 'General shop'
+export type ProjectRef = { name: string; file: string | null }
+/** Whether an entry belongs to this project: by its file when it has one (so a rename keeps them), else by name. */
+export const entryFor = (e: JournalEntry, p: ProjectRef) => (e.file ? e.file === p.file : e.project === p.name)
+const cleanMinutes = (m: number) => Math.max(0, Math.round(Number.isFinite(m) ? m : 0))
 export type ToolItem = { id: string; name: string; kind: string; notes?: string; tier?: 'beginner' | 'intermediate' | 'advanced' | 'adult' }
 export type HardwareStock = { id: string; itemId: string; name: string; qty: number; min?: number }
 export type FinishStock = { id: string; finishId?: string; product: string; amount: number; unit: 'oz' | 'qt' | 'gal' | 'can'; min?: number }
@@ -14,7 +21,7 @@ const isObj = (v: unknown): v is Record<string, any> => !!v && typeof v === 'obj
 const num = (v: unknown) => typeof v === 'number' && Number.isFinite(v) && v >= 0
 const str = (v: unknown) => typeof v === 'string'
 const entryOk = (e: any): e is JournalEntry => isObj(e) && str(e.id) && str(e.date) && str(e.project) && str(e.notes) && num(e.minutes) &&
-  Array.isArray(e.photos) && e.photos.every((p: unknown) => str(p) && (p as string).startsWith('data:image/')) &&
+  (e.file === undefined || str(e.file)) && Array.isArray(e.photos) && e.photos.every((p: unknown) => str(p) && (p as string).startsWith('data:image/')) &&
   Array.isArray(e.costs) && e.costs.every((c: any) => isObj(c) && str(c.what) && num(c.amount))
 export function cleanInventory(raw: unknown): Inventory {
   const r = isObj(raw) ? raw : {}
@@ -28,6 +35,12 @@ export function cleanInventory(raw: unknown): Inventory {
 
 type State = {
   loaded: boolean
+  /** Files that were damaged on disk (their last good copy was loaded). */
+  damaged: ('journal' | 'inventory')[]
+  /** The last save that failed, in words. */
+  saveError: string | null
+  /** When the journal's timer was started (it keeps running while you look at other tabs). */
+  timerStart: number | null
   journal: JournalEntry[]
   inventory: Inventory
   load(): Promise<void>
@@ -37,28 +50,49 @@ type State = {
   setInventory(f: (i: Inventory) => Inventory): void
 }
 
+const LABEL = { journal: 'shop journal', inventory: 'inventory' } as const
+
 export const tools = createStore<State>()((set, get) => {
-  const saveJournal = (journal: JournalEntry[]) => { set({ journal }); void window.aa?.saveData?.('journal', journal) }
+  // Entries this version can't read stay in the file untouched.
+  let unreadable: unknown[] = []
+  const save = (name: 'journal' | 'inventory', data: unknown) => {
+    Promise.resolve(window.aa?.saveData?.(name, data))
+      .then(() => { if (get().saveError?.includes(LABEL[name])) set({ saveError: null }) })
+      .catch(() => set({ saveError: `Couldn't save the ${LABEL[name]} — disk full or no permission.` }))
+  }
+  const saveJournal = (journal: JournalEntry[]) => { set({ journal }); save('journal', [...journal, ...unreadable]) }
+  // The inventory saves once typing stops.
+  let timer: ReturnType<typeof setTimeout> | null = null
   return {
     loaded: false,
+    damaged: [],
+    saveError: null,
+    timerStart: null,
     journal: [],
     inventory: { tools: [], hardware: [], finishes: [] },
     load: async () => {
-      const [j, i] = await Promise.all([window.aa?.loadData?.('journal'), window.aa?.loadData?.('inventory')])
-      set({ journal: Array.isArray(j) ? j.filter(entryOk) : [], inventory: cleanInventory(i), loaded: true })
+      const read = async (n: 'journal' | 'inventory') => (await window.aa?.loadData?.(n)) ?? { data: null, damaged: false }
+      const [j, i] = await Promise.all([read('journal'), read('inventory')])
+      const raw = Array.isArray(j.data) ? j.data : []
+      unreadable = raw.filter(x => !entryOk(x))
+      set({ journal: raw.filter(entryOk), inventory: cleanInventory(i.data), damaged: [...(j.damaged ? ['journal' as const] : []), ...(i.damaged ? ['inventory' as const] : [])], loaded: true })
     },
-    addEntry: e => { const id = newId('r'); saveJournal([...get().journal, { ...e, id }]); return id },
-    updateEntry: (id, patch) => saveJournal(get().journal.map(e => (e.id === id ? { ...e, ...patch } : e))),
+    addEntry: e => { const id = newId('r'); saveJournal([...get().journal, { ...e, minutes: cleanMinutes(e.minutes), id }]); return id },
+    updateEntry: (id, patch) => saveJournal(get().journal.map(e => (e.id === id ? { ...e, ...patch, ...(patch.minutes !== undefined ? { minutes: cleanMinutes(patch.minutes) } : {}) } : e))),
     removeEntry: id => saveJournal(get().journal.filter(e => e.id !== id)),
-    setInventory: f => { const inventory = f(get().inventory); set({ inventory }); void window.aa?.saveData?.('inventory', inventory) }
+    setInventory: f => {
+      set({ inventory: f(get().inventory) })
+      if (timer) clearTimeout(timer)
+      timer = setTimeout(() => { timer = null; save('inventory', get().inventory) }, 500)
+    }
   }
 })
 export const useTools = <T,>(sel: (s: State) => T) => useStore(tools, sel)
 export const newItemId = () => newId('r')
 
 /** A project's journal totals: minutes (its entries plus Shop Mode's step timers) and money. */
-export function journalTotals(entries: JournalEntry[], project: string, shopMinutes = 0): { minutes: number; cost: number; entries: number } {
-  const mine = entries.filter(e => e.project === project)
+export function journalTotals(entries: JournalEntry[], project: ProjectRef, shopMinutes = 0): { minutes: number; cost: number; entries: number } {
+  const mine = entries.filter(e => entryFor(e, project))
   return { minutes: mine.reduce((s, e) => s + e.minutes, 0) + shopMinutes, cost: Math.round(mine.reduce((s, e) => s + e.costs.reduce((a, c) => a + c.amount, 0), 0) * 100) / 100, entries: mine.length }
 }
 
@@ -75,6 +109,13 @@ export async function thumbnail(file: Blob, max = 800): Promise<string> {
   const url = URL.createObjectURL(file)
   try {
     const img = await new Promise<HTMLImageElement>((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => rej(new Error("Couldn't read that picture")); i.src = url })
+      .catch(async e => {
+        // iPhone photos (HEIC): the app decodes them.
+        const small = await window.aa?.photoThumbnail?.(new Uint8Array(await file.arrayBuffer()), max)
+        if (small) return small
+        throw e
+      })
+    if (typeof img === 'string') return img
     const k = Math.min(1, max / Math.max(img.width, img.height))
     const c = document.createElement('canvas')
     c.width = Math.round(img.width * k); c.height = Math.round(img.height * k)

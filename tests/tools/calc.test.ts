@@ -1,4 +1,4 @@
-import { boardFeet, compoundMiter, crownFlat, epoxy, evenSpacing, fibonacciHeights, graduated, GOLDEN, nearest, shellacFlakes, shellacThin, tapeMath } from '../../src/tools/calc'
+import { feetInches, boardFeet, compoundMiter, crownFlat, epoxy, evenSpacing, fibonacciHeights, graduated, GOLDEN, nearest, shellacFlakes, shellacThin, tapeMath } from '../../src/tools/calc'
 
 test('board feet', () => {
   expect(boardFeet(1, 6, 96)).toBe(4)
@@ -12,6 +12,23 @@ test('tape math and nearest fractions', () => {
   expect(tapeMath('29-3/4 / 2')).toEqual({ value: 14.875 })
   expect(tapeMath('5 / 0')).toEqual({ error: "Can't divide by zero" })
   expect('error' in tapeMath('abc')).toBe(true)
+  // Feet-dash-inches as written on drawings, and the other dash cases.
+  expect(tapeMath(`6'-2"`)).toEqual({ value: 74 })
+  expect(tapeMath(`3'-4-1/2"`)).toEqual({ value: 40.5 })
+  expect(tapeMath(`2' - 3`)).toEqual({ value: 21 })
+  expect(tapeMath('5-3')).toEqual({ value: 2 })
+  expect(tapeMath('1/2-1/4')).toEqual({ value: 0.25 })
+  expect(tapeMath('2-1/2-1/4')).toEqual({ value: 2.25 })
+  expect(tapeMath('-3 + 5')).toEqual({ value: 2 })
+  expect(tapeMath('1 + 2 * 3')).toEqual({ value: 7 })
+  expect(tapeMath('.5 + .25')).toEqual({ value: 0.75 })
+  expect(tapeMath('3 1/2 + 1')).toEqual({ value: 4.5 })
+  expect(tapeMath('5 / 0/0')).toEqual({ error: "Can't divide by zero" })
+  expect(tapeMath('5 +')).toEqual({ error: 'The sum ends with an operator' })
+  expect('error' in tapeMath(`10 * 3"`)).toBe(true)
+  expect(feetInches(23.99)).toBe(`2' 0"`)
+  expect(feetInches(-14)).toBe(`-1' 2"`)
+  expect(feetInches(40.5)).toBe(`3' 4-1/2"`)
   expect(nearest(0.3, 16)).toBe('5/16"')
   expect(nearest(2.51, 32)).toBe('2-1/2"')
   expect(nearest(0.1094, 64)).toBe('7/64"')

@@ -27,7 +27,8 @@ export const stock = createStore<State>()((set, get) => {
       const raw = await window.aa?.loadStock?.()
       set({ items: Array.isArray(raw) ? raw.filter(isItem) : [], loaded: true })
     },
-    add: item => save([...get().items, { ...item, id: newId('p') }]),
+    // Never write before the list has been read: that would replace it.
+    add: item => { if (get().loaded) save([...get().items, { ...item, id: newId('p') }]) },
     update: (id, patch) => save(get().items.map(i => (i.id === id ? { ...i, ...patch } : i))),
     remove: id => save(get().items.filter(i => i.id !== id)),
     markUsed: used => save(stockAfterUse(get().items, used, () => newId('p')))

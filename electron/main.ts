@@ -1,7 +1,7 @@
 import { app, BrowserWindow, dialog, ipcMain, nativeImage, net, powerSaveBlocker, shell } from 'electron'
-import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { copyFile, mkdir, readFile, writeFile } from 'node:fs/promises'
 import { basename, join } from 'node:path'
-import { autosavePath, defaultFolder, deleteAutosave, load, safeSave, writeAutosave } from './fileStore'
+import { autosavePath, defaultFolder, deleteAutosave, load, loadJson, safeSave, writeAutosave } from './fileStore'
 import { checkPin, loadProgress, pinFilePath, pinIsSet, saveProgress, setPin } from './kidsStore'
 import {
   attachDesign, createPlanFolder, deletePlanFolder, fileDataUrl, listPlans, loadPlan, plansRoot, readDesign, renamePlanFolder, savePage, savePhotoBytes, savePlan
@@ -65,7 +65,9 @@ const PHOTO_TYPES = ['jpg', 'jpeg', 'png', 'heic', 'heif']
 
 /** A photo file as a picture Electron can work with; iPhone HEIC photos are decoded first. */
 async function loadPhoto(path: string): Promise<Electron.NativeImage> {
-  const bytes = new Uint8Array(await readFile(path))
+  return photoFromBytes(new Uint8Array(await readFile(path)))
+}
+async function photoFromBytes(bytes: Uint8Array): Promise<Electron.NativeImage> {
   if (isHeic(bytes)) {
     const { width, height, data } = await heicToRgba(bytes)
     const bgra = Buffer.alloc(data.length)
@@ -224,18 +226,33 @@ function register(): void {
     await mkdir(app.getPath('userData'), { recursive: true })
     await safeSave(join(app.getPath('userData'), 'woods.json'), JSON.stringify(woods, null, 2))
   })
-  // The shop's stock on hand (sheets, offcuts, boards), shared by every project.
-  // The shop journal and inventory: JSON files in the app's data folder (only these names).
+  // The shop journal and inventory: JSON files in the app's data folder (only these names). A damaged file is
+  // kept aside as name.json.damaged and the last good copy (.bak) is used, so a save can't make the loss permanent.
   const DATA = new Set(['journal', 'inventory'])
+  // A photo the page can't read itself (iPhone HEIC) as a JPEG no bigger than `max` pixels, or null.
+  ipcMain.handle('aa:photoThumbnail', async (_e, bytes: Uint8Array, max: number) => {
+    try {
+      const img = await photoFromBytes(new Uint8Array(bytes))
+      if (img.isEmpty()) return null
+      const { width, height } = img.getSize()
+      const k = Math.min(1, max / Math.max(width, height))
+      const small = k < 1 ? img.resize({ width: Math.round(width * k), height: Math.round(height * k) }) : img
+      return `data:image/jpeg;base64,${small.toJPEG(80).toString('base64')}`
+    } catch { return null }
+  })
   ipcMain.handle('aa:loadData', async (_e, name: string) => {
-    if (!DATA.has(name)) return null
-    try { return JSON.parse(await readFile(join(app.getPath('userData'), `${name}.json`), 'utf8')) } catch { return null }
+    if (!DATA.has(name)) return { data: null, damaged: false }
+    const path = join(app.getPath('userData'), `${name}.json`)
+    const r = await loadJson(path)
+    if (r.damaged) await copyFile(path, `${path}.damaged`).catch(() => {})
+    return r
   })
   ipcMain.handle('aa:saveData', async (_e, name: string, data: unknown) => {
     if (!DATA.has(name)) return
     await mkdir(app.getPath('userData'), { recursive: true })
     await safeSave(join(app.getPath('userData'), `${name}.json`), JSON.stringify(data, null, 2))
   })
+  // The shop's stock on hand (sheets, offcuts, boards), shared by every project.
   ipcMain.handle('aa:loadStock', async () => {
     try { return JSON.parse(await readFile(join(app.getPath('userData'), 'stock.json'), 'utf8')) } catch { return [] }
   })

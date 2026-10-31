@@ -2,7 +2,7 @@
 import { useState, type ReactNode } from 'react'
 import { boxSize, type SlideKind } from '../../cabinet/drawers'
 import { formatInches, parseInches } from '../../model/units'
-import { boardFeet, compoundMiter, crownFlat, epoxy, evenSpacing, fibonacciHeights, GOLDEN, graduated, nearest, shellacFlakes, shellacThin, tapeMath } from '../calc'
+import { boardFeet, compoundMiter, crownFlat, epoxy, evenSpacing, fibonacciHeights, GOLDEN, graduated, feetInches, nearest, shellacFlakes, shellacThin, tapeMath } from '../calc'
 
 export type CalcId = 'bf' | 'fraction' | 'spacing' | 'miter' | 'drawer' | 'golden' | 'shellac' | 'epoxy'
 export const CALCS: [CalcId, string][] = [['bf', 'Board feet'], ['fraction', 'Tape math & fractions'], ['spacing', 'Even spacing'], ['miter', 'Compound miter & crown'], ['drawer', 'Drawer sizing'], ['golden', 'Proportions'], ['shellac', 'Shellac'], ['epoxy', 'Epoxy pour']]
@@ -72,7 +72,7 @@ function Fractions({ kids }: { kids?: boolean }) {
       <Answer kids={kids} label="Answer">
         {'error' in r ? <span className="text-red-700">{r.error}</span> : <>
           <div className="font-bold">{nearest(r.value, kids ? 16 : den)}</div>
-          <div className={kids ? 'text-lg' : 'text-xs text-stone-600'}>{Number(r.value.toFixed(4))}" as a decimal{Math.abs(r.value) >= 12 ? ` · ${Math.floor(r.value / 12)}' ${nearest(r.value % 12, 16)}` : ''}</div>
+          <div className={kids ? 'text-lg' : 'text-xs text-stone-600'}>{Number(r.value.toFixed(4))}" as a decimal{Math.abs(r.value) >= 12 ? ` · ${feetInches(r.value)}` : ''}</div>
         </>}
       </Answer>
     </div>
@@ -109,13 +109,18 @@ function Miter() {
   const [tilt, setTilt] = useState('30')
   const [spring, setSpring] = useState('38')
   const [corner, setCorner] = useState('90')
-  const c = compoundMiter(Number(sides), Number(tilt)), cr = crownFlat(Number(spring), Number(corner))
+  const nS = Number(sides), nT = Number(tilt), nSp = Number(spring), nC = Number(corner)
+  const frameOk = Number.isInteger(nS) && nS >= 3 && nT >= 0 && nT <= 90
+  const crownOk = nSp > 0 && nSp < 90 && nC > 0 && nC < 360 && nC !== 180
+  // An outside corner (more than 180°) cuts like the inside corner it wraps: 360° minus it.
+  const inside = nC > 180 ? 360 - nC : nC
+  const c = compoundMiter(nS, nT), cr = crownFlat(nSp, inside)
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-end gap-2"><Field label="Sides" value={sides} onChange={setSides} /><Field label="Sides lean out (°)" value={tilt} onChange={setTilt} /></div>
-      <Answer label="Compound miter"><div className="font-bold">Miter {deg(c.miter)}, bevel {deg(c.bevel)}</div><div className="text-xs text-stone-600">miter = atan(sin lean × tan(180°/sides)); bevel = asin(cos lean × sin(180°/sides)). Saw settings measured from square.</div></Answer>
+      <Answer label="Compound miter">{frameOk ? <div className="font-bold">Miter {deg(c.miter)}, bevel {deg(c.bevel)}</div> : <div className="text-red-700">Give 3 or more sides and a lean of 0–90°</div>}<div className="text-xs text-stone-600">miter = atan(sin lean × tan(180°/sides)); bevel = asin(cos lean × sin(180°/sides)). Saw settings measured from square.</div></Answer>
       <div className="flex flex-wrap items-end gap-2"><Field label="Crown spring angle (°)" value={spring} onChange={setSpring} /><Field label="Wall corner (°)" value={corner} onChange={setCorner} /></div>
-      <Answer label="Crown"><div className="font-bold">Crown laid flat: miter {deg(cr.miter)}, bevel {deg(cr.bevel)}</div><div className="text-xs text-stone-600">Common crowns: 52/38 (spring 38°) → 31.6° / 33.9°; 45/45 → 35.3° / 30.0°.</div></Answer>
+      <Answer label="Crown">{crownOk ? <div className="font-bold">Crown laid flat: miter {deg(cr.miter)}, bevel {deg(cr.bevel)}{nC > 180 ? ' (outside corner)' : ''}</div> : <div className="text-red-700">Give a spring angle of 1–89° and a wall corner (90 for a square inside corner, 270 outside)</div>}<div className="text-xs text-stone-600">Common crowns: 52/38 (spring 38°) → 31.6° / 33.9°; 45/45 → 35.3° / 30.0°.</div></Answer>
     </div>
   )
 }

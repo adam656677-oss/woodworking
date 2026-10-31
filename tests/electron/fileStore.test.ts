@@ -2,7 +2,7 @@ import { mkdtemp, readFile, utimes, writeFile } from 'node:fs/promises'
 import * as realFs from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { autosavePath, defaultFolder, deleteAutosave, load, safeSave } from '../../electron/fileStore'
+import { autosavePath, defaultFolder, deleteAutosave, load, loadJson, safeSave } from '../../electron/fileStore'
 
 let dir: string
 beforeEach(async () => {
@@ -78,4 +78,21 @@ test('deleteAutosave removes the side file and ignores one that is already gone'
   await deleteAutosave(p + '.autosave')
   await expect(realFs.stat(p + '.autosave')).rejects.toThrow()
   await deleteAutosave(p + '.autosave')
+})
+
+test('saves of the same file at the same moment take turns: the file ends whole, as the last one', async () => {
+  const p = join(dir, 'journal.json')
+  const texts = Array.from({ length: 8 }, (_, i) => JSON.stringify({ n: i, pad: 'x'.repeat((8 - i) * 300) }))
+  await Promise.all(texts.map(t => safeSave(p, t)))
+  expect(JSON.parse(await readFile(p, 'utf8')).n).toBe(7)
+})
+
+test('loadJson falls back to the .bak when the file is damaged, and says so', async () => {
+  const p = join(dir, 'journal.json')
+  await safeSave(p, '[1]')
+  await safeSave(p, '[1,2]')
+  await writeFile(p, '[1,2')
+  expect(await loadJson(p)).toEqual({ data: [1], damaged: true })
+  expect(await loadJson(join(dir, 'none.json'))).toEqual({ data: null, damaged: false })
+  expect(await loadJson(p.replace('journal', 'none'))).toEqual({ data: null, damaged: false })
 })

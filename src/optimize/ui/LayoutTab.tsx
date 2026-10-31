@@ -115,6 +115,9 @@ function WoodSection({ l }: { l: WoodLayout }) {
 export function StockPanel() {
   const project = useStudio(s => s.project)
   const items = useStock(s => s.items)
+  // Load the stock list before showing it, so an add can't overwrite a list that hasn't been read yet.
+  const loaded = useStock(s => s.loaded)
+  useEffect(() => { if (!loaded) void stock.getState().load() }, [loaded])
   const [draft, setDraft] = useState({ woodId: project.woods[0]?.id ?? '', kind: 'offcut' as 'sheet' | 'offcut' | 'board', width: '24', length: '48', defects: '' })
   const add = () => {
     const w = parseInches(draft.width), l = parseInches(draft.length)
@@ -133,7 +136,7 @@ export function StockPanel() {
           </li>
         ))}
       </ul>
-      <div className="mt-2 flex flex-wrap items-end gap-1 text-xs">
+      {!loaded ? <p className="mt-2 text-xs text-stone-500">Loading…</p> : <div className="mt-2 flex flex-wrap items-end gap-1 text-xs">
         <select aria-label="Stock wood" value={draft.woodId} onChange={e => setDraft({ ...draft, woodId: e.target.value })} className="rounded border border-stone-300 px-1 py-0.5">{project.woods.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}</select>
         <select aria-label="Stock kind" value={draft.kind} onChange={e => setDraft({ ...draft, kind: e.target.value as typeof draft.kind })} className="rounded border border-stone-300 px-1 py-0.5"><option value="sheet">Sheet</option><option value="offcut">Offcut</option><option value="board">Board</option></select>
         <input aria-label="Stock width" value={draft.width} onChange={e => setDraft({ ...draft, width: e.target.value })} className="w-14 rounded border border-stone-300 px-1 py-0.5" />
@@ -141,7 +144,7 @@ export function StockPanel() {
         <input aria-label="Stock length" value={draft.length} onChange={e => setDraft({ ...draft, length: e.target.value })} className="w-14 rounded border border-stone-300 px-1 py-0.5" />
         {draft.kind === 'board' && <input aria-label="Defects" placeholder="knots at 40-44, 60-62" value={draft.defects} onChange={e => setDraft({ ...draft, defects: e.target.value })} className="w-40 rounded border border-stone-300 px-1 py-0.5" />}
         <button onClick={add} className="rounded bg-amber-700 px-2 py-0.5 font-semibold text-white">Add to my stock</button>
-      </div>
+      </div>}
     </details>
   )
 }

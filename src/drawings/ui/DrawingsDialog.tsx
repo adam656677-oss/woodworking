@@ -6,7 +6,7 @@ import { formatInches } from '../../model/units'
 import type { Project } from '../../model/types'
 import { shoppingList } from '../../optimize/shopping'
 import { useStock } from '../../optimize/stockStore'
-import { journalTotals, tools, useTools } from '../../tools/store'
+import { entryFor, journalTotals, tools, useTools } from '../../tools/store'
 import { stepsFromDesign } from '../../shop/steps'
 import { finishById } from '../../finish/finishes'
 import { scheduleTime, stepText } from '../../finish/schedule'
@@ -40,7 +40,8 @@ export function DrawingsDialog() {
   const shop = useStock(s => s.items)
   const journal = useTools(s => s.journal)
   useEffect(() => { if (!tools.getState().loaded) void tools.getState().load() }, [])
-  const hasJournal = journal.some(e => e.project === project.name)
+  const filePath = useStudio(s => s.filePath)
+  const hasJournal = journal.some(e => entryFor(e, { name: project.name, file: filePath }))
 
   const close = () => studio.getState().set({ drawingsOpen: false })
   useEffect(() => {
@@ -289,8 +290,9 @@ function FinishPage({ p }: { p: Project }) {
 }
 
 function JournalPage({ p }: { p: Project }) {
-  const entries = tools.getState().journal.filter(e => e.project === p.name).sort((a, b) => a.date.localeCompare(b.date))
-  const t = journalTotals(tools.getState().journal, p.name, Object.values(p.shopProgress?.minutes ?? {}).reduce((a, b) => a + b, 0))
+  const ref = { name: p.name, file: studio.getState().filePath }
+  const entries = tools.getState().journal.filter(e => entryFor(e, ref)).sort((a, b) => a.date.localeCompare(b.date))
+  const t = journalTotals(tools.getState().journal, ref, Object.values(p.shopProgress?.minutes ?? {}).reduce((a, b) => a + b, 0))
   return (
     <section className={pageStyle}>
       <h2 className="mb-1 text-xl font-bold">Shop journal — {p.name}</h2>

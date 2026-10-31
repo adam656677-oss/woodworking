@@ -51,7 +51,7 @@ export function shoppingList(p: Project, shop: ShopStockItem[] = [], onHand?: { 
     const use = Math.min(owned, r.qty)
     have.set(r.itemId, owned - use)
     const buy = r.qty - use
-    lines.push({ section: 'hardware', what: `${r.name}${r.note ? ` — ${r.note}` : ''} (you have ${owned}; this project needs ${r.qty}${buy ? ` — buy ${buy}` : ''})`, qty: buy, unit: 'each', each: r.unit, total: money(buy * r.unit) })
+    lines.push({ section: 'hardware', what: `${r.name}${r.note ? ` — ${r.note}` : ''} (${use} from your shop; this project needs ${r.qty}${buy ? ` — buy ${buy}` : ''})`, qty: buy, unit: 'each', each: r.unit, total: money(buy * r.unit) })
   }
   // Finishes in the finishing schedule, unless the shop has some.
   const finishes = [...new Set((p.finish?.steps ?? []).map(s => s.finishId).filter((x): x is string => !!x))]
@@ -63,7 +63,7 @@ export function shoppingList(p: Project, shop: ShopStockItem[] = [], onHand?: { 
   }
   const byKind: ShoppingList['byKind'] = { wood: 0, banding: 0, hardware: 0, finish: 0 }
   let missing = 0
-  for (const l of lines) { if (l.total === undefined) { if (l.qty > 0) missing++ } else byKind[l.section] += l.total }
+  for (const l of lines) { if (l.total === undefined) { if (l.qty > 0 && l.section !== 'finish') missing++ } else byKind[l.section] += l.total }
   for (const k of Object.keys(byKind) as BuyLine['section'][]) byKind[k] = money(byKind[k])
   const subtotal = money(Object.values(byKind).reduce((a, b) => a + b, 0))
   const tax = money(subtotal * ((p.cutSettings?.tax ?? 0) / 100))

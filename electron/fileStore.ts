@@ -39,8 +39,29 @@ async function renameWithRetry(fs: FsLike, from: string, to: string, delayMs: nu
   }
 }
 
-/** Save without ever destroying the last good file. */
-export async function safeSave(path: string, text: string, fs: FsLike = nodeFs, retryDelayMs = 100): Promise<void> {
+// Saves of one file wait for the one before, so two never share the temp file.
+const queues = new Map<string, Promise<unknown>>()
+
+/** Save without ever destroying the last good file. Saves of the same file run one after another. */
+export function safeSave(path: string, text: string, fs: FsLike = nodeFs, retryDelayMs = 100): Promise<void> {
+  const run = (queues.get(path) ?? Promise.resolve()).catch(() => {}).then(() => saveNow(path, text, fs, retryDelayMs))
+  queues.set(path, run)
+  void run.finally(() => { if (queues.get(path) === run) queues.delete(path) }).catch(() => {})
+  return run
+}
+
+/**
+ * A JSON data file: its contents, or the last good copy (.bak) when the file is damaged — `damaged` says so,
+ * so the caller can keep from overwriting it with less. Null when there's no file yet.
+ */
+export async function loadJson(path: string, fs: FsLike = nodeFs): Promise<{ data: unknown; damaged: boolean }> {
+  let text: string
+  try { text = await fs.readFile(path, 'utf8') } catch { return { data: null, damaged: false } }
+  try { return { data: JSON.parse(text), damaged: false } } catch { /* fall through to the backup */ }
+  try { return { data: JSON.parse(await fs.readFile(`${path}.bak`, 'utf8')), damaged: true } } catch { return { data: null, damaged: true } }
+}
+
+async function saveNow(path: string, text: string, fs: FsLike, retryDelayMs: number): Promise<void> {
   const tmp = `${path}.tmp`
   try {
     await fs.writeFile(tmp, text, 'utf8')

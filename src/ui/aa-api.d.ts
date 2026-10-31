@@ -31,8 +31,11 @@ export type AaApi = {
   /** Opens an allowed https link in the system browser. */
   openLink(url: string): Promise<boolean>
   /** The shop journal or inventory from the app's data folder (null if none yet). */
-  loadData(name: 'journal' | 'inventory'): Promise<unknown>
+  /** The file's contents (or its last good copy when `damaged`); null data when there's no file yet. */
+  loadData(name: 'journal' | 'inventory'): Promise<{ data: unknown; damaged: boolean }>
   saveData(name: 'journal' | 'inventory', data: unknown): Promise<void>
+  /** A photo the page can't decode (iPhone HEIC) as a small JPEG data URL, or null. */
+  photoThumbnail?(bytes: Uint8Array, max: number): Promise<string | null>
   /** Saves what printing would print as a PDF; the chosen path, or null. */
   savePdf(name: string): Promise<string | null>
   /** Makes that PDF in a temporary folder and opens it in the system's PDF viewer to print; false if it couldn't. */

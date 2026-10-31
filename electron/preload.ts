@@ -13,6 +13,7 @@ contextBridge.exposeInMainWorld('aa', {
   openLink: (url: string) => ipcRenderer.invoke('aa:openLink', url),
   loadData: (name: string) => ipcRenderer.invoke('aa:loadData', name),
   saveData: (name: string, data: unknown) => ipcRenderer.invoke('aa:saveData', name, data),
+  photoThumbnail: (bytes: Uint8Array, max: number) => ipcRenderer.invoke('aa:photoThumbnail', bytes, max),
   savePdf: (name: string) => ipcRenderer.invoke('aa:savePdf', name),
   print: (opts?: { landscape?: boolean; edgeToEdge?: boolean }) => ipcRenderer.invoke('aa:print', opts),
   keepAwake: (on: boolean) => ipcRenderer.invoke('aa:keepAwake', on),
