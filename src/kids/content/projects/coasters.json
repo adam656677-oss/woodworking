@@ -18,15 +18,15 @@
   ],
   "steps": [
     {
-      "text": "Mark four 3-1/2 inch squares along the 1x4.",
+      "text": "Measure 3-1/2 inches from the end of the 1x4 and mark it.",
       "tool": "tape-measure"
     },
     {
-      "text": "Draw square lines across at each mark.",
+      "text": "Draw a square line across at the mark.",
       "tool": "square"
     },
     {
-      "text": "Cut the squares in the miter box.",
+      "text": "Cut it in the miter box, then measure, mark and cut the next one. One at a time, because each cut takes a little wood with it.",
       "tool": "hand-saw"
     },
     {

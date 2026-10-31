@@ -6,7 +6,7 @@
   "minutes": 60,
   "kind": "useful",
   "picture": "phone-stand",
-  "blurb": "A desk stand that holds a phone or tablet up so you can watch or video-call.",
+  "blurb": "A desk stand that holds a phone up so you can watch or video-call.",
   "tools": [
     "tape-measure",
     "square",
@@ -29,7 +29,11 @@
       "tool": "clamps"
     },
     {
-      "text": "Drill two holes up through the base for the back.",
+      "text": "Mark two holes 3/8 inch from the back end of the base and drill them through; countersink them underneath.",
+      "tool": "drill"
+    },
+    {
+      "text": "Stand the back in place and drill small pilot holes up into it through the holes.",
       "tool": "drill"
     },
     {

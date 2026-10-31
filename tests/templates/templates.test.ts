@@ -3,7 +3,7 @@ import { cutList } from '../../src/model/cutlist'
 import type { Project } from '../../src/model/types'
 import { validate } from '../../src/model/validate'
 import { emptyProject } from '../../src/model/woods'
-import { applyTemplate, TEMPLATES, unlock, updateTemplateParams } from '../../src/templates'
+import { applyTemplate, TEMPLATES, unlock, updateTemplateParams, woodAllowed } from '../../src/templates'
 
 const rowsOf = (p: Project) => cutList(p).rows.map(r => ({ qty: r.qty, part: r.part, t: r.thickness, w: r.width, l: r.length }))
 
@@ -76,7 +76,7 @@ describe('birdhouse', () => {
   })
 })
 
-test('all three defaults have no warnings', () => {
+test('every template has no warnings at its defaults', () => {
   for (const t of TEMPLATES) expect(validate(applyTemplate(emptyProject(t.name), t.id))).toEqual([])
 })
 
@@ -114,29 +114,63 @@ test('out-of-range parameters are clamped and reported', () => {
   expect(cutList(z).rows.find(r => r.part.startsWith('Top'))!.qty).toBe(2)
 })
 
+// Every setting each template has: defaults, each on/off flipped, each choice, the smallest and largest of every
+// number, a middle value of every number, and every wood each wood setting allows.
+function variants(t: (typeof TEMPLATES)[number]): Record<string, string | boolean | number>[] {
+  const woods = emptyProject('x').woods
+  return [
+    {},
+    ...t.params.filter(p => p.kind === 'bool').map(p => ({ [p.key]: !p.default })),
+    ...t.params.filter(p => p.kind === 'choice').flatMap(p => p.options!.map(o => ({ [p.key]: o }))),
+    ...t.params.filter(p => p.kind === 'count' || p.kind === 'inches').flatMap(p => [{ [p.key]: p.min! }, { [p.key]: p.max! }, { [p.key]: p.kind === 'count' ? Math.round((p.min! + p.max!) / 2) : Math.round(((p.min! + p.max!) / 2 + 0.37) * 8) / 8 }]),
+    ...t.params.filter(p => p.kind === 'wood').flatMap(p => woods.filter(w => woodAllowed(p, w)).map(w => ({ [p.key]: w.id })))
+  ]
+}
+
 describe('every template', () => {
   test('unlocking keeps every part the same size and place (the formulas rebuild the design exactly)', async () => {
     const { worldBox } = await import('../../src/model/geometry')
     for (const t of TEMPLATES) {
-      const variants: Record<string, string | boolean | number>[] = [{}, ...t.params.filter(p => p.kind === 'bool').map(p => ({ [p.key]: !p.default })), ...t.params.filter(p => p.kind === 'choice').flatMap(p => p.options!.map(o => ({ [p.key]: o }))),
-        ...t.params.filter(p => p.kind === 'count' || p.kind === 'inches').flatMap(p => [{ [p.key]: p.min! }, { [p.key]: p.max! }])]
-      for (const v of variants) {
+      for (const v of [...variants(t), ...(t.id === 'table' ? [{ D: 23, boards: 3 }] : t.id === 'wallShelf' ? [{ n: 6, H: 31 }] : [])]) {
         const live = applyTemplate(emptyProject(t.name), t.id, v)
         const open = unlock(live)
         expect([t.id, v, open.boards.length]).toEqual([t.id, v, live.boards.length])
         live.boards.forEach((b, i) => {
           const a = worldBox(b), c = worldBox(open.boards[i])
           for (const k of ['x', 'y', 'z'] as const) {
-            expect([t.id, v, b.name, k, Math.round(c.min[k] * 64) / 64, Math.round(c.max[k] * 64) / 64]).toEqual([t.id, v, b.name, k, Math.round(a.min[k] * 64) / 64, Math.round(a.max[k] * 64) / 64])
+            expect([t.id, v, b.name, k, Math.abs(c.min[k] - a.min[k]) < 1e-6, Math.abs(c.max[k] - a.max[k]) < 1e-6]).toEqual([t.id, v, b.name, k, true, true])
           }
         })
       }
     }
   })
-  test('every template has no warnings at its defaults and with each option', () => {
+  test('no warnings, and every joint matches a contact that offers it, at every setting', () => {
     for (const t of TEMPLATES) {
-      const variants: Record<string, string | boolean>[] = [{}, ...t.params.filter(p => p.kind === 'bool').map(p => ({ [p.key]: !p.default })), ...t.params.filter(p => p.kind === 'choice').flatMap(p => p.options!.map(o => ({ [p.key]: o })))]
-      for (const v of variants) expect([t.id, v, validate(applyTemplate(emptyProject(t.name), t.id, v)).map(w => w.message)]).toEqual([t.id, v, []])
+      for (const v of variants(t)) {
+        const p = applyTemplate(emptyProject(t.name), t.id, v)
+        // At extreme sizes a part can honestly be bigger than the stock (that warning teaches); nothing may overlap or
+        // fail to join, ever.
+        const extreme = Object.keys(v).some(k => { const d = t.params.find(x => x.key === k); return d && (d.kind === 'inches' || d.kind === 'count' || d.kind === 'wood') })
+        expect([t.id, v, validate(p).filter(w => !extreme || (w.kind !== 'exceedsStock' && w.kind !== 'sag')).map(w => w.message)]).toEqual([t.id, v, []])
+        for (const j of p.joints) {
+          const c = contactBetween(p, j.hostBoardId, j.partnerBoardId)
+          expect([t.id, v, j.type, !!c && c.host === j.hostBoardId && jointOffers(c).includes(j.type)]).toEqual([t.id, v, j.type, true])
+        }
+      }
     }
+  })
+  test('a wood a setting does not allow is replaced by its default', () => {
+    const p = applyTemplate(emptyProject('T'), 'table', { legWood: '1x2' })
+    expect(p.template!.params.legWood).toBe('hw-8-4')
+    const c = applyTemplate(emptyProject('C'), 'cuttingBoard', { wood: '1x6' })
+    expect(c.template!.params.wood).toBe('hw-4-4')
+  })
+  test('the side table lists tabletop fasteners; the cabinet lists shelf pins; rebuilding replaces them', () => {
+    const t = applyTemplate(emptyProject('T'), 'table')
+    expect(t.hardware!.filter(h => h.itemId === 'tabletop-fastener').reduce((n, h) => n + h.qty, 0)).toBe(8)
+    const again = applyTemplate(t, 'table', { W: 30 })
+    expect(again.hardware!.filter(h => h.itemId === 'tabletop-fastener')).toHaveLength(4)
+    const c = applyTemplate(emptyProject('C'), 'cabinet', { shelf: false })
+    expect(c.hardware ?? []).toEqual([])
   })
 })

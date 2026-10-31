@@ -24,11 +24,19 @@
       "tool": "hand-saw"
     },
     {
-      "text": "Drill two holes through each base, near one end.",
+      "text": "On each base, mark two holes 3/8 inch from one end, spread across the middle.",
+      "tool": "pencil"
+    },
+    {
+      "text": "Drill the holes through the base, then countersink them so the screw heads sit flush underneath.",
       "tool": "drill"
     },
     {
-      "text": "Stand an upright on the end of each base and screw it on from underneath.",
+      "text": "Stand an upright on that end of the base and drill small pilot holes up into it through the holes.",
+      "tool": "drill"
+    },
+    {
+      "text": "Screw the upright on from underneath.",
       "tool": "screwdriver"
     },
     {

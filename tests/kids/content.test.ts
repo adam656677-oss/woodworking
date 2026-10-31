@@ -102,3 +102,12 @@ test('the coaster set: four separate squares, nothing joined', () => {
   expect(d.boards).toHaveLength(4)
   expect(validate(d)).toEqual([])
 })
+
+test('every project that drives screws drills pilot holes first', () => {
+  for (const p of PROJECTS) {
+    const screw = p.steps.findIndex(s => s.tool === 'screwdriver')
+    if (screw < 0) continue
+    const pilot = p.steps.findIndex(s => (s.tool === 'drill' || s.tool === 'hammer') && /pilot/i.test(s.text))
+    expect([p.id, pilot >= 0 && pilot < screw]).toEqual([p.id, true])
+  }
+})

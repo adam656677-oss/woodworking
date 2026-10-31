@@ -27,15 +27,19 @@
       "tool": "drill"
     },
     {
-      "text": "Screw the sides to the ends to make a frame.",
+      "text": "Mark the screw spots 3/8 inch in from the ends of the sides, and drill small pilot holes there so the screws don't split the wood.",
+      "tool": "drill"
+    },
+    {
+      "text": "Screw the sides to the ends with outdoor screws to make a frame.",
       "tool": "screwdriver"
     },
     {
-      "text": "Fit the bottom inside and screw through the sides into it.",
-      "tool": "screwdriver"
+      "text": "Set the bottom inside, 3/4 inch up from the ground, so water can drain out underneath. Drill pilot holes through the sides and screw into it.",
+      "tool": "drill"
     },
     {
-      "text": "Sand the top edges. Use cedar, or a finish made for outdoors, so it lasts.",
+      "text": "Sand the top edges. Use cedar, or leave it unfinished inside, so it's safe for herbs.",
       "tool": "sandpaper"
     }
   ]

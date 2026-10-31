@@ -145,7 +145,8 @@ function planter(p: Project): Built {
   const endA = makeBoard('End', w, 5.5, 5.5, ORIENT.wallY, { x: 0, y: 0.75, z: 0 })
   const endB = makeBoard('End', w, 5.5, 5.5, ORIENT.wallY, { x: L - 0.75, y: 0.75, z: 0 })
   const holes = [3, 6.25, 9.5].map(v => ({ diameter: 0.5, u: 2.75, v }))
-  const bottom = makeBoard('Bottom', w, 5.5, L - 1.5, ORIENT.flatX, { x: 0.75, y: 0.75, z: 0 }, { holes })
+  // Set 3/4" up inside the box so water drains out underneath.
+  const bottom = makeBoard('Bottom', w, 5.5, L - 1.5, ORIENT.flatX, { x: 0.75, y: 0.75, z: 0.75 }, { holes })
   return {
     boards: [front, back, endA, endB, bottom],
     joints: [

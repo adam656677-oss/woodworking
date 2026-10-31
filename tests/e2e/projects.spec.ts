@@ -9,7 +9,7 @@ test('every new template starts with no warnings; the new kids projects have she
   try {
     await enterMasterShop(win)
     await shot(win, 'projects-start')
-    const parts: Record<string, number> = { 'Side table': 11, Workbench: 12, 'Base cabinet': 8, 'Cutting board': 6, 'Step stool': 5, 'Wall shelf': 6 }
+    const parts: Record<string, number> = { 'Side table': 11, Workbench: 12, 'Base cabinet': 9, 'Cutting board': 6, 'Step stool': 5, 'Wall shelf': 6 }
     for (const [name, n] of Object.entries(parts)) {
       await win.getByRole('button', { name: 'New ▾' }).click()
       await win.getByRole('menuitem', { name, exact: true }).click()
@@ -19,6 +19,16 @@ test('every new template starts with no warnings; the new kids projects have she
       await expect(win.getByRole('region', { name: 'Warnings' })).toHaveCount(0)
       await shot(win, `projects-${name.replace(/\W+/g, '-')}`)
     }
+    // The side table lists its tabletop fasteners.
+    await win.getByRole('button', { name: 'New ▾' }).click()
+    await win.getByRole('menuitem', { name: 'Side table', exact: true }).click()
+    const d0 = win.getByRole('button', { name: /Don.t save|Discard/ })
+    if (await d0.isVisible().catch(() => false)) await d0.click()
+    await win.getByRole('button', { name: 'Cut List' }).click()
+    await expect(win.getByRole('region', { name: 'Hardware' })).toContainText('Tabletop fasteners (figure-8)')
+    await win.keyboard.press('Escape')
+    await win.getByRole('button', { name: /Close/ }).first().click().catch(() => {})
+
     // A template stays live: more strips in the cutting board.
     await win.getByRole('button', { name: 'New ▾' }).click()
     await win.getByRole('menuitem', { name: 'Cutting board', exact: true }).click()
@@ -35,6 +45,10 @@ test('every new template starts with no warnings; the new kids projects have she
     await win.getByRole('button', { name: 'Projects' }).click()
     for (const p of ['Coaster set', 'Bookends', 'Phone stand', 'Planter box']) await expect(win.getByRole('button', { name: new RegExp(p) })).toBeVisible()
     await shot(win, 'projects-kids')
+    // A new project's page, with its steps.
+    await win.getByRole('button', { name: /Planter box/ }).click()
+    await expect(win.getByText(/drain out underneath/)).toBeVisible()
+    await shot(win, 'projects-planter')
   } finally {
     kill(app)
   }
