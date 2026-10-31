@@ -3,10 +3,11 @@ import { Art } from '../../kids/art'
 import { kids } from '../../kids/kidsStore'
 import { KidsPageFrame } from '../../kids/ui/kit'
 
-export type GameId = 'tape' | 'hazard' | 'wood' | 'joint' | 'lathe'
+import type { GameId } from '../types'
+export type { GameId }
 const GAMES: { id: GameId; name: string; about: string; art: string; color: string }[] = [
   { id: 'tape', name: 'Read the Tape', about: 'Read a tape measure, down to the tiny marks.', art: 'tape-measure', color: 'border-yellow-400 bg-yellow-100' },
-  { id: 'hazard', name: 'Spot the Hazard', about: 'Find the 8 dangers in the shop.', art: 'first-aid', color: 'border-red-400 bg-red-100' },
+  { id: 'hazard', name: 'Spot the Hazard', about: 'Find the 8 dangers in the shop.', art: 'ear-muffs', color: 'border-red-400 bg-red-100' },
   { id: 'wood', name: 'Match the Wood', about: 'Which wood is it? Use the clue.', art: 'wood-grain', color: 'border-amber-500 bg-amber-100' },
   { id: 'joint', name: 'Joint Puzzle', about: 'Fit the pieces and name the joint.', art: 'tic-tac-toe', color: 'border-teal-400 bg-teal-100' },
   { id: 'lathe', name: 'Lathe Turning', about: 'Turn a pen, a bowl or a candlestick.', art: 'block-plane', color: 'border-sky-400 bg-sky-100' }

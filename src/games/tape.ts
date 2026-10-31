@@ -26,6 +26,7 @@ export function explainTape(v: number, den: number): string {
   while (num > 0 && num % 2 === 0 && d > 1) { num /= 2; d /= 2 }
   const inches = `${whole} inch${whole === 1 ? '' : 'es'}`
   if (num === 0) return `${inches} — right on the big inch mark`
+  if (d === 2) return `${whole ? `${whole} and a half inches` : 'Half an inch'} — the long mark halfway to ${whole + 1}`
   return `${whole ? `${inches} and ` : ''}${num} ${NAMES[d][num === 1 ? 0 : 1]}: count the ${NAMES[d][1]} past the ${whole || 0} mark`
 }
 
@@ -37,10 +38,10 @@ export function tapeRound(level: number, r: Rng): TapeRound {
   const hard = den > 1 && r() < 0.7
   let answer = 0
   do {
-    const whole = 1 + Math.floor(r() * 10)
+    const whole = Math.floor(r() * 12)
     const k = den === 1 ? 0 : Math.floor(r() * den)
     answer = whole + k / den
-  } while (answer > 12 || (hard && den > 1 && tickOf(answer) !== tickOf(1 / den)))
+  } while (answer <= 0 || answer > 12 || (hard && den > 1 && tickOf(answer) !== tickOf(1 / den)))
   const step = 1 / den
   // Likely mistakes: one or two marks off, counting from the wrong inch, mirrored fraction.
   const frac = answer - Math.floor(answer)

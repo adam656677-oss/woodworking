@@ -6,6 +6,7 @@ import { grainPixels } from '../grain2d'
 import { rng } from '../rng'
 import { KID_WOODS, woodRound } from '../woods'
 import { Feedback, GamePage, RoundEnd, useRound } from './common'
+import { ReadAloud } from '../../kids/ui/ReadAloud'
 
 function Board({ id, seed }: { id: string; seed: number }) {
   const ref = useRef<HTMLCanvasElement>(null)
@@ -37,14 +38,14 @@ export function WoodGame() {
       {round.done && !picked ? <RoundEnd right={round.right} onAgain={() => { round.again(); next() }} /> : <>
         <p className="mb-2 text-lg text-sky-800">Question {Math.min(round.asked + (picked ? 0 : 1), 10)} of 10</p>
         <Board id={q.answer} seed={seed} />
-        <p aria-label="Clue" className="mt-4 max-w-3xl rounded-2xl bg-white p-4 text-2xl shadow">🔎 {q.clue}</p>
+        <div className="mt-4 flex max-w-3xl items-center gap-3 rounded-2xl bg-white p-4 shadow"><p aria-label="Clue" className="flex-1 text-2xl">🔎 {q.clue}</p><ReadAloud text={q.clue} /></div>
         <div role="group" aria-label="Choices" className="mt-4 flex flex-wrap gap-3">
           {q.choices.map(c => (
             <button key={c} disabled={picked !== null} onClick={() => { setPicked(c); round.answer(c === q.answer) }}
               className={`min-w-40 rounded-2xl px-6 py-4 text-2xl font-bold shadow ${picked && c === q.answer ? 'bg-green-500 text-white' : picked === c ? 'bg-amber-400' : 'bg-white hover:bg-sky-100'}`}>{nameOf(c)}</button>
           ))}
         </div>
-        {picked && <Feedback ok={picked === q.answer} onNext={next}>{picked === q.answer ? `Yes — ${nameOf(q.answer)}!` : `That one's ${nameOf(q.answer)}.`} {speciesById(q.answer)?.uses}</Feedback>}
+        {picked && <Feedback ok={picked === q.answer} onNext={next} say={`That's ${nameOf(q.answer)}. ${speciesById(q.answer)?.uses ?? ''}`}>{picked === q.answer ? `Yes — ${nameOf(q.answer)}!` : `That one's ${nameOf(q.answer)}.`} {speciesById(q.answer)?.uses}</Feedback>}
       </>}
     </GamePage>
   )

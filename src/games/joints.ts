@@ -7,14 +7,19 @@ export type Grid = string[]
 export type Puzzle = { id: string; name: string; names: string[]; host: Grid; partners: Grid[]; answer: number; about: string }
 
 export function fits(host: Grid, partner: Grid): boolean {
-  let filled = 0
+  let filled = 0, touches = false
+  const at = (g: Grid, x: number, y: number) => g[y]?.[x] ?? '.'
   for (let y = 0; y < host.length; y++) for (let x = 0; x < host[y].length; x++) {
     const h = host[y][x], p = partner[y]?.[x] ?? '.'
     if (h === '#' && p === '#') return false
     if (h === 's' && p !== '#') return false
-    if (p === '#') filled++
+    if (p === '#') {
+      filled++
+      // It has to meet the board: right up against its wood or in its socket.
+      if (h === 's' || [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => at(host, x + dx, y + dy) === '#')) touches = true
+    }
   }
-  return filled > 0
+  return filled > 0 && touches
 }
 
 const P = (id: string, name: string, others: string[], host: Grid, right: Grid, wrong: Grid[], about: string): Puzzle => {
@@ -28,10 +33,10 @@ export const PUZZLES: Puzzle[] = [
     ['...#####', '...#####', '...#####', '...#####'],
     [['###.....', '...#####', '...#####', '...#####'], ['..######', '..######', '..######', '..######']],
     'The end of one board just meets the other. Easy, but it needs glue and screws or nails to hold.'),
-  P('lap', 'Lap joint', ['Butt joint', 'Rabbet'],
-    ['####ssss', '####ssss', '########', '########'],
-    ['....####', '....####', '........', '........'],
-    [['....####', '....####', '....####', '........'], ['.....###', '.....###', '........', '........']],
+  P('lap', 'Lap joint', ['Butt joint', 'Dado'],
+    ['####ssss....', '####ssss....', '########....', '########....'],
+    ['....########', '....########', '........####', '........####'],
+    [['....########', '....########', '....########', '........####'], ['.....#######', '.....#######', '........####', '........####']],
     'Each board gives up half its thickness, so they overlap and the faces stay flush.'),
   P('dado', 'Dado', ['Rabbet', 'Box joint'],
     ['###.....', '##s.....', '##s.....', '###.....'],

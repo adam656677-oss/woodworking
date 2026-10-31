@@ -98,3 +98,44 @@ test('the parent can turn the games off; saved progress keeps it', async () => {
   expect(isProgress({ ...newProgress(), gamesOff: 'yes' })).toBe(false)
   expect(isProgress(newProgress())).toBe(true)
 })
+
+test('lathe score: going past the line costs more than leaving wood on; ruining it scores low', () => {
+  for (const t of LATHE_TARGETS) {
+    const ruined = { radii: t.radii.map(() => TOOL_REACH) }
+    expect([t.id, score(ruined, t).percent < 40]).toEqual([t.id, true])
+    // The same amount of wood off the line: too deep costs more than too much left on.
+    const deep = { radii: t.radii.map(r => Math.max(TOOL_REACH, r - 0.05)) }
+    const proud = { radii: t.radii.map(r => Math.min(1, r + 0.05)) }
+    if (t.id === 'pen') expect(score(deep, t).percent).toBeLessThan(score(proud, t).percent)
+    expect(score(deep, t).tooDeep.length).toBeGreaterThan(0)
+    // An uncut blank isn't nearly done.
+    expect(score(newBlank(t), t).percent).toBeLessThan(30)
+  }
+  const pen = LATHE_TARGETS[0]
+  const cylinder = { radii: pen.radii.map(() => Math.max(...pen.radii)) }
+  expect(score(cylinder, pen).percent).toBeLessThan(90)
+})
+
+test('joint puzzles: a piece that leaves a gap at the joint does not count', () => {
+  const butt = PUZZLES.find(p => p.id === 'butt')!
+  expect(fits(butt.host, ['....####', '....####', '....####', '....####'])).toBe(false)
+  // The lap: both boards are cut, so it isn't a rabbet.
+  const lap = PUZZLES.find(p => p.id === 'lap')!
+  expect(lap.partners[lap.answer].some(row => row.includes('s') || /#\.|\.#/.test(row))).toBe(true)
+  expect(lap.names).not.toContain('Rabbet')
+})
+
+test('hazards: the whole cord can be tapped, and a tap far from it misses', () => {
+  for (const [x, y] of [[150, 452], [60, 458], [440, 380], [330, 455]]) expect(hazardAt(HAZARD_SCENE, x, y)?.id).toBe('cord')
+  expect(hazardAt(HAZARD_SCENE, 300, 380)).toBeNull()
+})
+
+test('tape rounds reach readings under 1" and up to 12"', () => {
+  const r = rng(11)
+  const seen = Array.from({ length: 2000 }, () => tapeRound(3, r).answer)
+  expect(Math.min(...seen)).toBeLessThan(1)
+  expect(Math.max(...seen)).toBeGreaterThan(11)
+  // The harder levels mostly ask about their own marks.
+  const own = Array.from({ length: 500 }, () => tapeRound(4, r).answer).filter(v => tickOf(v) === 'sixteenth').length
+  expect(own).toBeGreaterThan(250)
+})

@@ -1,7 +1,8 @@
 // Spot the Hazard: tap the dangers in the shop picture.
 import { useState } from 'react'
 import { HAZARD_SCENE, hazardAt, type Hazard } from '../hazards'
-import { GamePage } from './common'
+import { GamePage, svgPoint } from './common'
+import { ReadAloud } from '../../kids/ui/ReadAloud'
 
 const INK = '#3b3226', STEEL = '#9aa5b1', WOOD = '#e2b878', DARK = '#8a5a2b'
 
@@ -52,9 +53,13 @@ function ShopPicture() {
       {/* Heater and an open finish can */}
       <rect x={30} y={385} width={60} height={70} rx={6} fill="#999" stroke={INK} strokeWidth={2} />
       {[0, 1, 2, 3].map(i => <path key={i} d={`M38 ${398 + i * 14} h44`} stroke="#e74c3c" strokeWidth={4} />)}
-      <rect x={100} y={415} width={34} height={40} rx={3} fill="#f39c12" stroke={INK} strokeWidth={2} />
+      {/* An open can of finish: label, brush, fumes. */}
+      <rect x={100} y={415} width={34} height={40} rx={3} fill="#c7ccd1" stroke={INK} strokeWidth={2} />
+      <rect x={102} y={426} width={30} height={16} fill="#f39c12" />
+      <text x={117} y={438} fontSize={9} textAnchor="middle" fontWeight={700} fill={INK}>FINISH</text>
       <ellipse cx={117} cy={415} rx={17} ry={5} fill="#7a4a1a" stroke={INK} />
-      <path d="M110 405 q4 -10 0 -18 M122 403 q4 -10 0 -16" stroke="#999" strokeWidth={2} fill="none" />
+      <path d="M124 412 l18 -26" stroke={DARK} strokeWidth={4} /><rect x={138} y={378} width={10} height={10} fill="#ddd" stroke={INK} transform="rotate(34 143 383)" />
+      <path d="M108 405 q6 -8 -2 -16 q-6 -6 2 -14 M120 404 q6 -8 -2 -16" stroke="#8fbf8f" strokeWidth={2} fill="none" strokeDasharray="3 3" />
     </g>
   )
 }
@@ -66,8 +71,7 @@ export function HazardGame() {
   const [misses, setMisses] = useState(0)
   const done = found.length === s.hazards.length
   const tap = (e: React.MouseEvent<SVGSVGElement>) => {
-    const box = e.currentTarget.getBoundingClientRect()
-    const x = ((e.clientX - box.left) / box.width) * s.width, y = ((e.clientY - box.top) / box.height) * s.height
+    const { x, y } = svgPoint(e.currentTarget, e.clientX, e.clientY)
     const h = hazardAt(s, x, y)
     if (!h) { setMisses(m => m + 1); return }
     if (!found.includes(h.id)) setFound([...found, h.id])
@@ -82,17 +86,19 @@ export function HazardGame() {
         {(done || found.length > 0) && <button onClick={() => { setFound([]); setShown(null); setMisses(0) }} className="rounded-xl bg-white px-4 py-2 shadow">Start over</button>}
         {misses > 2 && !done && <span className="text-lg text-sky-700">Look at the floor, the tools and the people.</span>}
       </div>
-      <div className="flex flex-wrap items-start gap-6">
-        <svg role="img" aria-label="Workshop picture" viewBox={`0 0 ${s.width} ${s.height}`} onClick={tap} className="w-full max-w-4xl cursor-pointer rounded-2xl border-4 border-white shadow">
+      {/* The card sits beside the picture (never below it, out of sight). */}
+      <div className="flex items-start gap-4">
+        <svg role="img" aria-label="Workshop picture" viewBox={`0 0 ${s.width} ${s.height}`} onClick={tap} className="min-w-0 max-w-4xl flex-1 cursor-pointer rounded-2xl border-4 border-white shadow">
           <ShopPicture />
           {s.hazards.filter(h => found.includes(h.id)).map(h => (
             <circle key={h.id} cx={h.x} cy={h.y} r={h.r} fill="none" stroke="#d6453d" strokeWidth={5} strokeDasharray="10 6" />
           ))}
         </svg>
-        <div className="flex w-80 flex-col gap-3">
+        <div className="flex w-72 shrink-0 flex-col gap-3">
+          {!shown && !done && <p className="rounded-2xl bg-white p-4 text-lg text-sky-800 shadow">Tap something that looks dangerous.</p>}
           {shown && (
             <section aria-label="Hazard" className="rounded-2xl bg-white p-4 text-lg shadow">
-              <h2 className="text-2xl font-bold text-red-700">{shown.name}</h2>
+              <h2 className="flex items-center justify-between gap-2 text-2xl font-bold text-red-700">{shown.name}<ReadAloud text={`${shown.name}. Why: ${shown.why} Fix it: ${shown.fix}`} /></h2>
               <p className="mt-2"><b>Why:</b> {shown.why}</p>
               <p className="mt-2"><b>Fix it:</b> {shown.fix}</p>
             </section>

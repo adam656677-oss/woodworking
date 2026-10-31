@@ -32,18 +32,27 @@ export function RoundEnd({ right, onAgain, extra }: { right: number; onAgain(): 
       <p className="text-3xl font-bold">{right} of {ROUND} right</p>
       <p>{note}</p>
       {extra}
-      <button onClick={onAgain} className="rounded-xl bg-green-600 px-6 py-3 text-xl font-semibold text-white hover:bg-green-700">Play again</button>
+      <button autoFocus onClick={onAgain} className="rounded-xl bg-green-600 px-6 py-3 text-xl font-semibold text-white hover:bg-green-700">Play again</button>
     </section>
   )
 }
 
 /** The right-or-not message after an answer, with a Next button. */
-export function Feedback({ ok, children, onNext }: { ok: boolean; children: ReactNode; onNext(): void }) {
+/** Where a pointer is in an SVG's own units (borders and scaling taken care of). */
+export function svgPoint(svg: SVGSVGElement, clientX: number, clientY: number): { x: number; y: number } {
+  const m = svg.getScreenCTM()
+  if (!m) return { x: 0, y: 0 }
+  const p = new DOMPoint(clientX, clientY).matrixTransform(m.inverse())
+  return { x: p.x, y: p.y }
+}
+
+export function Feedback({ ok, children, onNext, say, next = 'Next →' }: { ok: boolean; children: ReactNode; onNext(): void; say?: string; next?: string }) {
   return (
     <div role="alert" className={`mt-4 flex max-w-3xl items-center gap-4 rounded-2xl p-4 text-xl ${ok ? 'bg-green-100 text-green-900' : 'bg-amber-100 text-amber-900'}`}>
       <span className="text-3xl" aria-hidden>{ok ? '✅' : '🤔'}</span>
       <div className="flex-1">{children}</div>
-      <button autoFocus onClick={onNext} className="rounded-xl bg-sky-600 px-5 py-2 font-semibold text-white">Next →</button>
+      {say && <ReadAloud text={say} />}
+      <button autoFocus onClick={onNext} className="rounded-xl bg-sky-600 px-5 py-2 font-semibold text-white">{next}</button>
     </div>
   )
 }

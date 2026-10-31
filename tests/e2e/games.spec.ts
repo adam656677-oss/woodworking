@@ -41,7 +41,7 @@ test('kids games: a tape round, a hazard found, a joint puzzle solved, a turning
     for (let k = 1; k <= 3; k++) {
       await win.getByRole('button', { name: `Piece ${k}` }).click()
       if (await win.getByText('It fits!').isVisible()) break
-      await win.getByRole('button', { name: 'Next →' }).click()
+      await win.getByRole('button', { name: 'Try again' }).click()
     }
     await expect(win.getByText('It fits!')).toBeVisible()
     await shot(win, 'games-joint')

@@ -1,5 +1,5 @@
-import type { GameId } from '../games/ui/GamesHome'
 // The Kids' Workshop store: the child's progress, which page is showing, and the PIN-guarded actions.
+import type { GameId } from '../games/types'
 import { createStore, useStore } from 'zustand'
 import { findProject } from './content'
 import { projectUnlocked } from './logic'
