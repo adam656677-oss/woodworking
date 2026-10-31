@@ -204,6 +204,17 @@ function register(): void {
     await shell.openExternal(u.toString())
     return true
   })
+  // A picture of the 3D view (PNG data URL from the page).
+  ipcMain.handle('aa:savePng', async (_e, suggestedName: string, dataUrl: string) => {
+    if (typeof dataUrl !== 'string' || !dataUrl.startsWith('data:image/png;base64,')) return null
+    const r = await dialog.showSaveDialog(win!, {
+      defaultPath: join(defaultFolder(docsDir()), `${safeName(suggestedName)}.png`),
+      filters: [{ name: 'PNG picture', extensions: ['png'] }]
+    })
+    if (r.canceled || !r.filePath) return null
+    await writeFile(r.filePath, Buffer.from(dataUrl.slice('data:image/png;base64,'.length), 'base64'))
+    return r.filePath
+  })
   ipcMain.handle('aa:savePdf', async (_e, suggestedName: string) => {
     const r = await dialog.showSaveDialog(win!, {
       defaultPath: join(defaultFolder(docsDir()), `${safeName(suggestedName)}.pdf`),

@@ -193,7 +193,7 @@ export function finishLook(s: FinishSchedule | undefined): FinishLook {
 export function swatch(look: WoodLook, fin: FinishLook): Rgb {
   if (fin.paint) return fin.paint
   let c = mix(look.light, look.dark, look.contrast * 0.4)
-  if (fin.tint) c = mix(c, [c[0] * fin.tint[0] * 1.6, c[1] * fin.tint[1] * 1.6, c[2] * fin.tint[2] * 1.6], fin.tintAmount)
+  if (fin.tint) c = mix(c, [c[0] * fin.tint[0] * 1.25, c[1] * fin.tint[1] * 1.25, c[2] * fin.tint[2] * 1.25], fin.tintAmount)
   if (fin.amber) c = mix(c, [c[0] * 0.98, c[1] * 0.86, c[2] * 0.62], fin.amber * 0.5)
   return c
 }
@@ -210,13 +210,13 @@ export type Lighting = {
   fill: { color: string; intensity: number; dir: [number, number, number] }
 }
 export const LIGHTS: Record<LightPreset, Lighting> = {
-  studio: { label: 'Studio', background: '#f2eee8', floor: '#e8e2d9', env: 0.9, ambient: { color: '#ffffff', intensity: 0.15 },
-    key: { color: '#ffffff', intensity: 2.2, dir: [-0.45, -0.7, 0.85] }, fill: { color: '#e8eeff', intensity: 0.5, dir: [0.7, 0.4, 0.4] } },
-  workshop: { label: 'Workshop', background: '#3d3630', floor: '#8f877c', env: 0.45, ambient: { color: '#ffe2bd', intensity: 0.25 },
+  studio: { label: 'Studio', background: '#f2eee8', floor: '#e8e2d9', env: 0.55, ambient: { color: '#ffffff', intensity: 0.15 },
+    key: { color: '#ffffff', intensity: 1.8, dir: [-0.45, -0.7, 0.85] }, fill: { color: '#e8eeff', intensity: 0.5, dir: [0.7, 0.4, 0.4] } },
+  workshop: { label: 'Workshop', background: '#3d3630', floor: '#8f877c', env: 0.3, ambient: { color: '#ffe2bd', intensity: 0.25 },
     key: { color: '#ffd8a6', intensity: 2.6, dir: [-0.15, -0.25, 1] }, fill: { color: '#ffe9cc', intensity: 0.35, dir: [0.8, -0.6, 0.3] } },
-  daylight: { label: 'Daylight', background: '#dfe8f1', floor: '#d6d0c3', env: 0.8, ambient: { color: '#ffffff', intensity: 0.05 },
+  daylight: { label: 'Daylight', background: '#dfe8f1', floor: '#d6d0c3', env: 0.5, ambient: { color: '#ffffff', intensity: 0.05 },
     hemi: { sky: '#cfe2ff', ground: '#b9a688', intensity: 0.6 },
-    key: { color: '#fff3df', intensity: 3.2, dir: [0.75, -0.55, 0.55] }, fill: { color: '#cfe2ff', intensity: 0.3, dir: [-0.6, 0.5, 0.5] } }
+    key: { color: '#fff3df', intensity: 2.6, dir: [0.75, -0.55, 0.55] }, fill: { color: '#cfe2ff', intensity: 0.3, dir: [-0.6, 0.5, 0.5] } }
 }
 
 /** Image size for an export: the view's size times the scale, kept to 4096 px on the long side. */

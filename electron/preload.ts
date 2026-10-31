@@ -15,6 +15,7 @@ contextBridge.exposeInMainWorld('aa', {
   saveData: (name: string, data: unknown) => ipcRenderer.invoke('aa:saveData', name, data),
   photoThumbnail: (bytes: Uint8Array, max: number) => ipcRenderer.invoke('aa:photoThumbnail', bytes, max),
   savePdf: (name: string) => ipcRenderer.invoke('aa:savePdf', name),
+  savePng: (name: string, dataUrl: string) => ipcRenderer.invoke('aa:savePng', name, dataUrl),
   print: (opts?: { landscape?: boolean; edgeToEdge?: boolean }) => ipcRenderer.invoke('aa:print', opts),
   keepAwake: (on: boolean) => ipcRenderer.invoke('aa:keepAwake', on),
   exportFile: (ext: string, data: Uint8Array | string, suggestedName: string, mtl?: string) => ipcRenderer.invoke('aa:exportFile', ext, data, suggestedName, mtl),

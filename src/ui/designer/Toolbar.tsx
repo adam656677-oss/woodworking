@@ -14,6 +14,7 @@ import { GroupNameDialog } from '../../assemblies/ui/GroupPanel'
 import { startImport } from '../../exchange/ui/ExchangeDialog'
 import { shop } from '../../shop/shopStore'
 import { designSession } from '../../shop/steps'
+import { KidsLookButton } from '../../render/ui/RenderControls'
 
 function Btn(props: React.ButtonHTMLAttributes<HTMLButtonElement> & { active?: boolean }) {
   const { active, className, ...rest } = props
@@ -178,6 +179,7 @@ export function Toolbar() {
         <Btn key={v} active={view === v} onClick={() => s.set({ view: v })}>{label}</Btn>
       ))}
       <Btn onClick={() => window.dispatchEvent(new Event('aa:zoom-fit'))}>Fit</Btn>
+      {kidsMode && <KidsLookButton />}
       <span className="mx-1 h-5 w-px bg-stone-300" />
       {!kidsMode && <Menu label="Checks">
         {close => ([['interference', 'Interference'], ['weight', 'Weight & balance'], ['clearance', 'Door & drawer clearance'], ['notes', 'Dimensions & notes']] as const).map(([k, l]) => (

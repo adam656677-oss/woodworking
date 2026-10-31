@@ -29,7 +29,13 @@ export function RealStage({ bounds }: { bounds: Box | null }) {
     return () => { scene.environment = null; env.dispose(); pm.dispose() }
   }, [gl, scene])
   useEffect(() => { scene.environmentIntensity = L.env }, [scene, L.env])
-  useEffect(() => { gl.shadowMap.enabled = true; gl.shadowMap.type = THREE.PCFSoftShadowMap }, [gl])
+  // Neutral tone mapping keeps the wood's own colours (the default film curve washes light woods out).
+  useEffect(() => {
+    const was = { tm: gl.toneMapping, ex: gl.toneMappingExposure }
+    gl.toneMapping = THREE.NeutralToneMapping
+    gl.toneMappingExposure = 0.9
+    return () => { gl.toneMapping = was.tm; gl.toneMappingExposure = was.ex }
+  }, [gl])
 
   const b = bounds ?? { min: { x: 0, y: 0, z: 0 }, max: { x: 24, y: 24, z: 24 } }
   const c = new THREE.Vector3((b.min.x + b.max.x) / 2, (b.min.y + b.max.y) / 2, (b.min.z + b.max.z) / 2)
@@ -75,7 +81,7 @@ function Occlusion({ onComposer }: { onComposer(c: EffectComposer | null): void 
     c.addPass(new RenderPass(scene, camera))
     const ao = new GTAOPass(scene, camera, size.width, size.height)
     // Inches: about an inch and a half of reach.
-    ao.updateGtaoMaterial({ radius: 1.5, distanceExponent: 1, thickness: 1, scale: 1, samples: 16 })
+    ao.updateGtaoMaterial({ radius: 1.5, distanceExponent: 1, thickness: 1, scale: 1, samples: 12 })
     ao.blendIntensity = 0.85
     c.addPass(ao)
     c.addPass(new OutputPass())

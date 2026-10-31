@@ -2,6 +2,7 @@
 import { formatInches } from '../../model/units'
 import { designBox } from '../explode'
 import { studio, useStudio } from '../../ui/store'
+import { RenderControls } from '../../render/ui/RenderControls'
 
 export function ViewTools() {
   const explode = useStudio(s => s.explode)
@@ -40,6 +41,8 @@ export function ViewTools() {
       )}
       <label className="flex items-center gap-1"><input type="checkbox" checked={overall} onChange={e => set({ overallSize: e.target.checked })} />Overall size</label>
       <label className="flex items-center gap-1"><input type="checkbox" checked={showDims} onChange={e => set({ showDims: e.target.checked })} />Dimensions &amp; notes</label>
+      <span className="h-4 w-px bg-stone-300" />
+      <RenderControls />
     </div>
   )
 }

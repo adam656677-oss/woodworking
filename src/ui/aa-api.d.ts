@@ -38,6 +38,8 @@ export type AaApi = {
   photoThumbnail?(bytes: Uint8Array, max: number): Promise<string | null>
   /** Saves what printing would print as a PDF; the chosen path, or null. */
   savePdf(name: string): Promise<string | null>
+  /** Saves a PNG picture (a data URL) where the user picks; the path, or null if cancelled. */
+  savePng(name: string, dataUrl: string): Promise<string | null>
   /** Makes that PDF in a temporary folder and opens it in the system's PDF viewer to print; false if it couldn't. */
   printPdf(name: string): Promise<boolean>
   /** Print the page; landscape unless told otherwise. */

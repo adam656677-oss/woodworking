@@ -11,6 +11,7 @@ import { stepsFromDesign } from '../../shop/steps'
 import { finishById } from '../../finish/finishes'
 import { scheduleTime, stepText } from '../../finish/schedule'
 import { studio, useStudio } from '../../ui/store'
+import { useRender, type RenderedView } from '../../render/renderStore'
 import { PAPERS, SCALES, type Paper, type ScaleChoice } from '../sheet'
 import { template } from '../tiles'
 import { localSolids } from '../../checks/solids'
@@ -34,13 +35,14 @@ export function DrawingsDialog() {
   const parts = useMemo(() => partList(project), [project])
   const [chosen, setChosen] = useState<string[]>(() => parts.map(q => q.boardId))
   const [tmpl, setTmpl] = useState<string[]>(() => shaped(project))
-  const [packet, setPacket] = useState({ cover: true, drawings: true, parts: true, cutList: true, buy: true, steps: true, finish: true, journal: true, templates: true })
+  const [packet, setPacket] = useState({ cover: true, drawings: true, parts: true, cutList: true, buy: true, steps: true, finish: true, journal: true, renders: true, templates: true })
   const [pages, setPages] = useState<PageSpec[] | null>(null)
   const [message, setMessage] = useState<{ text: string; bad?: boolean } | null>(null)
   const shop = useStock(s => s.items)
   const journal = useTools(s => s.journal)
   useEffect(() => { if (!tools.getState().loaded) void tools.getState().load() }, [])
   const filePath = useStudio(s => s.filePath)
+  const renders = useRender(s => s.views)
   const hasJournal = journal.some(e => entryFor(e, { name: project.name, file: filePath }))
 
   const close = () => studio.getState().set({ drawingsOpen: false })
@@ -81,6 +83,7 @@ export function DrawingsDialog() {
     if (tab === 'templates') return tiles(tmpl)
     // The plan packet, in shop order.
     const contents = [
+      packet.renders && renders.length > 0 && 'Pictures of the finished piece',
       packet.drawings && 'Views, exploded view and section',
       packet.parts && 'A sheet for every part',
       packet.cutList && 'Cut list',
@@ -97,6 +100,7 @@ export function DrawingsDialog() {
     const renumbered = drawingSheets(project, set, opts, { first: packet.cover ? 2 : 1, total })
     const out: PageSpec[] = []
     if (packet.cover) out.push({ key: 'cover', kind: 'sheet', paper, svg: coverSheet(project, opts, contents, `1 of ${total}`).svg })
+    if (packet.renders && renders.length) out.push({ key: 'renders', kind: 'html', node: <RendersPage p={project} views={renders} /> })
     out.push(...sheetPages(renumbered, 's'))
     if (packet.cutList) out.push({ key: 'cut', kind: 'html', node: <CutListPage p={project} /> })
     if (packet.buy) out.push({ key: 'buy', kind: 'html', node: <BuyPage p={project} shop={shop} /> })
@@ -173,6 +177,7 @@ export function DrawingsDialog() {
             {box(packet.steps, v => setPacket({ ...packet, steps: v }), 'Steps')}
             {project.finish && box(packet.finish, v => setPacket({ ...packet, finish: v }), 'Finishing schedule')}
             {hasJournal && box(packet.journal, v => setPacket({ ...packet, journal: v }), 'Shop journal')}
+            {renders.length > 0 && box(packet.renders, v => setPacket({ ...packet, renders: v }), 'Rendered pictures')}
             {box(packet.templates, v => setPacket({ ...packet, templates: v }), `Templates (${tmpl.length})`)}
           </>}
         </div>
@@ -212,6 +217,20 @@ function PartPicker({ parts, chosen, onChange }: { parts: ReturnType<typeof part
 }
 
 const pageStyle = 'w-[8.5in] p-[0.5in] text-[11pt] leading-snug print:w-auto print:p-0'
+
+/** The rendered pictures (3D Picture… → Render views): the big 3D view, then front and exploded side by side. */
+function RendersPage({ p, views }: { p: Project; views: RenderedView[] }) {
+  const [first, ...rest] = views
+  return (
+    <section className={pageStyle} aria-label="Rendered pictures">
+      <h2 className="mb-2 text-xl font-bold">{p.name}</h2>
+      <figure className="mb-3"><img src={first.dataUrl} alt={`Rendered ${first.label}`} className="max-h-[5.5in] w-full rounded object-contain" /><figcaption className="text-xs text-stone-600">{first.label}</figcaption></figure>
+      <div className="grid grid-cols-2 gap-3">
+        {rest.map(v => <figure key={v.key}><img src={v.dataUrl} alt={`Rendered ${v.label}`} className="max-h-[3in] w-full rounded object-contain" /><figcaption className="text-xs text-stone-600">{v.label}</figcaption></figure>)}
+      </div>
+    </section>
+  )
+}
 
 function CutListPage({ p }: { p: Project }) {
   const { rows } = cutList(p)

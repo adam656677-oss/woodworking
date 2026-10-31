@@ -14,6 +14,7 @@ import { WoodLibraryDialog } from './WoodLibraryDialog'
 import { CabinetDialog } from '../../cabinet/ui/CabinetDialog'
 import { ExchangeDialog } from '../../exchange/ui/ExchangeDialog'
 import { SceneBoundary } from '../three/SceneBoundary'
+import { PictureDialog } from '../../render/ui/RenderControls'
 import { duplicateSelection, wholeGroup } from '../../assemblies/ops'
 import { GroupPanel } from '../../assemblies/ui/GroupPanel'
 import { ViewTools } from '../../checks/ui/ViewTools'
@@ -123,6 +124,7 @@ export function Designer() {
       {cutListOpen && <CutListView />}
       {drawingsOpen && <DrawingsDialog />}
       {woodsOpen && <WoodLibraryDialog />}
+      <PictureDialog />
       {!kidsMode && <CabinetDialog />}
       {!kidsMode && <ExchangeDialog />}
     </div>
