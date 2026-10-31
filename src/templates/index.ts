@@ -1,6 +1,6 @@
 import { formatInches } from '../model/units'
 // Templates: recipes that turn a few numbers into boards and joints. A template stays live until Unlock.
-import type { Board, Joint, Project, Wood } from '../model/types'
+import type { Board, HardwareUse, Joint, Project, Wood, WoodKind } from '../model/types'
 import type { NewRule, SizeDef } from '../formulas/types'
 import { recalc } from '../formulas/recalc'
 import { formulaName } from '../formulas/recalc'
@@ -19,13 +19,24 @@ export type ParamDef = {
   min?: number
   max?: number
   options?: string[]
+  /** Which woods suit a wood setting (others aren't offered, and are replaced by the default). */
+  allow?: { kinds?: WoodKind[]; minT?: number; maxT?: number; minW?: number; maxW?: number }
+}
+
+/** Whether a wood suits a wood setting. */
+export function woodAllowed(p: ParamDef, w: Wood): boolean {
+  const a = p.allow
+  if (!a) return true
+  return (!a.kinds || a.kinds.includes(w.kind)) && (a.minT === undefined || w.thickness >= a.minT - 1e-9) && (a.maxT === undefined || w.thickness <= a.maxT + 1e-9) &&
+    (a.minW === undefined || w.width >= a.minW - 1e-9) && (a.maxW === undefined || w.width <= a.maxW + 1e-9)
 }
 
 export type TemplateDef = {
   id: 'box' | 'bookshelf' | 'birdhouse' | 'table' | 'workbench' | 'cabinet' | 'cuttingBoard' | 'stepStool' | 'wallShelf'
   name: string
   params: ParamDef[]
-  build(params: Record<string, ParamValue>, woods: Wood[]): { boards: Board[]; joints: Joint[] }
+  /** The parts and joints, and hardware the design needs (tabletop fasteners, shelf pins…). */
+  build(params: Record<string, ParamValue>, woods: Wood[]): { boards: Board[]; joints: Joint[]; hardware?: HardwareUse[] }
   /**
    * The template written as named sizes, formulas and rules (used by Unlock). Boards and joints are by their index in
    * what `build` returns; a rule's parts are board indexes too.
@@ -77,9 +88,19 @@ export function applyTemplate(project: Project, id: string, params: Record<strin
   const def = findTemplate(id)
   if (!def) throw new Error(`Unknown template ${id}`)
   const base = resolveParams(def, params)
+  // A wood setting must be a wood that suits it (and is in this project's library); otherwise its default.
+  for (const p of def.params) {
+    if (p.kind !== 'wood') continue
+    const w = project.woods.find(x => x.id === base[p.key])
+    if (!w || !woodAllowed(p, w)) base[p.key] = p.default
+  }
   const resolved = def.adjust ? def.adjust(base, project.woods) : base
-  const { boards, joints } = def.build(resolved, project.woods)
-  return { ...project, boards, joints, template: { templateId: id, params: resolved } }
+  const { boards, joints, hardware } = def.build(resolved, project.woods)
+  // The template's own hardware is replaced; hardware added from the Cabinet menu stays.
+  const others = (project.hardware ?? []).filter(h => !h.id.startsWith('tpl-'))
+  const all = [...others, ...(hardware ?? [])]
+  const { hardware: _h, ...rest } = project
+  return { ...rest, boards, joints, ...(all.length ? { hardware: all } : {}), template: { templateId: id, params: resolved } }
 }
 
 /** Change a live template's parameters and regenerate. Unlocked projects are returned unchanged. */

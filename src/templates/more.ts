@@ -1,13 +1,27 @@
 // More Master Shop templates: workbench, base cabinet, cutting board, step stool and wall shelf.
 // Each builds its parts from a few sizes and writes the same thing as formulas for Unlock.
-import type { Board, Joint, Wood } from '../model/types'
+import type { Board, HardwareUse, Joint, Wood } from '../model/types'
 import { num, woodT, type TemplateDef, type UnlockForm } from './index'
-import { butt, glued, makeBoard, ORIENT, woodOf } from './place'
+import { butt, glued, groove, makeBoard, ORIENT, woodOf } from './place'
 
 const SCREWS = { fastener: 'screws' as const, count: 2 }
 const s = (n: number) => num(n)
+const f64 = (n: number) => Math.floor(n * 64 + 1e-9) / 64
 
-/** A sturdy shop bench: 2×4 legs and rails, a plywood top with overhang, an optional lower shelf. */
+/** Host and partner as the contact between the two parts sees them (so every joint checks out). */
+function asContact(boards: Board[], woods: Wood[], joints: Joint[]): Joint[] {
+  return joints.map(j => {
+    const a = boards.find(b => b.id === j.hostBoardId)!, b = boards.find(x => x.id === j.partnerBoardId)!
+    const g = glued(boards, woods, a, b)
+    return g && g.hostBoardId !== j.hostBoardId ? { ...j, hostBoardId: g.hostBoardId, partnerBoardId: g.partnerBoardId } : j
+  })
+}
+
+/**
+ * A sturdy shop bench: legs from frame lumber; long rails screwed across the outside faces of the legs and short
+ * rails across their inside edges (long grain to long grain, which resists racking); a plywood top with overhang and
+ * an optional lower shelf on its own rails.
+ */
 export const workbench: TemplateDef = {
   id: 'workbench',
   name: 'Workbench',
@@ -16,31 +30,36 @@ export const workbench: TemplateDef = {
     { key: 'D', label: 'Top depth', kind: 'inches', default: 24, min: 16, max: 48 },
     { key: 'H', label: 'Height', kind: 'inches', default: 34, min: 24, max: 42 },
     { key: 'over', label: 'Top overhang', kind: 'inches', default: 2, min: 0, max: 6 },
-    { key: 'frame', label: 'Frame lumber', kind: 'wood', default: '2x4' },
-    { key: 'top', label: 'Top', kind: 'wood', default: 'ply-3-4' },
+    { key: 'frame', label: 'Frame lumber', kind: 'wood', default: '2x4', allow: { kinds: ['lumber'], minT: 1.5, minW: 3.5 } },
+    { key: 'top', label: 'Top', kind: 'wood', default: 'ply-3-4', allow: { kinds: ['sheet'], minT: 0.5 } },
     { key: 'shelf', label: 'Lower shelf', kind: 'bool', default: true }
   ],
-  unlockForm(params): UnlockForm {
-    const shelf = !!params.shelf
+  adjust(params) {
+    // At least a foot of frame under the top each way.
+    const W = params.W as number, D = params.D as number
+    return { ...params, over: Math.max(0, Math.min(params.over as number, (W - 12) / 2, (D - 12) / 2)) }
+  },
+  unlockForm(params, woods: Wood[]): UnlockForm {
+    const f = woodOf(woods, params.frame as string)
     const sizes = [
       { name: 'W', expr: s(params.W as number) }, { name: 'D', expr: s(params.D as number) }, { name: 'H', expr: s(params.H as number) },
-      { name: 'Over', expr: s(params.over as number) }, { name: 'F', expr: woodT(params.frame as string) }, { name: 'FW', expr: s(3.5) },
-      { name: 'T', expr: woodT(params.top as string) }, { name: 'ST', expr: woodT(params.top as string) },
+      { name: 'Over', expr: s(params.over as number) }, { name: 'F', expr: woodT(params.frame as string) }, { name: 'FW', expr: s(f.width) },
+      { name: 'T', expr: woodT(params.top as string) },
       { name: 'BW', expr: 'W - 2*Over' }, { name: 'BD', expr: 'D - 2*Over' }, { name: 'LegH', expr: 'H - T' }, { name: 'Low', expr: '6' }
     ]
     const leg = (x: string, y: string) => ({ width: '=FW', length: '=LegH', x, y, z: '=0' })
     const boards: Record<number, Record<string, string>> = {
-      0: leg('=0', '=0'), 1: leg('=BW - FW', '=0'), 2: leg('=0', '=BD - F'), 3: leg('=BW - FW', '=BD - F'),
-      4: { width: '=FW', length: '=BW - 2*FW', x: '=FW', y: '=0', z: '=LegH - FW' },
-      5: { width: '=FW', length: '=BW - 2*FW', x: '=FW', y: '=BD - F', z: '=LegH - FW' },
-      6: { width: '=FW', length: '=BD - 2*F', x: '=1', y: '=F', z: '=LegH - FW' },
-      7: { width: '=FW', length: '=BD - 2*F', x: '=BW - 1 - F', y: '=F', z: '=LegH - FW' },
+      0: leg('=0', '=F'), 1: leg('=BW - FW', '=F'), 2: leg('=0', '=BD - 2*F'), 3: leg('=BW - FW', '=BD - 2*F'),
+      4: { width: '=FW', length: '=BW', x: '=0', y: '=0', z: '=LegH - FW' },
+      5: { width: '=FW', length: '=BW', x: '=0', y: '=BD - F', z: '=LegH - FW' },
+      6: { width: '=FW', length: '=BD - 2*F', x: '=FW', y: '=F', z: '=LegH - FW' },
+      7: { width: '=FW', length: '=BD - 2*F', x: '=BW - FW - F', y: '=F', z: '=LegH - FW' },
       8: { width: '=D', length: '=W', x: '=-Over', y: '=-Over', z: '=LegH' }
     }
-    if (shelf) {
+    if (params.shelf) {
       Object.assign(boards, {
-        9: { width: '=FW', length: '=BW - 2*FW', x: '=FW', y: '=0', z: '=Low' },
-        10: { width: '=FW', length: '=BW - 2*FW', x: '=FW', y: '=BD - F', z: '=Low' },
+        9: { width: '=FW', length: '=BW', x: '=0', y: '=0', z: '=Low' },
+        10: { width: '=FW', length: '=BW', x: '=0', y: '=BD - F', z: '=Low' },
         11: { width: '=BD', length: '=BW - 2*FW', x: '=FW', y: '=0', z: '=Low + FW' }
       })
     }
@@ -49,86 +68,96 @@ export const workbench: TemplateDef = {
   build(params, woods: Wood[]) {
     const W = params.W as number, D = params.D as number, H = params.H as number, o = params.over as number
     const f = woodOf(woods, params.frame as string), top = woodOf(woods, params.top as string)
-    const F = f.thickness, FW = 3.5, T = top.thickness
+    const F = f.thickness, FW = f.width, T = top.thickness
     const bw = W - 2 * o, bd = D - 2 * o, legH = H - T
+    // Legs sit just inside the long rails.
     const leg = (x: number, y: number) => makeBoard('Leg', f, FW, legH, ORIENT.uprightX, { x, y, z: 0 })
-    const legs = [leg(0, 0), leg(bw - FW, 0), leg(0, bd - F), leg(bw - FW, bd - F)]
+    const legs = [leg(0, F), leg(bw - FW, F), leg(0, bd - 2 * F), leg(bw - FW, bd - 2 * F)]
     const zr = legH - FW
-    const front = makeBoard('Long rail', f, FW, bw - 2 * FW, ORIENT.wallX, { x: FW, y: 0, z: zr })
-    const back = makeBoard('Long rail', f, FW, bw - 2 * FW, ORIENT.wallX, { x: FW, y: bd - F, z: zr })
-    const left = makeBoard('Short rail', f, FW, bd - 2 * F, ORIENT.wallY, { x: 1, y: F, z: zr })
-    const right = makeBoard('Short rail', f, FW, bd - 2 * F, ORIENT.wallY, { x: bw - 1 - F, y: F, z: zr })
+    const front = makeBoard('Long rail', f, FW, bw, ORIENT.wallX, { x: 0, y: 0, z: zr })
+    const back = makeBoard('Long rail', f, FW, bw, ORIENT.wallX, { x: 0, y: bd - F, z: zr })
+    const left = makeBoard('Short rail', f, FW, bd - 2 * F, ORIENT.wallY, { x: FW, y: F, z: zr })
+    const right = makeBoard('Short rail', f, FW, bd - 2 * F, ORIENT.wallY, { x: bw - FW - F, y: F, z: zr })
     const tp = makeBoard('Top', top, D, W, ORIENT.flatX, { x: -o, y: -o, z: legH })
     const boards: Board[] = [...legs, front, back, left, right, tp]
     const joints: Joint[] = [
-      butt(legs[0], front, SCREWS), butt(legs[1], front, SCREWS), butt(legs[2], back, SCREWS), butt(legs[3], back, SCREWS),
-      butt(legs[0], left, SCREWS), butt(legs[2], left, SCREWS), butt(legs[1], right, SCREWS), butt(legs[3], right, SCREWS)
+      butt(front, legs[0], SCREWS), butt(front, legs[1], SCREWS), butt(back, legs[2], SCREWS), butt(back, legs[3], SCREWS),
+      butt(left, legs[0], SCREWS), butt(left, legs[2], SCREWS), butt(right, legs[1], SCREWS), butt(right, legs[3], SCREWS),
+      butt(left, front, SCREWS), butt(left, back, SCREWS), butt(right, front, SCREWS), butt(right, back, SCREWS)
     ]
     for (const r of [front, back, left, right]) joints.push(butt(tp, r, SCREWS))
     if (params.shelf) {
-      const lf = makeBoard('Shelf rail', f, FW, bw - 2 * FW, ORIENT.wallX, { x: FW, y: 0, z: 6 })
-      const lb = makeBoard('Shelf rail', f, FW, bw - 2 * FW, ORIENT.wallX, { x: FW, y: bd - F, z: 6 })
+      const lf = makeBoard('Shelf rail', f, FW, bw, ORIENT.wallX, { x: 0, y: 0, z: 6 })
+      const lb = makeBoard('Shelf rail', f, FW, bw, ORIENT.wallX, { x: 0, y: bd - F, z: 6 })
       const sh = makeBoard('Shelf', top, bd, bw - 2 * FW, ORIENT.flatX, { x: FW, y: 0, z: 6 + FW })
       boards.push(lf, lb, sh)
-      joints.push(butt(legs[0], lf, SCREWS), butt(legs[1], lf, SCREWS), butt(legs[2], lb, SCREWS), butt(legs[3], lb, SCREWS), butt(sh, lf, SCREWS), butt(sh, lb, SCREWS))
+      joints.push(butt(lf, legs[0], SCREWS), butt(lf, legs[1], SCREWS), butt(lb, legs[2], SCREWS), butt(lb, legs[3], SCREWS), butt(sh, lf, SCREWS), butt(sh, lb, SCREWS))
     }
-    return { boards, joints }
+    return { boards, joints: asContact(boards, woods, joints) }
   }
 }
 
-/** A frameless base cabinet box: sides to the floor, bottom above a set-back toe kick, top stretchers, a back and an optional shelf. */
+/**
+ * A frameless base cabinet: a box on a separate toe-kick base (so cabinets side by side show one continuous recess),
+ * front and back top rails, a back between the sides' back edges and an adjustable shelf on pins. With a 3/4" door
+ * the front is 24" from the wall at the default depth.
+ */
 export const cabinet: TemplateDef = {
   id: 'cabinet',
   name: 'Base cabinet',
   params: [
     { key: 'W', label: 'Width', kind: 'inches', default: 24, min: 9, max: 48 },
     { key: 'H', label: 'Height', kind: 'inches', default: 34.5, min: 12, max: 40 },
-    { key: 'D', label: 'Depth (box)', kind: 'inches', default: 23.25, min: 10, max: 30 },
+    { key: 'D', label: 'Depth (box, with the back)', kind: 'inches', default: 23.25, min: 10, max: 30 },
     { key: 'toe', label: 'Toe kick height', kind: 'inches', default: 4, min: 2, max: 6 },
-    { key: 'wood', label: 'Box wood', kind: 'wood', default: 'ply-3-4' },
-    { key: 'back', label: 'Back wood', kind: 'wood', default: 'ply-1-4' },
-    { key: 'shelf', label: 'Shelf', kind: 'bool', default: true }
+    { key: 'wood', label: 'Box wood', kind: 'wood', default: 'ply-3-4', allow: { kinds: ['sheet'], minT: 0.5 } },
+    { key: 'back', label: 'Back wood', kind: 'wood', default: 'ply-1-4', allow: { kinds: ['sheet'], maxT: 0.5 } },
+    { key: 'shelf', label: 'Adjustable shelf', kind: 'bool', default: true }
   ],
   unlockForm(params): UnlockForm {
     const sizes = [
       { name: 'W', expr: s(params.W as number) }, { name: 'H', expr: s(params.H as number) }, { name: 'D', expr: s(params.D as number) },
       { name: 'Toe', expr: s(params.toe as number) }, { name: 'T', expr: woodT(params.wood as string) }, { name: 'BT', expr: woodT(params.back as string) },
-      { name: 'Kick', expr: '3' }, { name: 'Rail', expr: '3-1/2' }, { name: 'Inside', expr: 'W - 2*T' }
+      { name: 'Kick', expr: '3' }, { name: 'Rail', expr: '3-1/2' }, { name: 'Inside', expr: 'W - 2*T' }, { name: 'Box', expr: 'D - BT' }, { name: 'BoxH', expr: 'H - Toe' }
     ]
     const boards: Record<number, Record<string, string>> = {
-      0: { width: '=D', length: '=H', x: '=0', y: '=0', z: '=0' },
-      1: { width: '=D', length: '=H', x: '=W - T', y: '=0', z: '=0' },
-      2: { width: '=D', length: '=Inside', x: '=T', y: '=0', z: '=Toe' },
-      3: { width: '=Toe', length: '=Inside', x: '=T', y: '=Kick', z: '=0' },
-      4: { width: '=Rail', length: '=Inside', x: '=T', y: '=0', z: '=H - T' },
-      5: { width: '=Rail', length: '=Inside', x: '=T', y: '=D - Rail', z: '=H - T' },
-      6: { width: '=W', length: '=H - Toe', x: '=0', y: '=D', z: '=Toe' }
+      0: { width: '=Box', length: '=BoxH', x: '=0', y: '=0', z: '=Toe' },
+      1: { width: '=Box', length: '=BoxH', x: '=W - T', y: '=0', z: '=Toe' },
+      2: { width: '=Box', length: '=Inside', x: '=T', y: '=0', z: '=Toe' },
+      3: { width: '=Toe', length: '=W', x: '=0', y: '=Kick', z: '=0' },
+      4: { width: '=Toe', length: '=W', x: '=0', y: '=Box - 4', z: '=0' },
+      5: { width: '=Rail', length: '=Inside', x: '=T', y: '=0', z: '=H - T' },
+      6: { width: '=Rail', length: '=Inside', x: '=T', y: '=Box - Rail', z: '=H - T' },
+      7: { width: '=W', length: '=BoxH', x: '=0', y: '=Box', z: '=Toe' }
     }
-    if (params.shelf) boards[7] = { width: '=D - 1', length: '=Inside', x: '=T', y: '=0', z: '=Toe + (H - Toe)/2' }
+    if (params.shelf) boards[8] = { width: '=Box - 1', length: '=Inside - 1/16', x: '=T + 1/32', y: '=1', z: '=Toe + floor(BoxH/2*64)/64' }
     return { sizes, boards }
   },
   build(params, woods: Wood[]) {
     const W = params.W as number, H = params.H as number, D = params.D as number, toe = params.toe as number
     const w = woodOf(woods, params.wood as string), bk = woodOf(woods, params.back as string)
-    const T = w.thickness, inside = W - 2 * T
-    const left = makeBoard('Side', w, D, H, ORIENT.uprightY, { x: 0, y: 0, z: 0 })
-    const right = makeBoard('Side', w, D, H, ORIENT.uprightY, { x: W - T, y: 0, z: 0 })
-    const bottom = makeBoard('Bottom', w, D, inside, ORIENT.flatX, { x: T, y: 0, z: toe })
-    const kick = makeBoard('Toe kick', w, toe, inside, ORIENT.wallX, { x: T, y: 3, z: 0 })
+    const T = w.thickness, inside = W - 2 * T, box = D - bk.thickness, boxH = H - toe
+    const left = makeBoard('Side', w, box, boxH, ORIENT.uprightY, { x: 0, y: 0, z: toe })
+    const right = makeBoard('Side', w, box, boxH, ORIENT.uprightY, { x: W - T, y: 0, z: toe })
+    const bottom = makeBoard('Bottom', w, box, inside, ORIENT.flatX, { x: T, y: 0, z: toe })
+    // The base: a front kick set back 3" and a back one, full width, under the box.
+    const kick = makeBoard('Toe kick', w, toe, W, ORIENT.wallX, { x: 0, y: 3, z: 0 })
+    const kickBack = makeBoard('Base back', w, toe, W, ORIENT.wallX, { x: 0, y: box - 4, z: 0 })
     const front = makeBoard('Top rail', w, 3.5, inside, ORIENT.flatX, { x: T, y: 0, z: H - T })
-    const backRail = makeBoard('Top rail', w, 3.5, inside, ORIENT.flatX, { x: T, y: D - 3.5, z: H - T })
-    const back = makeBoard('Back', bk, W, H - toe, ORIENT.uprightX, { x: 0, y: D, z: toe })
-    const boards: Board[] = [left, right, bottom, kick, front, backRail, back]
+    const backRail = makeBoard('Top rail', w, 3.5, inside, ORIENT.flatX, { x: T, y: box - 3.5, z: H - T })
+    const back = makeBoard('Back', bk, W, boxH, ORIENT.uprightX, { x: 0, y: box, z: toe })
+    const boards: Board[] = [left, right, bottom, kick, kickBack, front, backRail, back]
     const joints: Joint[] = []
-    for (const side of [left, right]) for (const p of [bottom, kick, front, backRail]) joints.push(butt(side, p, SCREWS))
-    joints.push(butt(bottom, kick, SCREWS), butt(back, left, SCREWS), butt(back, right, SCREWS))
+    for (const side of [left, right]) for (const p of [bottom, front, backRail]) joints.push(butt(side, p, SCREWS))
+    for (const k of [kick, kickBack]) for (const p of [left, right, bottom]) joints.push(butt(k, p, SCREWS))
+    joints.push(butt(back, left, SCREWS), butt(back, right, SCREWS))
+    const hardware: HardwareUse[] = []
     if (params.shelf) {
-      // An adjustable shelf on pins, set back 1" so the doors clear it; pins hold it, so no joint is drawn.
-      const sh = makeBoard('Shelf', w, D - 1, inside, ORIENT.flatX, { x: T, y: 0, z: toe + (H - toe) / 2 })
-      boards.push(sh)
-      joints.push(butt(left, sh, { fastener: 'glue', count: 0 }), butt(right, sh, { fastener: 'glue', count: 0 }))
+      // An adjustable shelf: 1/16" narrower than the inside, set back 1", resting on four pins (no joint).
+      boards.push(makeBoard('Shelf', w, box - 1, inside - 0.0625, ORIENT.flatX, { x: T + 0.03125, y: 1, z: toe + f64(boxH / 2) }))
+      hardware.push({ id: 'tpl-pins', itemId: 'pin-5mm', qty: 4, note: 'Drill rows of 5 mm holes in the sides to move the shelf' })
     }
-    return { boards, joints }
+    return { boards, joints: asContact(boards, woods, joints), hardware }
   }
 }
 
@@ -140,8 +169,8 @@ export const cuttingBoard: TemplateDef = {
     { key: 'L', label: 'Length', kind: 'inches', default: 16, min: 6, max: 30 },
     { key: 'strip', label: 'Strip width', kind: 'inches', default: 1.75, min: 0.75, max: 4 },
     { key: 'n', label: 'Strips', kind: 'count', default: 6, min: 2, max: 16 },
-    { key: 'wood', label: 'Wood', kind: 'wood', default: 'hw-4-4' },
-    { key: 'wood2', label: 'Every other strip', kind: 'wood', default: 'hw-4-4' }
+    { key: 'wood', label: 'Wood', kind: 'wood', default: 'hw-4-4', allow: { kinds: ['hardwood'] } },
+    { key: 'wood2', label: 'Every other strip', kind: 'wood', default: 'hw-4-4', allow: { kinds: ['hardwood'] } }
   ],
   adjust(params, woods: Wood[]) {
     // Both woods the same thickness, or the board isn't flat: use the first wood's when they differ.
@@ -165,45 +194,64 @@ export const cuttingBoard: TemplateDef = {
   }
 }
 
-/** A two-step stool: sides, a top, a lower step and a back stretcher. */
+/**
+ * A two-step stool you can climb: deep sides, the lower step at the front in dados, the top at the back (so the
+ * step is clear in front of it) and a back stretcher under the top. Height is kept to about 1-1/2 times the depth.
+ */
 export const stepStool: TemplateDef = {
   id: 'stepStool',
   name: 'Step stool',
   params: [
-    { key: 'W', label: 'Width', kind: 'inches', default: 16, min: 10, max: 24 },
-    { key: 'H', label: 'Height', kind: 'inches', default: 16, min: 8, max: 24 },
-    { key: 'wood', label: 'Sides and top', kind: 'wood', default: '1x10' },
-    { key: 'step', label: 'Lower step', kind: 'wood', default: '1x6' },
-    { key: 'rail', label: 'Back stretcher', kind: 'wood', default: '1x4' }
+    { key: 'W', label: 'Width', kind: 'inches', default: 16, min: 12, max: 24 },
+    { key: 'H', label: 'Height', kind: 'inches', default: 16, min: 10, max: 18 },
+    { key: 'wood', label: 'Sides', kind: 'wood', default: '1x12', allow: { kinds: ['lumber', 'hardwood'], minT: 0.75, minW: 11 } },
+    { key: 'top', label: 'Top', kind: 'wood', default: '1x6', allow: { kinds: ['lumber'], minW: 5.5, maxW: 5.5 } },
+    { key: 'step', label: 'Lower step', kind: 'wood', default: '1x6', allow: { kinds: ['lumber'], minW: 5.5, maxW: 5.5 } },
+    { key: 'rail', label: 'Back stretcher', kind: 'wood', default: '1x4', allow: { kinds: ['lumber'], maxW: 3.5, minW: 2.5 } }
   ],
+  adjust(params, woods: Wood[]) {
+    const deep = woodOf(woods, params.wood as string).width
+    return { ...params, H: Math.min(params.H as number, deep * 1.6) }
+  },
   unlockForm(params, woods: Wood[]): UnlockForm {
-    const w = woodOf(woods, params.wood as string), st = woodOf(woods, params.step as string), r = woodOf(woods, params.rail as string)
+    const w = woodOf(woods, params.wood as string), tp = woodOf(woods, params.top as string), st = woodOf(woods, params.step as string), r = woodOf(woods, params.rail as string)
     return {
       sizes: [
         { name: 'W', expr: s(params.W as number) }, { name: 'H', expr: s(params.H as number) }, { name: 'T', expr: woodT(params.wood as string) },
-        { name: 'Deep', expr: s(w.width) }, { name: 'StepW', expr: s(st.width) }, { name: 'RailW', expr: s(r.width) }
+        { name: 'Deep', expr: s(w.width) }, { name: 'TopW', expr: s(tp.width) }, { name: 'StepW', expr: s(st.width) }, { name: 'RailW', expr: s(r.width) },
+        { name: 'RT', expr: woodT(params.rail as string) }, { name: 'Dado', expr: 'floor(T*21)/64' }, { name: 'StepZ', expr: 'floor((H - T)/2*64)/64' }
       ],
       boards: {
         0: { width: '=Deep', length: '=H - T', x: '=0', y: '=0', z: '=0' },
         1: { width: '=Deep', length: '=H - T', x: '=W - T', y: '=0', z: '=0' },
-        2: { width: '=Deep', length: '=W', x: '=0', y: '=0', z: '=H - T' },
-        3: { width: '=StepW', length: '=W - 2*T', x: '=T', y: '=0', z: '=(H - T)/2' },
-        4: { width: '=RailW', length: '=W - 2*T', x: '=T', y: `=Deep - ${s(r.thickness)}`, z: '=H - T - RailW' }
-      }
+        2: { width: '=TopW', length: '=W', x: '=0', y: '=Deep - TopW', z: '=H - T' },
+        3: { width: '=StepW', length: '=W - 2*T + 2*Dado', x: '=T - Dado', y: '=0', z: '=StepZ' },
+        4: { width: '=RailW', length: '=W - 2*T', x: '=T', y: '=Deep - RT', z: '=H - T - RailW' }
+      },
+      joints: { 2: { depth: '=Dado' }, 3: { depth: '=Dado' } }
     }
   },
   build(params, woods: Wood[]) {
     const W = params.W as number, H = params.H as number
-    const w = woodOf(woods, params.wood as string), st = woodOf(woods, params.step as string), r = woodOf(woods, params.rail as string)
+    const w = woodOf(woods, params.wood as string), tp = woodOf(woods, params.top as string), st = woodOf(woods, params.step as string), r = woodOf(woods, params.rail as string)
     const T = w.thickness, deep = w.width
+    const dado = Math.floor(T * 21) / 64 // about a quarter of an inch in 3/4" stock
+    const stepZ = f64((H - T) / 2)
     const left = makeBoard('Side', w, deep, H - T, ORIENT.uprightY, { x: 0, y: 0, z: 0 })
     const right = makeBoard('Side', w, deep, H - T, ORIENT.uprightY, { x: W - T, y: 0, z: 0 })
-    const top = makeBoard('Top', w, deep, W, ORIENT.flatX, { x: 0, y: 0, z: H - T })
-    const step = makeBoard('Step', st, st.width, W - 2 * T, ORIENT.flatX, { x: T, y: 0, z: (H - T) / 2 })
+    const top = makeBoard('Top', tp, tp.width, W, ORIENT.flatX, { x: 0, y: deep - tp.width, z: H - T })
+    const step = makeBoard('Step', st, st.width, W - 2 * T + 2 * dado, ORIENT.flatX, { x: T - dado, y: 0, z: stepZ })
     const rail = makeBoard('Stretcher', r, r.width, W - 2 * T, ORIENT.wallX, { x: T, y: deep - r.thickness, z: H - T - r.width })
+    const boards = [left, right, top, step, rail]
     return {
-      boards: [left, right, top, step, rail],
-      joints: [butt(top, left, SCREWS), butt(top, right, SCREWS), butt(left, step, SCREWS), butt(right, step, SCREWS), butt(left, rail, SCREWS), butt(right, rail, SCREWS), butt(top, rail, SCREWS)]
+      boards,
+      joints: asContact(boards, woods, [
+        butt(top, left, SCREWS), butt(top, right, SCREWS),
+        // The step carries your weight: it sits in a dado in each side (glue and screws), not on screws alone.
+        groove('dado', left, step, { width: st.thickness, depth: dado, offset: stepZ, along: 'width' }),
+        groove('dado', right, step, { width: st.thickness, depth: dado, offset: stepZ, along: 'width' }),
+        butt(left, rail, SCREWS), butt(right, rail, SCREWS), butt(top, rail, SCREWS)
+      ])
     }
   }
 }
@@ -213,16 +261,17 @@ export const wallShelf: TemplateDef = {
   id: 'wallShelf',
   name: 'Wall shelf',
   params: [
-    { key: 'W', label: 'Width', kind: 'inches', default: 24, min: 8, max: 48 },
+    { key: 'W', label: 'Width', kind: 'inches', default: 24, min: 8, max: 36 },
     { key: 'H', label: 'Height', kind: 'inches', default: 24, min: 8, max: 48 },
     { key: 'n', label: 'Shelves', kind: 'count', default: 3, min: 2, max: 6 },
-    { key: 'wood', label: 'Wood', kind: 'wood', default: '1x6' },
-    { key: 'rail', label: 'Hanging rail', kind: 'wood', default: '1x3' }
+    { key: 'wood', label: 'Wood', kind: 'wood', default: '1x6', allow: { kinds: ['lumber', 'hardwood'], maxT: 1 } },
+    { key: 'rail', label: 'Hanging rail', kind: 'wood', default: '1x3', allow: { kinds: ['lumber'], maxT: 0.75, maxW: 3.5 } }
   ],
-  adjust(params) {
-    // Room between shelves for the rail under the top one.
+  adjust(params, woods: Wood[]) {
+    // Room between shelves for the rail under the top one, and a useful gap (4") between the others.
     const n = params.n as number
-    return { ...params, H: Math.max(params.H as number, (n - 1) * 4 + 1) }
+    const T = woodOf(woods, params.wood as string).thickness, rw = woodOf(woods, params.rail as string).width
+    return { ...params, H: Math.max(params.H as number, (n - 1) * (Math.max(4, rw + 0.5) + T) + T) }
   },
   unlockForm(params, woods: Wood[]): UnlockForm {
     const n = params.n as number
@@ -231,7 +280,7 @@ export const wallShelf: TemplateDef = {
       0: { width: '=Deep', length: '=H', x: '=0', y: '=0', z: '=0' },
       1: { width: '=Deep', length: '=H', x: '=W - T', y: '=0', z: '=0' }
     }
-    for (let k = 0; k < n; k++) boards[2 + k] = { width: '=Deep', length: '=W - 2*T', x: '=T', y: '=0', z: `=${k}*(H - T)/${n - 1}` }
+    for (let k = 0; k < n; k++) boards[2 + k] = { width: '=Deep', length: '=W - 2*T', x: '=T', y: '=0', z: k === n - 1 ? '=H - T' : `=floor(${k}*(H - T)/${n - 1}*64)/64` }
     boards[2 + n] = { width: '=RailW', length: '=W - 2*T', x: '=T', y: '=Deep - RT', z: '=H - T - RailW' }
     return {
       sizes: [
@@ -247,7 +296,7 @@ export const wallShelf: TemplateDef = {
     const T = w.thickness, deep = w.width
     const left = makeBoard('Side', w, deep, H, ORIENT.uprightY, { x: 0, y: 0, z: 0 })
     const right = makeBoard('Side', w, deep, H, ORIENT.uprightY, { x: W - T, y: 0, z: 0 })
-    const shelves = Array.from({ length: n }, (_, k) => makeBoard('Shelf', w, deep, W - 2 * T, ORIENT.flatX, { x: T, y: 0, z: (k * (H - T)) / (n - 1) }))
+    const shelves = Array.from({ length: n }, (_, k) => makeBoard('Shelf', w, deep, W - 2 * T, ORIENT.flatX, { x: T, y: 0, z: k === n - 1 ? H - T : f64((k * (H - T)) / (n - 1)) }))
     const rail = makeBoard('Hanging rail', r, r.width, W - 2 * T, ORIENT.wallX, { x: T, y: deep - r.thickness, z: H - T - r.width })
     const joints: Joint[] = []
     for (const sh of shelves) joints.push(butt(left, sh, SCREWS), butt(right, sh, SCREWS))

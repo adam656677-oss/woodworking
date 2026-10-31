@@ -7,7 +7,7 @@ const SCREWS = { fastener: 'screws' as const, count: 2 }
 /**
  * A side or end table: four square legs, an apron between each pair (set back a little from the leg faces) and a
  * top glued up from boards edge to edge, overhanging the legs. Tabletop fasteners (not glue) hold the top so it
- * can move with the seasons.
+ * can move with the seasons (they're in the hardware list, two on each apron).
  */
 export const table: TemplateDef = {
   id: 'table',
@@ -18,8 +18,8 @@ export const table: TemplateDef = {
     { key: 'H', label: 'Height', kind: 'inches', default: 24, min: 12, max: 36 },
     { key: 'over', label: 'Top overhang', kind: 'inches', default: 1, min: 0, max: 4 },
     { key: 'apron', label: 'Apron height', kind: 'inches', default: 3.5, min: 2, max: 6 },
-    { key: 'legWood', label: 'Leg wood', kind: 'wood', default: 'hw-8-4' },
-    { key: 'wood', label: 'Apron and top wood', kind: 'wood', default: 'hw-4-4' },
+    { key: 'legWood', label: 'Leg wood', kind: 'wood', default: 'hw-8-4', allow: { kinds: ['hardwood', 'lumber'], minT: 1.5 } },
+    { key: 'wood', label: 'Apron and top wood', kind: 'wood', default: 'hw-4-4', allow: { kinds: ['hardwood', 'lumber'], minT: 0.75, maxT: 1.25 } },
     { key: 'boards', label: 'Boards in the top', kind: 'count', default: 3, min: 1, max: 8 }
   ],
   adjust(params, woods: Wood[]) {
@@ -39,7 +39,9 @@ export const table: TemplateDef = {
       { name: 'Over', expr: num(params.over as number) }, { name: 'Apron', expr: num(params.apron as number) },
       { name: 'L', expr: woodT(params.legWood as string) }, { name: 'T', expr: woodT(params.wood as string) },
       { name: 'Inset', expr: '1/4' }, { name: 'Boards', expr: String(n) },
-      { name: 'LegH', expr: 'H - T' }, { name: 'BaseW', expr: 'W - 2*Over' }, { name: 'BaseD', expr: 'D - 2*Over' }
+      { name: 'LegH', expr: 'H - T' }, { name: 'BaseW', expr: 'W - 2*Over' }, { name: 'BaseD', expr: 'D - 2*Over' },
+      // Each top board's width on the 1/64" grid; the last one takes what's left, so the top is exactly D.
+      { name: 'TopB', expr: 'floor(D/Boards*64)/64' }
     ]
     const legs: Record<number, Record<string, string>> = {
       0: { width: '=L', length: '=LegH', z: '=0' },
@@ -55,7 +57,7 @@ export const table: TemplateDef = {
       7: { width: '=Apron', length: '=BaseD - 2*L', x: '=BaseW - Inset - T', y: '=L', z: `=${top}` }
     }
     const tops: Record<number, Record<string, string>> = {}
-    for (let k = 0; k < n; k++) tops[8 + k] = { width: '=D/Boards', length: '=W', x: '=-Over', y: `=-Over + ${k}*D/Boards`, z: '=LegH' }
+    for (let k = 0; k < n; k++) tops[8 + k] = { width: k === n - 1 ? '=D - (Boards - 1)*TopB' : '=TopB', length: '=W', x: '=-Over', y: `=-Over + ${k}*TopB`, z: '=LegH' }
     return { sizes, boards: { ...legs, ...aprons, ...tops } }
   },
   build(params, woods: Wood[]) {
@@ -74,7 +76,8 @@ export const table: TemplateDef = {
     const left = makeBoard('Short apron', w, A, bd - 2 * L, ORIENT.wallY, { x: inset, y: L, z })
     const right = makeBoard('Short apron', w, A, bd - 2 * L, ORIENT.wallY, { x: bw - inset - T, y: L, z })
     const tops: Board[] = []
-    for (let k = 0; k < n; k++) tops.push(makeBoard('Top board', w, Math.floor((D / n) * 64) / 64, W, ORIENT.flatX, { x: -o, y: -o + (k * D) / n, z: legH }))
+    const tb = Math.floor((D / n) * 64) / 64
+    for (let k = 0; k < n; k++) tops.push(makeBoard('Top board', w, k === n - 1 ? D - (n - 1) * tb : tb, W, ORIENT.flatX, { x: -o, y: -o + k * tb, z: legH }))
     const joints: Joint[] = [
       butt(legs[0], front, SCREWS), butt(legs[1], front, SCREWS), butt(legs[2], back, SCREWS), butt(legs[3], back, SCREWS),
       butt(legs[0], left, SCREWS), butt(legs[2], left, SCREWS), butt(legs[1], right, SCREWS), butt(legs[3], right, SCREWS)
@@ -82,6 +85,8 @@ export const table: TemplateDef = {
     const all = [...legs, front, back, left, right, ...tops]
     // The top is glued up edge to edge.
     for (let k = 1; k < n; k++) { const g = glued(all, woods, tops[k - 1], tops[k]); if (g) joints.push(g) }
-    return { boards: all, joints }
+    // Tabletop fasteners: two on each apron, so the top can move across its width with the seasons.
+    const hardware = [front, back, left, right].map((a, i) => ({ id: `tpl-top-${i}`, itemId: 'tabletop-fastener', qty: 2, boardId: a.id, note: 'Hold the top to the aprons; let it move' }))
+    return { boards: all, joints, hardware }
   }
 }
