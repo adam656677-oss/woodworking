@@ -3,6 +3,7 @@ import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { hasVoice, speak, stop } from '../../kids/speech'
 import { addMinutes, toggleDone } from '../steps'
 import { shop, useShop } from '../shopStore'
+import { HandsFree } from '../../smart/ui/HandsFree'
 
 const StepPicture = lazy(() => import('./StepPicture'))
 
@@ -58,6 +59,7 @@ export function ShopMode() {
         <button aria-label="Smaller text" onClick={() => setZoom(z => Math.max(0.6, z - 0.15))} className="rounded-lg border-2 border-stone-900 px-4 py-2 text-2xl font-bold">A–</button>
         <button aria-label="Bigger text" onClick={() => setZoom(z => Math.min(1.8, z + 0.15))} className="rounded-lg border-2 border-stone-900 px-4 py-2 text-2xl font-bold">A+</button>
         {hasVoice() && <button onClick={() => speak(`${step.title}. ${step.text}`)} className="rounded-lg border-2 border-stone-900 px-4 py-2 text-xl font-bold">🔊 Read</button>}
+        <HandsFree onNext={() => go(i + 1)} />
         <button onClick={exit} className="rounded-lg bg-stone-900 px-5 py-2 text-xl font-bold text-white">Exit (Esc)</button>
       </header>
       <main className="flex min-h-0 flex-1 gap-6 overflow-hidden p-6">

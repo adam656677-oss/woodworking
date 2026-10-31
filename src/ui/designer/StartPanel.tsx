@@ -1,5 +1,6 @@
 import { TEMPLATES } from '../../templates'
 import { studio, useStudio } from '../store'
+import { openHelper } from '../../smart/ui/SmartDialogs'
 
 /** Shown in an empty project: start from a template, an empty board, or open a file. */
 export function StartPanel() {
@@ -23,6 +24,7 @@ export function StartPanel() {
           </button>
         ))}
       </div>
+      <button onClick={() => openHelper('describe')} className="rounded border border-amber-700 px-3 py-1 text-sm hover:bg-amber-50">✨ Describe what you want to make…</button>
       <p className="text-sm text-stone-500">…or use Add board in the toolbar to start from scratch, or Open a saved project.</p>
     </div>
   )

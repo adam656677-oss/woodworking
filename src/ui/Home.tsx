@@ -4,6 +4,7 @@ import { openShopTools } from '../tools/ui/ShopTools'
 import { openFinishing } from '../finish/ui/FinishingSchool'
 import { studio } from './store'
 import { BackupBar } from '../family/ui/BackupBar'
+import { openHelper } from '../smart/ui/SmartDialogs'
 
 export function Home() {
   const inv = useTools(s => s.inventory)
@@ -51,6 +52,7 @@ export function Home() {
         </button>
       </div>
       <BackupBar />
+      <button onClick={() => openHelper('settings')} className="text-sm text-stone-600 underline">✨ Smart Helpers settings</button>
       {low.length > 0 && (
         <p role="alert" className="rounded-xl bg-amber-100 px-4 py-2 text-amber-900">
           Running low: {low.join('; ')} — <button className="underline" onClick={() => openShopTools('home', 'inventory')}>see the inventory</button>
