@@ -3,7 +3,7 @@ import { forwardRef, useMemo } from 'react'
 import { bandOf } from '../../optimize/banding'
 import * as THREE from 'three'
 import { Brush, Evaluator, SUBTRACTION } from 'three-bvh-csg'
-import type { Cut, PlaneCut } from '../../model/joints'
+import { PRISM_UV, type Cut, type PlaneCut } from '../../model/joints'
 import type { Board, WoodKind } from '../../model/types'
 import type { Pt } from '../../sketch/types'
 import { extrudeOutline, type OutlineProfile } from './shapeGeometry'
@@ -27,6 +27,47 @@ function brushFor(cut: Cut, board: Board): Brush | null {
     return b
   }
   if (cut.kind === 'profile') return profileBrush(cut, board)
+  if (cut.kind === 'pocket') {
+    const b = new Brush(new THREE.BoxGeometry(cut.max.x - cut.min.x, cut.max.y - cut.min.y, cut.max.z - cut.min.z))
+    b.position.set((cut.min.x + cut.max.x) / 2, (cut.min.y + cut.max.y) / 2, (cut.min.z + cut.max.z) / 2)
+    b.updateMatrixWorld()
+    return b
+  }
+  if (cut.kind === 'prism') {
+    // The outline in its two axes, pushed along the third.
+    const shape = new THREE.Shape(cut.poly.map(([u, v]) => new THREE.Vector2(u, v)))
+    const g = new THREE.ExtrudeGeometry(shape, { depth: cut.to - cut.from, bevelEnabled: false })
+    g.translate(0, 0, cut.from)
+    const [ua, va] = PRISM_UV[cut.axis]
+    const col = (a: 'x' | 'y' | 'z') => new THREE.Vector3(a === 'x' ? 1 : 0, a === 'y' ? 1 : 0, a === 'z' ? 1 : 0)
+    g.applyMatrix4(new THREE.Matrix4().makeBasis(col(ua), col(va), col(cut.axis)))
+    // A basis that mirrors turns the faces inside out; flip them back.
+    if (new THREE.Matrix4().makeBasis(col(ua), col(va), col(cut.axis)).determinant() < 0) {
+      const idx = g.getIndex()
+      if (idx) for (let i = 0; i < idx.count; i += 3) { const t = idx.getX(i + 1); idx.setX(i + 1, idx.getX(i + 2)); idx.setX(i + 2, t) }
+      else {
+        const pos = g.getAttribute('position')
+        for (let i = 0; i < pos.count; i += 3) for (const k of [0, 1, 2]) { const t = pos.getComponent(i + 1, k); pos.setComponent(i + 1, k, pos.getComponent(i + 2, k)); pos.setComponent(i + 2, k, t) }
+      }
+      g.computeVertexNormals()
+    }
+    const b = new Brush(g)
+    b.updateMatrixWorld()
+    return b
+  }
+  if (cut.kind === 'bore') {
+    const pad = 0.05
+    const len = cut.depth + pad
+    const b = new Brush(new THREE.CylinderGeometry(cut.diameter / 2, cut.diameter / 2, len, 32))
+    // The cylinder runs along y; turn it to the cut's axis, from just outside the surface into the board.
+    if (cut.axis === 'x') b.rotation.z = Math.PI / 2
+    if (cut.axis === 'z') b.rotation.x = Math.PI / 2
+    const c = { ...cut.center }
+    c[cut.axis] = cut.center[cut.axis] + cut.dir * (cut.depth - pad) / 2
+    b.position.set(c.x, c.y, c.z)
+    b.updateMatrixWorld()
+    return b
+  }
   if (cut.kind === 'hole') {
     // Through holes run a hair past both faces; a stopped hole only past the face it's drilled from.
     const through = cut.depth >= board.thickness - 1e-9

@@ -3,12 +3,30 @@ import type { Board, ButtParams, GrooveParams, Joint, MiterParams, PocketParams,
 import { formatInches } from './units'
 import { taperCuts } from '../shaping/taper'
 import { inSection, profileCuts, toEdge, type ProfileCut } from '../shaping/edges'
+import { joineryCuts, joineryProblem, joineryNotes } from '../joinery/cuts'
 
 export type BoxCut = { boardId: string; kind: 'dado' | 'rabbet'; min: Vec3; max: Vec3 }
 export type HoleCut = { boardId: string; kind: 'hole'; center: Vec3; diameter: number; depth: number }
 /** Material on the `normal` side of the plane through `point` is removed (board-local coordinates). */
 export type PlaneCut = { boardId: string; kind: 'miter' | 'bevel' | 'taper'; plane: { point: Vec3; normal: Vec3 } }
-export type Cut = BoxCut | HoleCut | PlaneCut | ProfileCut
+/** A box of material taken out by a cut joint (mortise, lap, finger, shoulder). */
+export type PocketCut = { boardId: string; kind: 'pocket'; min: Vec3; max: Vec3 }
+/** A straight-sided shape (a dovetail, a splice profile) cut through from `from` to `to` along a local axis; `poly` is in the other two axes (x→(y,z), y→(x,z), z→(x,y)). */
+export type PrismCut = { boardId: string; kind: 'prism'; axis: 'x' | 'y' | 'z'; from: number; to: number; poly: [number, number][] }
+/** A round hole along any local axis (dowels): from `center` on a surface, `depth` into the board in direction `dir`. */
+export type BoreCut = { boardId: string; kind: 'bore'; axis: 'x' | 'y' | 'z'; dir: 1 | -1; center: Vec3; diameter: number; depth: number }
+export type Cut = BoxCut | HoleCut | PlaneCut | ProfileCut | PocketCut | PrismCut | BoreCut
+
+/** The two axes a prism's polygon is drawn in. */
+export const PRISM_UV: Record<'x' | 'y' | 'z', ['x' | 'y' | 'z', 'x' | 'y' | 'z']> = { x: ['y', 'z'], y: ['x', 'z'], z: ['x', 'y'] }
+export function inPoly(poly: [number, number][], u: number, v: number): boolean {
+  let inside = false
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const [xi, yi] = poly[i], [xj, yj] = poly[j]
+    if ((yi > v) !== (yj > v) && u < ((xj - xi) * (v - yi)) / (yj - yi) + xi) inside = !inside
+  }
+  return inside
+}
 
 export const MAX_ANGLE = 60
 const EPS = 1e-9
@@ -86,6 +104,7 @@ export function cutGeometry(project: Project): Cut[] {
     }
     cuts.push(...endAndEdgeCuts(b), ...taperCuts(b), ...profileCuts(b))
   }
+  for (const j of project.joints) if (j.type === 'joinery') cuts.push(...joineryCuts(project, j).cuts)
   return cuts
 }
 
@@ -96,6 +115,18 @@ export function pointRemovedBy(cut: Cut, p: Vec3, board?: Board): boolean {
     const dx = p.x - cut.center.x
     const dy = p.y - cut.center.y
     return dx * dx + dy * dy < (cut.diameter / 2) ** 2 && p.z >= cut.center.z && p.z <= cut.center.z + cut.depth
+  }
+  if (cut.kind === 'pocket') return p.x >= cut.min.x && p.x <= cut.max.x && p.y >= cut.min.y && p.y <= cut.max.y && p.z >= cut.min.z && p.z <= cut.max.z
+  if (cut.kind === 'prism') {
+    const w = p[cut.axis]
+    if (w < Math.min(cut.from, cut.to) || w > Math.max(cut.from, cut.to)) return false
+    const [a, b] = PRISM_UV[cut.axis]
+    return inPoly(cut.poly, p[a], p[b])
+  }
+  if (cut.kind === 'bore') {
+    const [a, b] = PRISM_UV[cut.axis]
+    const d = (p[cut.axis] - cut.center[cut.axis]) * cut.dir
+    return d >= 0 && d <= cut.depth && (p[a] - cut.center[a]) ** 2 + (p[b] - cut.center[b]) ** 2 < (cut.diameter / 2) ** 2
   }
   if (cut.kind === 'profile') {
     if (!board) return false
@@ -154,6 +185,7 @@ export function validateJoint(project: Project, joint: Joint): string | null {
     if (!(p.screwLength > 0)) return 'Screw length must be more than 0'
     return null
   }
+  if (joint.type === 'joinery') return joineryProblem(project, joint)
   if (joint.type === 'miter') {
     const p = joint.params as MiterParams
     if (!(p.angle > 0 && p.angle <= MAX_ANGLE)) return `Miter angle must be between 0° and ${MAX_ANGLE}°`
@@ -193,6 +225,10 @@ export function jointNotes(project: Project, boardId: string): string[] {
   const notes: string[] = []
   const rabbetCounts = new Map<string, { count: number; along: 'width' | 'length' }>()
   for (const j of project.joints) {
+    if (j.type === 'joinery') {
+      if (j.hostBoardId === boardId || j.partnerBoardId === boardId) notes.push(...joineryNotes(project, j, boardId))
+      continue
+    }
     if (isGroove(j) && j.hostBoardId === boardId) {
       const p = j.params
       if (p.face === 'left' || p.face === 'right') {

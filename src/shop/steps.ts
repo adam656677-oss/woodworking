@@ -1,10 +1,11 @@
 // Steps for Shop Mode: from a plan's own steps, a kid project, or worked out from a design.
+import { joineryNotes, STYLE_NAMES } from '../joinery/cuts'
 import { finishById } from '../finish/finishes'
 import { kidFinish } from '../finish/kids'
 import { stepText } from '../finish/schedule'
 import { ancestry } from '../assemblies/ops'
 import { cutList } from '../model/cutlist'
-import type { Board, ButtParams, GrooveParams, Joint, MiterParams, PocketParams, Project } from '../model/types'
+import type { Board, ButtParams, GrooveParams, Joint, JoineryParams, MiterParams, PocketParams, Project } from '../model/types'
 import { formatInches } from '../model/units'
 import { TOOLS } from '../kids/content'
 import { adultDoes } from '../kids/logic'
@@ -35,6 +36,16 @@ const inches = (v: number) => formatInches(v)
 export function jointStep(p: Project, j: Joint): { title: string; text: string; tools: string[]; cut: boolean } {
   const host = name(p, j.hostBoardId), partner = name(p, j.partnerBoardId)
   switch (j.type) {
+    case 'joinery': {
+      const jp = j.params as JoineryParams
+      const notes = [...joineryNotes(p, j, j.hostBoardId), ...joineryNotes(p, j, j.partnerBoardId)]
+      const tools: Record<string, string[]> = {
+        dowel: ['Doweling jig', 'Drill'], biscuit: ['Biscuit joiner'], looseTenon: ['Loose-tenon joiner or router'], dovetail: ['Dovetail saw', 'Chisels', 'Marking gauge'],
+        halfBlindDovetail: ['Dovetail saw', 'Chisels', 'Marking gauge'], boxJoint: ['Table saw with box-joint jig'], mortiseTenon: ['Mortiser or chisels', 'Tenon saw or table saw'],
+        tongueGroove: ['Router table or table saw'], spline: ['Table saw or router'], bridle: ['Table saw with tenoning jig'], halfLap: ['Table saw or router']
+      }
+      return { title: `${STYLE_NAMES[jp.style]}: ${partner} to ${host}`, text: `${notes.join('. ')}.`, tools: tools[jp.style] ?? ['Japanese saws', 'Chisels'], cut: true }
+    }
     case 'dado':
     case 'rabbet': {
       const g = j.params as GrooveParams

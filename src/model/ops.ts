@@ -4,9 +4,11 @@ import { AXES, type Axis, boxInLocal, faceToward, localAxes, rotateVec, worldBox
 import { newId } from './ids'
 import { MAX_ANGLE, validateJoint } from './joints'
 import type {
-  Board, ButtParams, EndCut, GrooveParams, Joint, JointRestore, JointType, MiterParams, PocketParams, Project, Vec3
+  Board, ButtParams, EndCut, GrooveParams, Joint, JointRestore, JointType, JoineryParams, JoineryStyle, MiterParams, PocketParams, Project, Vec3
 } from './types'
 import { snap64 } from './units'
+import { joineryChange, joineryDefaults, joineryOffers } from '../joinery/plan'
+import { STYLE_NAMES } from '../joinery/cuts'
 import { findWood } from './woods'
 
 export type OpError = { error: string }
@@ -255,7 +257,7 @@ function sideFacing(b: Board, other: Board, lengthwise: boolean): Side {
 // ── joints ────────────────────────────────────────────────────────────────
 
 const LABEL: Record<JointType, string> = {
-  butt: 'A butt joint', dado: 'A dado', rabbet: 'A rabbet', pocketScrew: 'A pocket-screw joint', miter: 'A miter'
+  butt: 'A butt joint', dado: 'A dado', rabbet: 'A rabbet', pocketScrew: 'A pocket-screw joint', miter: 'A miter', joinery: 'That joint'
 }
 
 export function addJoint(
@@ -263,6 +265,7 @@ export function addJoint(
 ): { project: Project; id: string } | OpError {
   const c = contactBetween(p, hostId, partnerId)
   if (!c) return { error: "These boards don't touch" }
+  if (type === 'joinery') return addJoinery(p, c, params)
   if (!jointOffers(c).includes(type)) return { error: `${LABEL[type]} can't join these boards` }
   const host = getBoard(p, c.host)
   const partner = getBoard(p, c.partner)
@@ -309,6 +312,42 @@ function addGroove(
     restore: [{ boardId: partner.id, side, extend: depth }]
   }
   const next = resizeAt({ ...p, joints: [...p.joints, joint] }, partner.id, side, depth)
+  const reason = validateJoint(next, joint)
+  if (reason) return { error: reason }
+  return { project: next, id }
+}
+
+function moveBy(p: Project, id: string, v: Vec3): Project {
+  return mapBoard(p, id, b => ({ ...b, position: { x: clean(b.position.x + v.x), y: clean(b.position.y + v.y), z: clean(b.position.z + v.z) } }))
+}
+
+/** A cut joint (mortise and tenon, dovetails, laps…): the partner lengthens into or sinks into the host as the style needs. */
+function addJoinery(p: Project, c: Contact, params: Record<string, unknown>): { project: Project; id: string } | OpError {
+  const style = params.style as JoineryStyle
+  if (!joineryOffers(c).includes(style)) return { error: `${STYLE_NAMES[style] ?? 'That joint'} can't join these parts` }
+  const host = getBoard(p, c.host), partner = getBoard(p, c.partner)
+  const jp: JoineryParams = { ...joineryDefaults(p, style, host, partner, c), ...(params as Partial<JoineryParams>), style }
+  if (style === 'custom' && !(p.customJoints ?? []).some(x => x.id === jp.customId)) return { error: 'Design the joint in the joint designer first' }
+  const id = newId('j')
+  const ch = joineryChange(style, jp, host, partner, c.kind)
+  let next = p
+  const restore: JointRestore[] = []
+  if (ch.extend && ch.extend.by > 0) {
+    const side = sideFacing(partner, host, ch.extend.along === 'length')
+    next = resizeAt(next, partner.id, side, ch.extend.by)
+    restore.push({ boardId: partner.id, side, extend: ch.extend.by })
+  }
+  if (ch.move) {
+    // Toward the host, across the faces that touch.
+    const t = localAxes(host).thickness.axis
+    const hb = worldBox(host), pb = worldBox(partner)
+    const sgn = (hb.min[t] + hb.max[t]) / 2 > (pb.min[t] + pb.max[t]) / 2 ? 1 : -1
+    const v = { x: 0, y: 0, z: 0, [t]: sgn * ch.move } as Vec3
+    next = moveBy(next, partner.id, v)
+    restore.push({ boardId: partner.id, side: 'start', extend: 0, move: v })
+  }
+  const joint: Joint = { id, type: 'joinery', hostBoardId: host.id, partnerBoardId: partner.id, params: jp, restore }
+  next = { ...next, joints: [...next.joints, joint] }
   const reason = validateJoint(next, joint)
   if (reason) return { error: reason }
   return { project: next, id }
@@ -399,6 +438,20 @@ export function updateJoint(p: Project, id: string, params: Record<string, unkno
     const r0 = j.restore?.find(r => r.boardId === j.partnerBoardId)
     if (r0) next = resizeAt(next, j.partnerBoardId, r0.side, delta)
   }
+  if (j.type === 'joinery') {
+    // A setting that changes how far the partner goes in moves it in or out to match.
+    const host = getBoard(p, j.hostBoardId), partner = getBoard(p, j.partnerBoardId)
+    const r0 = (j.restore ?? []).find(r => r.boardId === j.partnerBoardId && !r.move)
+    if (r0) {
+      const jp = merged as JoineryParams
+      const want = joineryChange(jp.style, jp, host, partner, 'endToFace').extend?.by ?? r0.extend
+      const delta = snap64(want - r0.extend)
+      if (delta) {
+        next = resizeAt(next, j.partnerBoardId, r0.side, delta)
+        restore = restore.map(r => (r === r0 ? { ...r, extend: snap64(r.extend + delta) } : r))
+      }
+    }
+  }
   if (j.type === 'miter' && params.angle !== undefined) {
     const a = params.angle as number
     for (const r of j.restore ?? []) {
@@ -421,6 +474,7 @@ export function removeJoint(p: Project, id: string): Project {
   let next: Project = { ...p, joints: p.joints.filter(x => x.id !== id) }
   for (const r of restore) {
     if (!next.boards.some(b => b.id === r.boardId)) continue
+    if (r.move) next = moveBy(next, r.boardId, { x: -r.move.x, y: -r.move.y, z: -r.move.z })
     next = resizeAt(next, r.boardId, r.side, -r.extend)
     if (r.field) {
       const end = r.side as 'start' | 'end'

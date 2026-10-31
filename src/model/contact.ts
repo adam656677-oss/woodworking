@@ -3,7 +3,7 @@ import { AXES, type Axis, type Box, isAxisAligned, localAxes, overlap1, worldBox
 import type { Board, GrooveParams, JointType, Project } from './types'
 
 export type Contact = {
-  kind: 'endToFace' | 'edgeToFace' | 'faceToFace' | 'cornerEnds' | 'endToEdge'
+  kind: 'endToFace' | 'edgeToFace' | 'faceToFace' | 'cornerEnds' | 'endToEdge' | 'edgeToEdge' | 'endToEnd'
   host: string
   partner: string
   nearHostEnd: boolean
@@ -89,6 +89,9 @@ export function contactBetween(project: Project, aId: string, bId: string): Cont
   if (pPart === 'end' && hPart !== 'end' && flushWithHostEnd(host, hb, pbx)) {
     return { kind: 'cornerEnds', host: host.id, partner: partner.id, nearHostEnd: true, cornerAngle: 90, hostSurface: hPart === 'face' ? 'face' : 'edge' }
   }
+  // Two boards edge to edge (a glued-up panel), or two beams end to end in line (a splice).
+  if (pPart === 'edge' && hPart === 'edge') return { kind: 'edgeToEdge', host: host.id, partner: partner.id, nearHostEnd: false }
+  if (pPart === 'end' && hPart === 'end') return { kind: 'endToEnd', host: host.id, partner: partner.id, nearHostEnd: false }
   // A frame's rail ending against a stile's edge partway along it (face frames, doors).
   if (pPart === 'end' && hPart === 'edge') return { kind: 'endToEdge', host: host.id, partner: partner.id, nearHostEnd: false }
   if (hPart !== 'face') return null
@@ -110,5 +113,8 @@ export function jointOffers(c: Contact): JointType[] {
       return ['butt', 'pocketScrew']
     case 'cornerEnds':
       return c.hostSurface === 'face' ? ['butt', 'miter', 'rabbet', 'pocketScrew'] : ['butt', 'miter']
+    case 'edgeToEdge':
+    case 'endToEnd':
+      return ['butt']
   }
 }

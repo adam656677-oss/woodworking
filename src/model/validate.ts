@@ -71,7 +71,7 @@ export function validate(project: Project): Warning[] {
     if (angleProblem) warnings.push({ kind: 'badJoint', boardIds: [b.id], message: angleProblem })
   }
 
-  const NAMES: Record<string, string> = { butt: 'butt', dado: 'dado', rabbet: 'rabbet', pocketScrew: 'pocket-screw', miter: 'miter' }
+  const NAMES: Record<string, string> = { butt: 'butt', dado: 'dado', rabbet: 'rabbet', pocketScrew: 'pocket-screw', miter: 'miter', joinery: 'cut' }
   for (const j of project.joints) {
     const reason = validateJoint(project, j)
     if (reason) {
@@ -81,7 +81,8 @@ export function validate(project: Project): Warning[] {
     // A joint only means something while its boards still meet the way it describes.
     // Frame-and-panel cuts (edge grooves, tenon cheeks, glass rabbets) are checked by their own seat, not by contact.
     const gp = j.params as GrooveParams
-    const own = (j.type === 'dado' || j.type === 'rabbet') && (gp.face === 'left' || gp.face === 'right' || gp.standalone)
+    // Cut joints check where their parts are themselves (joinery problems are reported above).
+    const own = j.type === 'joinery' || ((j.type === 'dado' || j.type === 'rabbet') && (gp.face === 'left' || gp.face === 'right' || gp.standalone))
     if ((!own && !contactBetween(project, j.hostBoardId, j.partnerBoardId)) || !seatedInGroove(project, j)) {
       const name = (id: string) => project.boards.find(b => b.id === id)?.name ?? '?'
       warnings.push({

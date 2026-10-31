@@ -167,7 +167,7 @@ export type HardwareKind = 'hinge' | 'slide' | 'pull' | 'screw' | 'pin' | 'glass
 /** A hardware item; `price` is per piece (per square foot for glass). */
 export type HardwareItem = { id: string; name: string; kind: HardwareKind; price: number }
 
-export type JointType = 'butt' | 'dado' | 'rabbet' | 'pocketScrew' | 'miter'
+export type JointType = 'butt' | 'dado' | 'rabbet' | 'pocketScrew' | 'miter' | 'joinery'
 
 export type ButtParams = { fastener: 'glue' | 'screws' | 'nails'; count: number }
 /**
@@ -196,14 +196,43 @@ export type JointRestore = {
   /** For miters: which angle on that end was set, and its value before. */
   field?: 'miter' | 'bevel'
   previous?: number
+  /** A part moved (a cross lap sinks one part into the other): undone by moving it back. */
+  move?: Vec3
 }
+
+/** The joinery styles (cut joints) beyond the basic ones. */
+export type JoineryStyle =
+  | 'halfLap' | 'dowel' | 'biscuit' | 'looseTenon' | 'boxJoint' | 'dovetail' | 'halfBlindDovetail' | 'mortiseTenon' | 'bridle' | 'tongueGroove' | 'spline'
+  | 'kanawa' | 'okkakeDaisen' | 'koshikakeAri' | 'kama' | 'watariAgo' | 'hozoSashi' | 'shachiSen' | 'custom'
+/** A cut joint: its style and settings (inches; counts are whole numbers). Unused settings are left out. */
+export type JoineryParams = {
+  style: JoineryStyle
+  /** How far the partner goes into the host (tenon length, splice length, lap/finger depth). */
+  depth?: number
+  /** Tenon/tongue/spline thickness; dowel or loose-tenon size; finger width. */
+  size?: number
+  count?: number
+  /** Shoulders each side across the width (tenons). */
+  shoulder?: number
+  /** Dovetails: slope 1:n (6 softwood, 8 hardwood); half-blind lap. */
+  slope?: number
+  lap?: number
+  through?: boolean
+  haunch?: boolean
+  biscuit?: '0' | '10' | '20'
+  /** A joint made in the joint designer. */
+  customId?: string
+}
+
+/** A joint designed on a voxel grid in the joint designer: cells[i + n*(j + n*k)] is 0 (beam A, the host) or 1 (beam B). */
+export type CustomJoint = { id: string; name: string; layout: 'inline' | 'cross'; n: number; cells: string; slide: 'x+' | 'x-' | 'y+' | 'y-' | 'z+' | 'z-' }
 
 export type Joint = {
   id: string
   type: JointType
   hostBoardId: string
   partnerBoardId: string
-  params: ButtParams | GrooveParams | PocketParams | MiterParams
+  params: ButtParams | GrooveParams | PocketParams | MiterParams | JoineryParams
   restore?: JointRestore[]
   /** Formulas for groove width, depth and offset. */
   formulas?: Record<string, string>
@@ -242,6 +271,8 @@ export type Project = {
   models?: RefModel[]
   /** Cutting allowances, waste and tax for layouts and the shopping list. */
   cutSettings?: CutSettings
+  /** Joints designed in the joint designer. */
+  customJoints?: CustomJoint[]
   /** How the piece gets finished: prep, colour, seal, topcoats, rub-out. */
   finish?: FinishSchedule
 }
