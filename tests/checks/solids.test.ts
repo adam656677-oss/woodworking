@@ -19,7 +19,8 @@ test('densities: known species, plywood, and an estimate for unknown ones', () =
   expect(densityOf('White Oak').lbPerCuFt).toBe(47)
   expect(densityOf('Red oak').lbPerCuFt).toBe(44)
   expect(densityOf('Plywood').lbPerCuFt).toBe(34)
-  expect(densityOf('Purpleheart')).toEqual({ lbPerCuFt: 35, estimated: true })
+  expect(densityOf('Purpleheart')).toEqual({ lbPerCuFt: 56, estimated: false })
+  expect(densityOf('Mystery wood')).toEqual({ lbPerCuFt: 35, estimated: true })
 })
 
 test('a plain board weighs its volume × density; the centre of mass is its middle', () => {

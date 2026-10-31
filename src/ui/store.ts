@@ -138,7 +138,7 @@ export function createStudioStore() {
       const { project, selection } = history.current
       const fe: FormulaError[] = recalc(project).errors
       const formulaErrors = Object.fromEntries(fe.map(e => [e.key, e.message]))
-      const warnings = [...validate(project), ...fe.map(e => ({ kind: 'formula' as const, boardIds: e.boardIds, message: e.message })), ...libraryAdvice(project)]
+      const warnings = [...validate(project), ...fe.map(e => ({ kind: 'formula' as const, boardIds: e.boardIds, message: e.message })), ...(get().kidsMode ? [] : libraryAdvice(project))]
       set({ project, selection, warnings, formulaErrors, dirty, canUndo: history.canUndo, canRedo: history.canRedo })
       api()?.setDirty(dirty)
     }

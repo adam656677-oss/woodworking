@@ -7,8 +7,8 @@ export type Cut = 'flat' | 'quarter'
 /** Dimensional change coefficient per 1% moisture change: the Handbook's where listed, else estimated from total shrinkage. */
 export function moveCoef(s: Species, cut: Cut): { coef: number; estimated: boolean } {
   if (s.coef) return { coef: cut === 'flat' ? s.coef[0] : s.coef[1], estimated: false }
-  // Most of the shrinkage happens below about 26–28% moisture; this matches the Handbook's coefficients to within ~10%.
-  return { coef: (cut === 'flat' ? s.shrinkT : s.shrinkR) / 100 / 26.5, estimated: true }
+  // The Handbook's own coefficients are about total shrinkage ÷ 28.5 (cedars and redwood less).
+  return { coef: (cut === 'flat' ? s.shrinkT : s.shrinkR) / 100 / 28.5, estimated: true }
 }
 
 /** How much a board's width changes between two moisture contents (inches; positive = it swells). */

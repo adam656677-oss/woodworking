@@ -1,4 +1,4 @@
-// Woodworking words, explained in a sentence. Other pages link here with `glossaryHref(term)`.
+// Woodworking words, explained in a sentence (the Library's Glossary page).
 
 const G: [string, string][] = [
   ['Air-dried', 'Lumber dried outdoors in stacks rather than in a kiln; slower, and usually ends up around 12–15% moisture.'],

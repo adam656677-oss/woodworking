@@ -5,6 +5,7 @@ import { formatInches, parseInches } from '../../model/units'
 import { studio, type Screen } from '../../ui/store'
 import { LOADS, movement, moveCoef, sag, SAG_LIMIT_PER_FT, type Cut } from '../calc'
 import { GLOSSARY } from '../glossary'
+import { MOVE_LIMIT } from '../advice'
 import { ARTICLES, DRILL_SPEEDS, GLUES, HARDWOOD_GRADES, NOMINAL, SOFTWOOD_GRADES } from '../reference'
 import { SHEET_MOE, SPECIES, speciesById, type Species } from '../species'
 
@@ -116,7 +117,7 @@ function SpeciesInfo({ s }: { s: Species }) {
       <dl className="mt-3 grid grid-cols-3 gap-x-6 gap-y-1 text-sm">
         <dt className="text-stone-500">Weight</dt><dd className="col-span-2">{s.density} lb per cubic foot (at 12% moisture)</dd>
         <dt className="text-stone-500">Hardness (Janka)</dt><dd className="col-span-2">{s.janka} lbf</dd>
-        <dt className="text-stone-500">Shrinkage, green to dry</dt><dd className="col-span-2">{s.shrinkT}% across the rings (flat-sawn), {s.shrinkR}% along them (quartersawn)</dd>
+        <dt className="text-stone-500">Shrinkage, green to dry</dt><dd className="col-span-2">{s.shrinkT}% tangential (along the rings — flat-sawn width), {s.shrinkR}% radial (across the rings — quartersawn width)</dd>
         <dt className="text-stone-500">Stiffness</dt><dd className="col-span-2">{s.moe} million psi</dd>
         <dt className="text-stone-500">Movement</dt><dd className="col-span-2">A 12" flat-sawn board moves about {formatInches(m.inches)} from 6% to 12% moisture</dd>
         <dt className="text-stone-500">Price (estimate)</dt><dd className="col-span-2">${s.price[0]}–${s.price[1]} per board foot</dd>
@@ -143,8 +144,8 @@ function Movement({ init }: { init: LibParams }) {
   const [to, setTo] = useState('12')
   const [cut, setCut] = useState<Cut>('flat')
   const s = speciesById(id) ?? SPECIES[0]
-  const w = inch(width), a = Number(from), b = Number(to)
-  const ok = Number.isFinite(w) && w > 0 && Number.isFinite(a) && Number.isFinite(b)
+  const w = inch(width), a = from.trim() ? Number(from) : NaN, b = to.trim() ? Number(to) : NaN
+  const ok = Number.isFinite(w) && w > 0 && a >= 0 && b >= 0
   const r = ok ? movement(w, s, a, b, cut) : null
   return (
     <div className="flex max-w-3xl flex-col gap-4">
@@ -163,8 +164,8 @@ function Movement({ init }: { init: LibParams }) {
       <section role="status" aria-label="Movement" className="rounded-lg bg-white p-4 shadow-sm">
         {r ? <>
           <div className="text-2xl font-bold">{r.inches >= 0 ? 'Grows' : 'Shrinks'} about {formatInches(Math.abs(r.inches), { sixtyFourths: true })}</div>
-          <p className="text-sm text-stone-600">{formatInches(w)} × {moveCoef(s, cut).coef.toFixed(5)} per 1% × {Math.abs(b - a)}% change{r.estimated ? ' (coefficient estimated from the Handbook\'s shrinkage)' : ' (coefficient from the Wood Handbook)'}.</p>
-          {Math.abs(r.inches) >= 3 / 16 - 1e-6 && <p className="mt-2 text-sm text-amber-900">That's enough to crack a rigid cross-grain joint: use tabletop buttons, figure-8s, slotted screw holes, or let panels float in grooves.</p>}
+          <p className="text-sm text-stone-600">{formatInches(w)} × {moveCoef(s, cut).coef.toFixed(5)} per 1% × {Math.abs(Math.min(b, 28) - Math.min(a, 28))}% change{Math.max(a, b) > 28 ? ' (wood stops swelling above about 28%)' : ''}{r.estimated ? ' (coefficient estimated from the Handbook\'s shrinkage)' : ' (coefficient from the Wood Handbook)'}.</p>
+          {Math.abs(r.inches) >= MOVE_LIMIT && <p className="mt-2 text-sm text-amber-900">That's enough to crack a rigid cross-grain joint: use tabletop buttons, figure-8s, slotted screw holes, or let panels float in grooves.</p>}
         </> : <p>Give a width and two moisture contents.</p>}
       </section>
     </div>

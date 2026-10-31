@@ -2,7 +2,7 @@
 
 export type Glue = { id: string; name: string; open: string; clamp: string; cure: string; water: string; gaps: string; cleanup: string; best: string }
 export const GLUES: Glue[] = [
-  { id: 'pva1', name: 'PVA (yellow glue) — Type I', open: '5–10 min', clamp: '30–60 min', cure: '24 hours', water: 'Water-resistant (ANSI Type I)', gaps: 'Poor — needs tight joints', cleanup: 'Water while wet; scrape when rubbery', best: 'Outdoor furniture that sees rain' },
+  { id: 'pva1', name: 'PVA (yellow glue) — original, interior', open: '5–10 min', clamp: '30–60 min', cure: '24 hours', water: 'Not water-resistant', gaps: 'Poor — needs tight joints', cleanup: 'Water while wet; scrape when rubbery', best: 'Indoor furniture and cabinets' },
   { id: 'pva2', name: 'PVA (yellow glue) — Type II', open: '5–10 min', clamp: '30–60 min', cure: '24 hours', water: 'Water-resistant (Type II): not for constant wet', gaps: 'Poor', cleanup: 'Water while wet', best: 'Most indoor furniture; cutting boards (Type II or III)' },
   { id: 'pva3', name: 'PVA — Type III (waterproof)', open: '8–10 min', clamp: '30–60 min', cure: '24 hours', water: 'Waterproof (Type I test) — not for below the waterline', gaps: 'Poor', cleanup: 'Water while wet', best: 'Outdoor projects, cutting boards, longer assemblies' },
   { id: 'white', name: 'White glue (PVA)', open: '10–15 min', clamp: '1 hour', cure: '24 hours', water: 'None', gaps: 'Poor', cleanup: 'Water', best: 'Kids\' projects, crafts, indoor work' },
@@ -35,7 +35,8 @@ export const ARTICLES: Article[] = [
 
 export const HARDWOOD_GRADES = [
   { grade: 'FAS (Firsts and Seconds)', what: 'The best: at least 6" wide and 8\' long, about 83% or more clear cuttings.', use: 'Long clear parts, fine furniture.' },
-  { grade: 'FAS One Face (F1F) / Selects', what: 'FAS on the better face; the back can be #1 Common.', use: 'When only one face shows.' },
+  { grade: 'FAS One Face (F1F)', what: 'FAS on the better face; the back can be #1 Common.', use: 'When only one face shows.' },
+  { grade: 'Selects', what: 'Like F1F but in shorter, narrower boards (at least 4" × 6\').', use: 'Good one-face parts at a lower price.' },
   { grade: '#1 Common', what: 'At least 3" wide and 4\' long, about 67% clear in shorter pieces.', use: 'Cabinet parts and furniture with shorter parts — often the best value.' },
   { grade: '#2A Common', what: 'About 50% clear; more knots and defects.', use: 'Small parts, rustic work, flooring.' }
 ]
