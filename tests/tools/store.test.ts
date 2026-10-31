@@ -99,3 +99,21 @@ test('finishes on the shopping list are never counted as "no price"', () => {
   const { template: _t, ...p0 } = applyTemplate(emptyProject('T'), 'bookshelf', {})
   expect(shoppingList(setSchedule(p0, fromTemplate('wipe-poly'))).missing).toBe(shoppingList(p0).missing)
 })
+
+test('dowels for a doweled joint go on the shopping list, without counting as a missing price', async () => {
+  const { makeBoard, ORIENT } = await import('../../src/templates/place')
+  const { addJoint } = await import('../../src/model/ops')
+  const { contactBetween } = await import('../../src/model/contact')
+  const p = emptyProject('D')
+  const w = p.woods.find(x => x.id === '1x6')!
+  const a = makeBoard('A', w, 5.5, 24, ORIENT.flatY, { x: 0, y: 0, z: 0 })
+  const b = makeBoard('B', w, 5.5, 24, ORIENT.flatY, { x: 5.5, y: 0, z: 0 })
+  const p0 = { ...p, boards: [a, b] }
+  const c = contactBetween(p0, a.id, b.id)!
+  const r = addJoint(p0, 'joinery', c.host, c.partner, { style: 'dowel', count: 3 })
+  if ('error' in r) throw new Error(r.error)
+  const list = shoppingList(r.project)
+  const line = list.lines.find(l => /dowel/i.test(l.what))!
+  expect(line.qty).toBe(3)
+  expect(list.missing).toBe(shoppingList(p0).missing)
+})

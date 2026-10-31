@@ -1,13 +1,15 @@
 // The shopping list: sheets, lumber by length, hardwood by the board foot, edge banding and hardware, with costs.
 import { finishById } from '../finish/finishes'
 import { hardwareList } from '../cabinet/hardware'
+import { joineryHardware } from '../joinery/cuts'
 import type { Project } from '../model/types'
 import { formatInches } from '../model/units'
 import { BANDINGS, bandingInches } from './banding'
 import { layoutAll, roughThickness, type ShopStockItem } from './layout'
 import { HARDWOOD_WASTE } from './settings'
 
-export type BuyLine = { section: 'wood' | 'banding' | 'hardware' | 'finish'; what: string; qty: number; unit: string; each?: number; total?: number }
+/** `unpriced`: the app keeps no price for it (joint hardware, finishes), so it isn't counted as a missing price. */
+export type BuyLine = { section: 'wood' | 'banding' | 'hardware' | 'finish'; what: string; qty: number; unit: string; each?: number; total?: number; unpriced?: boolean }
 export type ShoppingList = { lines: BuyLine[]; subtotal: number; byKind: Record<BuyLine['section'], number>; missing: number; tax: number; total: number }
 
 const money = (n: number) => Math.round(n * 100) / 100
@@ -53,6 +55,8 @@ export function shoppingList(p: Project, shop: ShopStockItem[] = [], onHand?: { 
     const buy = r.qty - use
     lines.push({ section: 'hardware', what: `${r.name}${r.note ? ` — ${r.note}` : ''} (${use} from your shop; this project needs ${r.qty}${buy ? ` — buy ${buy}` : ''})`, qty: buy, unit: 'each', each: r.unit, total: money(buy * r.unit) })
   }
+  // What goes in the cut joints: dowels, biscuits, loose tenons, splines (no price kept for these).
+  for (const h of joineryHardware(p)) lines.push({ section: 'hardware', what: `${h.what} (for the joints)`, qty: h.qty, unit: 'each', unpriced: true })
   // Finishes in the finishing schedule, unless the shop has some.
   const finishes = [...new Set((p.finish?.steps ?? []).map(s => s.finishId).filter((x): x is string => !!x))]
   for (const id of finishes) {
@@ -63,7 +67,7 @@ export function shoppingList(p: Project, shop: ShopStockItem[] = [], onHand?: { 
   }
   const byKind: ShoppingList['byKind'] = { wood: 0, banding: 0, hardware: 0, finish: 0 }
   let missing = 0
-  for (const l of lines) { if (l.total === undefined) { if (l.qty > 0 && l.section !== 'finish') missing++ } else byKind[l.section] += l.total }
+  for (const l of lines) { if (l.total === undefined) { if (l.qty > 0 && l.section !== 'finish' && !l.unpriced) missing++ } else byKind[l.section] += l.total }
   for (const k of Object.keys(byKind) as BuyLine['section'][]) byKind[k] = money(byKind[k])
   const subtotal = money(Object.values(byKind).reduce((a, b) => a + b, 0))
   const tax = money(subtotal * ((p.cutSettings?.tax ?? 0) / 100))
