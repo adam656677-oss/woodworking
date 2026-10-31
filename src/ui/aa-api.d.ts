@@ -59,6 +59,14 @@ export type AaApi = {
   kidsSetPin(pin: string): Promise<void>
   kidsCheckPin(pin: string): Promise<boolean>
   kidsPinPath(): Promise<string>
+  /** The children in the Kids' Workshop and who's working now. */
+  kidsProfiles(): Promise<{ active: string; profiles: { id: string; name: string }[] }>
+  kidsSwitch(id: string): Promise<void>
+  /** Adds a child (parent PIN); their id, or null if the PIN was wrong. */
+  kidsAddProfile(name: string, pin: string): Promise<string | null>
+  kidsRemoveProfile(id: string, pin: string): Promise<boolean>
+  /** Every child's progress (parent PIN), or null if the PIN was wrong. */
+  kidsFamily(pin: string): Promise<{ id: string; name: string; progress: import('../kids/progress').Progress }[] | null>
   /** Opens a file picker; returns the saved photo's file name, or null if cancelled. */
   kidsAddPhoto(projectId: string): Promise<string | null>
   kidsPhotoUrl(name: string): Promise<string | null>

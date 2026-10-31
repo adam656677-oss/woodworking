@@ -2,7 +2,7 @@ import { app, BrowserWindow, dialog, ipcMain, nativeImage, net, powerSaveBlocker
 import { copyFile, mkdir, readFile, writeFile } from 'node:fs/promises'
 import { basename, join } from 'node:path'
 import { autosavePath, defaultFolder, deleteAutosave, load, loadJson, safeSave, writeAutosave } from './fileStore'
-import { checkPin, loadProgress, pinFilePath, pinIsSet, saveProgress, setPin } from './kidsStore'
+import { checkPin, loadProgress, pinFilePath, pinIsSet, saveProgress, setPin, addProfile, familyProgress, loadProfiles, photoName, removeProfile, switchProfile } from './kidsStore'
 import {
   attachDesign, createPlanFolder, deletePlanFolder, fileDataUrl, listPlans, loadPlan, plansRoot, readDesign, renamePlanFolder, savePage, savePhotoBytes, savePlan
 } from './plansStore'
@@ -284,6 +284,24 @@ function register(): void {
   ipcMain.handle('kids:setPin', async (_e, pin: string) => setPin(await kidsDir(), pin))
   ipcMain.handle('kids:checkPin', async (_e, pin: string) => checkPin(await kidsDir(), pin))
   ipcMain.handle('kids:pinPath', async () => pinFilePath(await kidsDir()))
+  // More than one child. Adding or removing a child and the family page need the parent PIN; picking who's working doesn't.
+  ipcMain.handle('kids:profiles', async () => loadProfiles(await kidsDir()))
+  ipcMain.handle('kids:switch', async (_e, id: string) => switchProfile(await kidsDir(), id))
+  ipcMain.handle('kids:addProfile', async (_e, name: string, pin: string) => {
+    const d = await kidsDir()
+    if (typeof name !== 'string' || !name.trim() || !(await checkPin(d, pin))) return null
+    return addProfile(d, name)
+  })
+  ipcMain.handle('kids:removeProfile', async (_e, id: string, pin: string) => {
+    const d = await kidsDir()
+    if (!(await checkPin(d, pin))) return false
+    await removeProfile(d, id)
+    return true
+  })
+  ipcMain.handle('kids:family', async (_e, pin: string) => {
+    const d = await kidsDir()
+    return (await checkPin(d, pin)) ? familyProgress(d) : null
+  })
   ipcMain.handle('kids:addPhoto', async (_e, projectId: string) => {
     if (!/^[a-z0-9-]+$/.test(projectId)) return null
     const r = await dialog.showOpenDialog(win!, { properties: ['openFile'], filters: [{ name: 'Photos', extensions: PHOTO_TYPES }] })
@@ -295,7 +313,7 @@ function register(): void {
     if (scale < 1) img = img.resize({ width: Math.round(width * scale), height: Math.round(height * scale), quality: 'best' })
     const folder = join(await kidsDir(), 'kids-photos')
     await mkdir(folder, { recursive: true })
-    const name = `${projectId}.jpg`
+    const name = photoName((await loadProfiles(await kidsDir())).active, projectId)
     await writeFile(join(folder, name), img.toJPEG(85))
     return name
   })

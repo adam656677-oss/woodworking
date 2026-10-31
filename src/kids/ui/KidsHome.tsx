@@ -4,6 +4,7 @@ import { newDrawing } from '../../sketch/ui/session'
 import { studio } from '../../ui/store'
 import { Art } from '../art'
 import { kids, useKids } from '../kidsStore'
+import { WhoIsWorking } from './FamilyPanel'
 
 const TILES = [
   { page: 'path', label: 'My Path', art: 'rules', color: 'border-green-500 bg-green-100' },
@@ -29,6 +30,7 @@ export function KidsHome() {
       </div>
       <h1 className="mt-4 text-5xl font-bold">Kids&apos; Workshop</h1>
       <p className="mt-2 text-2xl">{name ? `Hi, ${name}! What are we making today?` : 'What are we making today?'}</p>
+      <WhoIsWorking />
       {notice && (
         <p role="status" className="mt-4 flex items-center gap-3 rounded-xl bg-amber-100 px-4 py-2 text-lg text-amber-900">
           {notice}

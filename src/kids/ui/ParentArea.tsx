@@ -4,6 +4,7 @@ import { projectUnlocked } from '../logic'
 import { kids, useKids } from '../kidsStore'
 import type { ChildTier } from '../progress'
 import { KidsPageFrame } from './kit'
+import { FamilyPanel } from './FamilyPanel'
 
 const TIERS: { id: ChildTier; label: string; tools: string }[] = [
   { id: 'beginner', label: 'Beginner', tools: 'Hand tools only' },
@@ -111,6 +112,7 @@ function Settings({ pin, onPinChanged }: { pin: string; onPinChanged(pin: string
         </div>
         <p className="mt-1 text-base text-stone-600">Table saw, miter saw, router, lathe, band saw and planer are always grown-up only.</p>
       </section>
+      <FamilyPanel pin={pin} />
       <section>
         <h2 className="mb-2 text-2xl font-bold">Games</h2>
         <label className="flex items-center gap-3 text-lg"><input type="checkbox" aria-label="Games on" checked={!progress.gamesOff} onChange={e => void k.setGames(e.target.checked, pin)} className="h-5 w-5" />Show the Games (tape measure, hazards, woods, joints, lathe)</label>

@@ -35,6 +35,12 @@ export type KidsState = {
   setPhoto(projectId: string, photo: string): Promise<void>
   setTier(tier: ChildTier, pin: string): Promise<boolean>
   setGames(on: boolean, pin: string): Promise<boolean>
+  /** The children, and who's working now. */
+  profiles: { active: string; profiles: { id: string; name: string }[] }
+  /** Picks who's working: their progress loads. */
+  switchChild(id: string): Promise<void>
+  /** Re-reads the children list (after the parent adds or removes one). */
+  refreshProfiles(): Promise<void>
   resetQuiz(quizId: string, pin: string): Promise<boolean>
   setNameAndPin(name: string, pin: string): Promise<void>
 }
@@ -63,12 +69,25 @@ export function createKidsStore() {
       progress: newProgress(),
       notice: null,
       page: { name: 'home' },
+      profiles: { active: 'main', profiles: [] },
+      refreshProfiles: async () => {
+        const p = await api().kidsProfiles?.().catch(() => null)
+        if (p) set({ profiles: p })
+      },
+      switchChild: async id => {
+        await api().kidsSwitch(id)
+        const { progress, notice } = await api().kidsLoad()
+        loadFailed = false
+        set({ progress, notice, page: { name: 'home' } })
+        await get().refreshProfiles()
+      },
 
       load: async () => {
         if (get().loaded) return
         try {
           const { progress, notice } = await api().kidsLoad()
           set({ progress, notice, loaded: true })
+          await get().refreshProfiles()
         } catch {
           loadFailed = true
           set({ progress: newProgress(), notice: "Saved progress couldn't be opened, so the workshop started fresh. Nothing new will be saved until the app is restarted.", loaded: true })

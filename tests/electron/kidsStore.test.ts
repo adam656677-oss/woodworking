@@ -1,7 +1,7 @@
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { checkPin, loadProgress, pinFilePath, pinIsSet, saveProgress, setPin } from '../../electron/kidsStore'
+import { addProfile, checkPin, familyProgress, loadProfiles, loadProgress, photoName, removeProfile, switchProfile, pinFilePath, pinIsSet, saveProgress, setPin } from '../../electron/kidsStore'
 import { newProgress } from '../../src/kids/progress'
 
 let dir: string
@@ -70,4 +70,47 @@ test('only the backup copy is there: progress comes back from it', async () => {
   const good = { ...newProgress(), childName: 'Sam', passedQuizzes: { 'quiz-1': '2026-10-28' } }
   await writeFile(join(dir, 'kids-progress.json.bak'), JSON.stringify(good))
   expect(await loadProgress(dir)).toEqual({ progress: good, notice: 'Progress was restored from the backup copy.' })
+})
+
+describe('more than one child', () => {
+  test('an existing single child becomes the first profile; a new child gets a fresh record', async () => {
+    const first = { ...newProgress(), childName: 'Sam', passedQuizzes: { 'quiz-1': '2026-10-01' } }
+    await saveProgress(dir, first)
+    const p0 = await loadProfiles(dir)
+    expect(p0).toEqual({ active: 'main', profiles: [{ id: 'main', name: 'Sam' }] })
+    const id = await addProfile(dir, 'Riley')
+    expect(id).toMatch(/^k[0-9a-f]{8}$/)
+    expect((await loadProfiles(dir)).profiles.map(p => p.name)).toEqual(['Sam', 'Riley'])
+    // Still Sam until switched.
+    expect((await loadProgress(dir)).progress.childName).toBe('Sam')
+    await switchProfile(dir, id)
+    const r = await loadProgress(dir)
+    expect(r.progress.childName).toBe('Riley')
+    expect(r.progress.passedQuizzes).toEqual({})
+    // Riley's saves don't touch Sam's record.
+    await saveProgress(dir, { ...r.progress, openedLessons: ['l1'] })
+    await switchProfile(dir, 'main')
+    expect((await loadProgress(dir)).progress.passedQuizzes).toEqual({ 'quiz-1': '2026-10-01' })
+    expect((await loadProgress(dir)).progress.openedLessons).toEqual([])
+    const fam = await familyProgress(dir)
+    expect(fam.map(f => [f.name, f.progress.openedLessons.length])).toEqual([['Sam', 0], ['Riley', 1]])
+  })
+  test('switching to a child that does not exist is refused; the last child cannot be removed', async () => {
+    await expect(switchProfile(dir, 'knope0000')).rejects.toThrow()
+    await expect(removeProfile(dir, 'main')).rejects.toThrow(/last/i)
+    const id = await addProfile(dir, 'Riley')
+    await switchProfile(dir, id)
+    await removeProfile(dir, id)
+    const p = await loadProfiles(dir)
+    expect(p.profiles.map(x => x.id)).toEqual(['main'])
+    expect(p.active).toBe('main')
+  })
+  test('a name change is kept in the family list', async () => {
+    await saveProgress(dir, { ...newProgress(), childName: 'Sammy' })
+    expect((await loadProfiles(dir)).profiles[0].name).toBe('Sammy')
+  })
+  test('photo names: the first child keeps plain names, others get their id in front', () => {
+    expect(photoName('main', 'birdhouse')).toBe('birdhouse.jpg')
+    expect(photoName('k1234abcd', 'birdhouse')).toBe('k1234abcd-birdhouse.jpg')
+  })
 })

@@ -1,6 +1,6 @@
 // The Kids' Workshop's saved progress and the parent PIN, kept in the app's settings folder.
 import { pbkdf2, randomBytes, timingSafeEqual } from 'node:crypto'
-import { readFile, stat } from 'node:fs/promises'
+import { readFile, rename, stat } from 'node:fs/promises'
 import { join } from 'node:path'
 import { promisify } from 'node:util'
 import { isProgress, newProgress, type Progress } from '../src/kids/progress'
@@ -10,7 +10,58 @@ const derive = promisify(pbkdf2)
 const ITERATIONS = 100_000
 const KEY_BYTES = 32
 
-const progressPath = (dir: string) => join(dir, 'kids-progress.json')
+// More than one child: kids-profiles.json lists them. The first child keeps the original kids-progress.json,
+// so a workshop set up before profiles existed carries on as child number one.
+export type Profiles = { active: string; profiles: { id: string; name: string }[] }
+const profilesPath = (dir: string) => join(dir, 'kids-profiles.json')
+const progressFile = (dir: string, id: string) => join(dir, id === 'main' ? 'kids-progress.json' : `kids-progress-${id}.json`)
+const validId = (id: unknown): id is string => typeof id === 'string' && (id === 'main' || /^k[0-9a-f]{8}$/.test(id))
+/** A finished-project photo's file name; children after the first get their id in front. */
+export const photoName = (profile: string, projectId: string) => (profile === 'main' ? `${projectId}.jpg` : `${profile}-${projectId}.jpg`)
+
+export async function loadProfiles(dir: string): Promise<Profiles> {
+  try {
+    const v = JSON.parse(await readFile(profilesPath(dir), 'utf8'))
+    if (validId(v?.active) && Array.isArray(v.profiles) && v.profiles.length && v.profiles.every((p: any) => validId(p?.id) && typeof p.name === 'string') && v.profiles.some((p: any) => p.id === v.active)) return v
+  } catch { /* none yet */ }
+  const first = await readProgress(progressFile(dir, 'main')) ?? await readProgress(`${progressFile(dir, 'main')}.bak`)
+  return { active: 'main', profiles: [{ id: 'main', name: first?.childName ?? '' }] }
+}
+const saveProfiles = (dir: string, p: Profiles) => safeSave(profilesPath(dir), JSON.stringify(p, null, 2))
+
+export async function addProfile(dir: string, name: string): Promise<string> {
+  const p = await loadProfiles(dir)
+  const id = `k${randomBytes(4).toString('hex')}`
+  const n = name.trim().slice(0, 40)
+  await safeSave(progressFile(dir, id), JSON.stringify({ ...newProgress(), childName: n }, null, 2))
+  await saveProfiles(dir, { ...p, profiles: [...p.profiles, { id, name: n }] })
+  return id
+}
+
+export async function switchProfile(dir: string, id: string): Promise<void> {
+  const p = await loadProfiles(dir)
+  if (!p.profiles.some(x => x.id === id)) throw new Error('There is no such child')
+  await saveProfiles(dir, { ...p, active: id })
+}
+
+/** Takes a child off the list. Their record is kept beside the others, renamed, in case it was a mistake. */
+export async function removeProfile(dir: string, id: string): Promise<void> {
+  const p = await loadProfiles(dir)
+  if (!p.profiles.some(x => x.id === id)) throw new Error('There is no such child')
+  if (p.profiles.length === 1) throw new Error("The last child can't be removed")
+  const rest = p.profiles.filter(x => x.id !== id)
+  const file = progressFile(dir, id)
+  if (await exists(file)) await rename(file, `${file}.removed-${Date.now()}`)
+  await saveProfiles(dir, { active: p.active === id ? rest[0].id : p.active, profiles: rest })
+}
+
+/** Every child's progress, for the parent's family page. */
+export async function familyProgress(dir: string): Promise<{ id: string; name: string; progress: Progress }[]> {
+  const p = await loadProfiles(dir)
+  const out = []
+  for (const x of p.profiles) out.push({ id: x.id, name: x.name, progress: (await loadProgress(dir, x.id)).progress })
+  return out
+}
 export const pinFilePath = (dir: string) => join(dir, 'kids-pin.json')
 
 async function readProgress(path: string): Promise<Progress | null> {
@@ -32,8 +83,8 @@ async function exists(path: string): Promise<boolean> {
 }
 
 /** Load progress; a damaged file falls back to its backup, then to a fresh start. Never throws. */
-export async function loadProgress(dir: string): Promise<{ progress: Progress; notice: string | null }> {
-  const main = progressPath(dir)
+export async function loadProgress(dir: string, profile?: string): Promise<{ progress: Progress; notice: string | null }> {
+  const main = progressFile(dir, profile ?? (await loadProfiles(dir)).active)
   const p = await readProgress(main)
   if (p) return { progress: p, notice: null }
   // Missing or unreadable (damaged, or briefly locked by OneDrive): the backup copy is next best.
@@ -45,7 +96,11 @@ export async function loadProgress(dir: string): Promise<{ progress: Progress; n
 
 export async function saveProgress(dir: string, p: Progress): Promise<void> {
   if (!isProgress(p)) throw new Error('Progress is not valid and was not saved')
-  await safeSave(progressPath(dir), JSON.stringify(p, null, 2))
+  const profiles = await loadProfiles(dir)
+  await safeSave(progressFile(dir, profiles.active), JSON.stringify(p, null, 2))
+  // Keep the family list's name in step (only once there is a list).
+  const me = profiles.profiles.find(x => x.id === profiles.active)
+  if (me && me.name !== p.childName && (await exists(profilesPath(dir)))) await saveProfiles(dir, { ...profiles, profiles: profiles.profiles.map(x => (x.id === me.id ? { ...x, name: p.childName } : x)) })
 }
 
 export async function pinIsSet(dir: string): Promise<boolean> {
