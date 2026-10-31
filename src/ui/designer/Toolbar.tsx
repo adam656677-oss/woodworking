@@ -14,6 +14,7 @@ import { GroupNameDialog } from '../../assemblies/ui/GroupPanel'
 import { startImport } from '../../exchange/ui/ExchangeDialog'
 import { shop } from '../../shop/shopStore'
 import { designSession } from '../../shop/steps'
+import { openShared, ShareDialog } from '../../family/ui/ShareDialog'
 import { KidsLookButton } from '../../render/ui/RenderControls'
 
 function Btn(props: React.ButtonHTMLAttributes<HTMLButtonElement> & { active?: boolean }) {
@@ -59,6 +60,8 @@ export function Toolbar() {
   const hidden = useStudio(st => st.hidden)
   const whole = useMemo(() => (kidsMode ? null : wholeGroup(project, selection)), [kidsMode, project, selection])
   const [naming, setNaming] = useState(false)
+  const [sharing, setSharing] = useState(false)
+  const [shared, setShared] = useState<string | null>(null)
   const makeGroup = (name: string | null) => {
     setNaming(false)
     if (!name) return
@@ -101,6 +104,16 @@ export function Toolbar() {
       <Btn onClick={() => void s.open()}>Open</Btn>
       <Btn onClick={() => void s.save()}>Save</Btn>
       <Btn onClick={() => void s.saveAs()}>Save As</Btn>
+      {!kidsMode && <Menu label="Share">
+        {close => (
+          <>
+            <button role="menuitem" className={item} onClick={() => { close(); setSharing(true) }}>Share this project…</button>
+            <button role="menuitem" className={item} onClick={() => { close(); void openShared().then(m => m && setShared(m)) }}>Open a shared project…</button>
+          </>
+        )}
+      </Menu>}
+      {sharing && <ShareDialog onClose={() => setSharing(false)} />}
+      {shared && <span role="status" className="rounded bg-green-100 px-2 text-xs text-green-900">{shared}<button aria-label="Dismiss" className="ml-1" onClick={() => setShared(null)}>✕</button></span>}
       {!kidsMode && <Menu label="3D files">
         {close => (
           <>

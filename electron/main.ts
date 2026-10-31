@@ -10,6 +10,7 @@ import type { Plan } from '../src/plans/types'
 import { configureOcr, ocrImage } from './ocr'
 import { heicToRgba, isHeic } from './heic'
 import { capturePage } from './webCapture'
+import { collectBackup, readPackage, restoreBackup, writeBackup, writePackage, type Package } from './backup'
 import type { Progress } from '../src/kids/progress'
 
 // Test hooks: e2e runs point these at temp folders so they never touch real documents or settings.
@@ -205,6 +206,34 @@ function register(): void {
     return true
   })
   // A picture of the 3D view (PNG data URL from the page).
+  // Family & sharing: a whole backup (app data + the projects folder) and project packages.
+  const BACKUP = [{ name: 'A&A Woodworking backup', extensions: ['aabackup'] }]
+  const PACKAGE = [{ name: 'A&A Woodworking project package', extensions: ['aapkg'] }]
+  ipcMain.handle('aa:backup', async () => {
+    const day = new Date().toISOString().slice(0, 10)
+    const r = await dialog.showSaveDialog(win!, { defaultPath: join(docsDir(), `A&A Woodworking backup ${day}.aabackup`), filters: BACKUP })
+    if (r.canceled || !r.filePath) return null
+    const files = await collectBackup(app.getPath('userData'), defaultFolder(docsDir()))
+    await writeBackup(r.filePath, files)
+    return { path: r.filePath, files: files.length }
+  })
+  ipcMain.handle('aa:restore', async () => {
+    const r = await dialog.showOpenDialog(win!, { defaultPath: docsDir(), filters: BACKUP, properties: ['openFile'] })
+    if (r.canceled || !r.filePaths[0]) return null
+    await mkdir(defaultFolder(docsDir()), { recursive: true })
+    return restoreBackup(r.filePaths[0], app.getPath('userData'), defaultFolder(docsDir()))
+  })
+  ipcMain.handle('aa:savePackage', async (_e, name: string, pkg: Package) => {
+    const r = await dialog.showSaveDialog(win!, { defaultPath: join(defaultFolder(docsDir()), `${safeName(name)}.aapkg`), filters: PACKAGE })
+    if (r.canceled || !r.filePath) return null
+    await writePackage(r.filePath, pkg)
+    return r.filePath
+  })
+  ipcMain.handle('aa:openPackage', async () => {
+    const r = await dialog.showOpenDialog(win!, { defaultPath: defaultFolder(docsDir()), filters: PACKAGE, properties: ['openFile'] })
+    if (r.canceled || !r.filePaths[0]) return null
+    return readPackage(r.filePaths[0])
+  })
   ipcMain.handle('aa:savePng', async (_e, suggestedName: string, dataUrl: string) => {
     if (typeof dataUrl !== 'string' || !dataUrl.startsWith('data:image/png;base64,')) return null
     const r = await dialog.showSaveDialog(win!, {

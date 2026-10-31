@@ -40,6 +40,12 @@ export type AaApi = {
   savePdf(name: string): Promise<string | null>
   /** Saves a PNG picture (a data URL) where the user picks; the path, or null if cancelled. */
   savePng(name: string, dataUrl: string): Promise<string | null>
+  /** Backs up everything (app data and the projects folder) to a file the user picks. */
+  backup(): Promise<{ path: string; files: number } | null>
+  /** Restores from a backup file the user picks; replaced files are kept aside in a _before-restore folder. */
+  restore(): Promise<{ files: number; keptUser: string | null; keptDocs: string | null } | null>
+  savePackage(name: string, pkg: import('../family/package').ProjectPackage): Promise<string | null>
+  openPackage(): Promise<import('../family/package').ProjectPackage | null>
   /** Makes that PDF in a temporary folder and opens it in the system's PDF viewer to print; false if it couldn't. */
   printPdf(name: string): Promise<boolean>
   /** Print the page; landscape unless told otherwise. */
