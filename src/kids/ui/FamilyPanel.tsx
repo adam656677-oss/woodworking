@@ -16,7 +16,7 @@ export function FamilyPanel({ pin }: { pin: string }) {
   const [name, setName] = useState('')
   const [msg, setMsg] = useState<string | null>(null)
   const [removing, setRemoving] = useState<string | null>(null)
-  const reload = async () => { setRows(await window.aa.kidsFamily(pin)); await kids.getState().refreshProfiles() }
+  const reload = async () => { setRows((await window.aa.kidsFamily?.(pin).catch(() => null)) ?? null); await kids.getState().refreshProfiles() }
   useEffect(() => { void reload() }, [pin])
   const add = async () => {
     const id = await window.aa.kidsAddProfile(name, pin)
