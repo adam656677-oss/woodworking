@@ -1,0 +1,42 @@
+{
+  "id": "planter",
+  "name": "Planter box",
+  "level": 3,
+  "stars": 2,
+  "minutes": 120,
+  "kind": "outdoors",
+  "picture": "planter",
+  "blurb": "A flower or herb planter for a porch or window sill, with holes so the water drains.",
+  "tools": [
+    "tape-measure",
+    "square",
+    "pencil",
+    "hand-saw",
+    "miter-box",
+    "drill",
+    "screwdriver",
+    "sandpaper"
+  ],
+  "steps": [
+    {
+      "text": "Cut two sides, two ends and the bottom from the 1x6.",
+      "tool": "hand-saw"
+    },
+    {
+      "text": "Drill three half-inch drain holes in the bottom.",
+      "tool": "drill"
+    },
+    {
+      "text": "Screw the sides to the ends to make a frame.",
+      "tool": "screwdriver"
+    },
+    {
+      "text": "Fit the bottom inside and screw through the sides into it.",
+      "tool": "screwdriver"
+    },
+    {
+      "text": "Sand the top edges. Use cedar, or a finish made for outdoors, so it lasts.",
+      "tool": "sandpaper"
+    }
+  ]
+}

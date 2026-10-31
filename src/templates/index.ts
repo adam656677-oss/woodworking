@@ -7,6 +7,8 @@ import { formulaName } from '../formulas/recalc'
 import { birdhouse } from './birdhouse'
 import { bookshelf } from './bookshelf'
 import { box } from './box'
+import { table } from './table'
+import { cabinet, cuttingBoard, stepStool, wallShelf, workbench } from './more'
 
 export type ParamValue = number | boolean | string
 export type ParamDef = {
@@ -20,7 +22,7 @@ export type ParamDef = {
 }
 
 export type TemplateDef = {
-  id: 'box' | 'bookshelf' | 'birdhouse'
+  id: 'box' | 'bookshelf' | 'birdhouse' | 'table' | 'workbench' | 'cabinet' | 'cuttingBoard' | 'stepStool' | 'wallShelf'
   name: string
   params: ParamDef[]
   build(params: Record<string, ParamValue>, woods: Wood[]): { boards: Board[]; joints: Joint[] }
@@ -43,7 +45,7 @@ export const num = (v: number) => (Math.abs(v * 64 - Math.round(v * 64)) < 1e-9 
 /** The formula name for a wood's thickness. */
 export const woodT = (id: string) => `Wood.${formulaName(id)}.T`
 
-export const TEMPLATES: TemplateDef[] = [box, bookshelf, birdhouse]
+export const TEMPLATES: TemplateDef[] = [box, bookshelf, birdhouse, table, workbench, cabinet, cuttingBoard, stepStool, wallShelf]
 
 export function findTemplate(id: string): TemplateDef | undefined {
   return TEMPLATES.find(t => t.id === id)

@@ -3,6 +3,7 @@ import { faceToward, worldBox } from '../model/geometry'
 import { newId } from '../model/ids'
 import type { Board, ButtParams, GrooveParams, Joint, Vec3, Wood } from '../model/types'
 import { snap64 } from '../model/units'
+import { contactBetween } from '../model/contact'
 
 /**
  * Orientations (world: x = left→right, y = front→back, z = up). Each rotation was solved so the
@@ -70,4 +71,11 @@ export function woodOf(woods: Wood[], id: string): Wood {
   const w = woods.find(x => x.id === id)
   if (!w) throw new Error(`Wood ${id} is not in this project's library`)
   return w
+}
+
+/** A glued joint between two parts, with host and partner the way the contact between them sees it. */
+export function glued(boards: Board[], woods: Wood[], a: Board, b: Board): Joint | null {
+  const c = contactBetween({ boards, woods, joints: [] } as unknown as Parameters<typeof contactBetween>[0], a.id, b.id)
+  if (!c) return null
+  return { id: newId('j'), type: 'butt', hostBoardId: c.host, partnerBoardId: c.partner, params: { fastener: 'glue', count: 0 } }
 }
