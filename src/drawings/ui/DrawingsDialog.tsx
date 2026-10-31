@@ -6,6 +6,7 @@ import { formatInches } from '../../model/units'
 import type { Project } from '../../model/types'
 import { shoppingList } from '../../optimize/shopping'
 import { useStock } from '../../optimize/stockStore'
+import { journalTotals, tools, useTools } from '../../tools/store'
 import { stepsFromDesign } from '../../shop/steps'
 import { finishById } from '../../finish/finishes'
 import { scheduleTime, stepText } from '../../finish/schedule'
@@ -33,10 +34,13 @@ export function DrawingsDialog() {
   const parts = useMemo(() => partList(project), [project])
   const [chosen, setChosen] = useState<string[]>(() => parts.map(q => q.boardId))
   const [tmpl, setTmpl] = useState<string[]>(() => shaped(project))
-  const [packet, setPacket] = useState({ cover: true, drawings: true, parts: true, cutList: true, buy: true, steps: true, finish: true, templates: true })
+  const [packet, setPacket] = useState({ cover: true, drawings: true, parts: true, cutList: true, buy: true, steps: true, finish: true, journal: true, templates: true })
   const [pages, setPages] = useState<PageSpec[] | null>(null)
   const [message, setMessage] = useState<{ text: string; bad?: boolean } | null>(null)
   const shop = useStock(s => s.items)
+  const journal = useTools(s => s.journal)
+  useEffect(() => { if (!tools.getState().loaded) void tools.getState().load() }, [])
+  const hasJournal = journal.some(e => e.project === project.name)
 
   const close = () => studio.getState().set({ drawingsOpen: false })
   useEffect(() => {
@@ -82,6 +86,7 @@ export function DrawingsDialog() {
       packet.buy && 'Shopping list',
       packet.steps && 'Steps',
       packet.finish && project.finish && 'Finishing schedule',
+      packet.journal && hasJournal && 'Shop journal',
       packet.templates && tmpl.length > 0 && 'Full-size templates'
     ].filter(Boolean) as string[]
     const set = { views: packet.drawings, exploded: packet.drawings, section: packet.drawings, parts: packet.parts ? 'all' as const : [] }
@@ -96,6 +101,7 @@ export function DrawingsDialog() {
     if (packet.buy) out.push({ key: 'buy', kind: 'html', node: <BuyPage p={project} shop={shop} /> })
     if (packet.steps) out.push({ key: 'steps', kind: 'html', node: <StepsPage p={project} /> })
     if (packet.finish && project.finish) out.push({ key: 'finish', kind: 'html', node: <FinishPage p={project} /> })
+    if (packet.journal && hasJournal) out.push({ key: 'journal', kind: 'html', node: <JournalPage p={project} /> })
     if (packet.templates) out.push(...tiles(tmpl))
     return out
   }
@@ -165,6 +171,7 @@ export function DrawingsDialog() {
             {box(packet.buy, v => setPacket({ ...packet, buy: v }), 'Shopping list')}
             {box(packet.steps, v => setPacket({ ...packet, steps: v }), 'Steps')}
             {project.finish && box(packet.finish, v => setPacket({ ...packet, finish: v }), 'Finishing schedule')}
+            {hasJournal && box(packet.journal, v => setPacket({ ...packet, journal: v }), 'Shop journal')}
             {box(packet.templates, v => setPacket({ ...packet, templates: v }), `Templates (${tmpl.length})`)}
           </>}
         </div>
@@ -227,7 +234,7 @@ function CutListPage({ p }: { p: Project }) {
 }
 
 function BuyPage({ p, shop }: { p: Project; shop: Parameters<typeof shoppingList>[1] }) {
-  const s = shoppingList(p, shop)
+  const s = shoppingList(p, shop, tools.getState().inventory)
   const money = (n?: number) => (n === undefined ? '—' : `$${n.toFixed(2)}`)
   return (
     <section className={pageStyle}>
@@ -277,6 +284,24 @@ function FinishPage({ p }: { p: Project }) {
           </li>
         ))}
       </ol>
+    </section>
+  )
+}
+
+function JournalPage({ p }: { p: Project }) {
+  const entries = tools.getState().journal.filter(e => e.project === p.name).sort((a, b) => a.date.localeCompare(b.date))
+  const t = journalTotals(tools.getState().journal, p.name, Object.values(p.shopProgress?.minutes ?? {}).reduce((a, b) => a + b, 0))
+  return (
+    <section className={pageStyle}>
+      <h2 className="mb-1 text-xl font-bold">Shop journal — {p.name}</h2>
+      <p className="mb-3 text-[10pt] text-stone-600">{Math.round(t.minutes / 6) / 10} hours · ${t.cost.toFixed(2)} spent</p>
+      {entries.map(e => (
+        <div key={e.id} className="mb-3 break-inside-avoid">
+          <div className="font-semibold">{e.date}{e.minutes ? ` · ${e.minutes} min` : ''}{e.costs.length ? ` · ${e.costs.map(c => `${c.what} $${c.amount.toFixed(2)}`).join(', ')}` : ''}</div>
+          {e.notes && <div>{e.notes}</div>}
+          {e.photos.length > 0 && <div className="mt-1 flex gap-2">{e.photos.map((ph, i) => <img key={i} src={ph} alt="" className="h-28" />)}</div>}
+        </div>
+      ))}
     </section>
   )
 }

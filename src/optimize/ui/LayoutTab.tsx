@@ -112,7 +112,7 @@ function WoodSection({ l }: { l: WoodLayout }) {
   )
 }
 
-function StockPanel() {
+export function StockPanel() {
   const project = useStudio(s => s.project)
   const items = useStock(s => s.items)
   const [draft, setDraft] = useState({ woodId: project.woods[0]?.id ?? '', kind: 'offcut' as 'sheet' | 'offcut' | 'board', width: '24', length: '48', defects: '' })

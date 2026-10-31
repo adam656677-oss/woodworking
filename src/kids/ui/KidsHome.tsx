@@ -9,7 +9,8 @@ const TILES = [
   { page: 'path', label: 'My Path', art: 'rules', color: 'border-green-500 bg-green-100' },
   { page: 'projects', label: 'Projects', art: 'birdhouse', color: 'border-amber-500 bg-amber-100' },
   { page: 'learn', label: 'Learn', art: 'tree', color: 'border-sky-500 bg-sky-100' },
-  { page: 'badges', label: 'My Badges', art: 'first-aid', color: 'border-rose-400 bg-rose-100' }
+  { page: 'badges', label: 'My Badges', art: 'first-aid', color: 'border-rose-400 bg-rose-100' },
+  { page: 'calc', label: 'Math Helpers', art: 'square', color: 'border-violet-400 bg-violet-100' }
 ] as const
 
 /** The Kids' Workshop front door: big tiles and the parent gear. */

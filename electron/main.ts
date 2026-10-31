@@ -225,6 +225,17 @@ function register(): void {
     await safeSave(join(app.getPath('userData'), 'woods.json'), JSON.stringify(woods, null, 2))
   })
   // The shop's stock on hand (sheets, offcuts, boards), shared by every project.
+  // The shop journal and inventory: JSON files in the app's data folder (only these names).
+  const DATA = new Set(['journal', 'inventory'])
+  ipcMain.handle('aa:loadData', async (_e, name: string) => {
+    if (!DATA.has(name)) return null
+    try { return JSON.parse(await readFile(join(app.getPath('userData'), `${name}.json`), 'utf8')) } catch { return null }
+  })
+  ipcMain.handle('aa:saveData', async (_e, name: string, data: unknown) => {
+    if (!DATA.has(name)) return
+    await mkdir(app.getPath('userData'), { recursive: true })
+    await safeSave(join(app.getPath('userData'), `${name}.json`), JSON.stringify(data, null, 2))
+  })
   ipcMain.handle('aa:loadStock', async () => {
     try { return JSON.parse(await readFile(join(app.getPath('userData'), 'stock.json'), 'utf8')) } catch { return [] }
   })

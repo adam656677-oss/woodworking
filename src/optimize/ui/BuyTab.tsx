@@ -1,5 +1,6 @@
 // The Buy tab: everything to buy, with prices and a total.
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
+import { tools, useTools } from '../../tools/store'
 import { studio, useStudio } from '../../ui/store'
 import { setCutOption } from '../settings'
 import { shoppingList } from '../shopping'
@@ -11,7 +12,9 @@ const SECTIONS = [['wood', 'Wood'], ['banding', 'Edge banding'], ['hardware', 'H
 export function BuyTab() {
   const project = useStudio(s => s.project)
   const items = useStock(s => s.items)
-  const list = useMemo(() => shoppingList(project, items), [project, items])
+  const inventory = useTools(s => s.inventory)
+  useEffect(() => { if (!tools.getState().loaded) void tools.getState().load() }, [])
+  const list = useMemo(() => shoppingList(project, items, inventory), [project, items, inventory])
   const tax = project.cutSettings?.tax ?? 0
   const waste = Math.round((project.cutSettings?.hardwoodWaste ?? 0.2) * 100)
   return (

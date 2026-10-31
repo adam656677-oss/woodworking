@@ -1,7 +1,13 @@
+import { useEffect } from 'react'
+import { lowStock, tools, useTools } from '../tools/store'
+import { openShopTools } from '../tools/ui/ShopTools'
 import { openFinishing } from '../finish/ui/FinishingSchool'
 import { studio } from './store'
 
 export function Home() {
+  const inv = useTools(s => s.inventory)
+  useEffect(() => { if (!tools.getState().loaded) void tools.getState().load() }, [])
+  const low = lowStock(inv)
   const enterMaster = async () => {
     const s = studio.getState()
     s.enterMasterShop()
@@ -13,7 +19,7 @@ export function Home() {
         <h1 className="text-4xl font-bold text-stone-800">A&amp;A Woodworking Studio</h1>
         <p className="mt-2 text-stone-600">Design it together. Build it together.</p>
       </header>
-      <div className="flex gap-8">
+      <div className="grid grid-cols-2 gap-8 xl:grid-cols-4">
         <button
           onClick={() => studio.getState().goto('kids')}
           className="flex h-56 w-72 flex-col items-center justify-center gap-3 rounded-2xl border-4 border-sky-400 bg-sky-100 text-sky-900 shadow-lg hover:bg-sky-200"
@@ -35,7 +41,19 @@ export function Home() {
           <span className="text-5xl" aria-hidden>🖌️</span>
           <span className="text-2xl font-bold">Finishing School</span>
         </button>
+        <button
+          onClick={() => openShopTools('home')}
+          className="flex h-56 w-72 flex-col items-center justify-center gap-3 rounded-2xl border-4 border-stone-600 bg-stone-100 text-stone-900 shadow-lg hover:bg-stone-200"
+        >
+          <span className="text-5xl" aria-hidden>🧮</span>
+          <span className="text-2xl font-bold">Shop Tools</span>
+        </button>
       </div>
+      {low.length > 0 && (
+        <p role="alert" className="rounded-xl bg-amber-100 px-4 py-2 text-amber-900">
+          Running low: {low.join('; ')} — <button className="underline" onClick={() => openShopTools('home', 'inventory')}>see the inventory</button>
+        </p>
+      )}
     </main>
   )
 }

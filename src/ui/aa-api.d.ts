@@ -30,6 +30,9 @@ export type AaApi = {
   exportShape(kind: 'dxf' | 'svg', text: string, suggestedName: string): Promise<string | null>
   /** Opens an allowed https link in the system browser. */
   openLink(url: string): Promise<boolean>
+  /** The shop journal or inventory from the app's data folder (null if none yet). */
+  loadData(name: 'journal' | 'inventory'): Promise<unknown>
+  saveData(name: 'journal' | 'inventory', data: unknown): Promise<void>
   /** Saves what printing would print as a PDF; the chosen path, or null. */
   savePdf(name: string): Promise<string | null>
   /** Makes that PDF in a temporary folder and opens it in the system's PDF viewer to print; false if it couldn't. */

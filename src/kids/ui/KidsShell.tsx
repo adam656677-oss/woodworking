@@ -1,3 +1,4 @@
+import { KidsCalc } from '../../tools/ui/KidsCalc'
 import { useEffect } from 'react'
 import { kids, useKids } from '../kidsStore'
 import { PlansShell } from '../../plans/ui/PlansShell'
@@ -42,6 +43,8 @@ export function KidsShell() {
       return <PlansShell />
     case 'sheet':
       return <ProjectSheet key={page.id} projectId={page.id} />
+    case 'calc':
+      return <KidsCalc />
     case 'certificate':
       return <Certificate key={page.badgeId} badgeId={page.badgeId} />
     default:
