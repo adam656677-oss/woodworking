@@ -87,6 +87,10 @@ function ringLook(s: Species | undefined, label: string): WoodLook {
 export function woodLook(wood: Wood | undefined): WoodLook {
   const name = `${wood?.species ?? ''}`.trim()
   if (wood?.kind === 'sheet' || /plywood|\bply\b|mdf|particle/i.test(name)) {
+    if (/melamine|laminate/i.test(name)) {
+      const c = hexToRgb(/black/i.test(name) ? '#2b2b2b' : /grey|gray/i.test(name) ? '#9a9a98' : '#f1efe9')
+      return { pattern: 'mdf', light: c, dark: scale(c, 0.96), ringSpacing: 1, contrast: 0.02, pores: false, streaks: 0, label: 'Melamine' }
+    }
     if (/mdf|particle|hardboard/i.test(name)) {
       const c = /particle/i.test(name) ? hexToRgb('#c2a37c') : hexToRgb('#a98059')
       return { pattern: 'mdf', light: c, dark: scale(c, 0.82), ringSpacing: 1, contrast: 0.08, pores: false, streaks: 0, label: /particle/i.test(name) ? 'Particleboard' : 'MDF' }
@@ -132,8 +136,8 @@ export function grainFrame(board: Pick<Board, 'grain' | 'width' | 'length' | 'th
 
 // Stain and dye colours by the words people use on the can.
 const STAINS: [RegExp, string][] = [
-  [/ebony|jacobean|espresso|black/i, '#3a2a22'], [/dark walnut/i, '#4e3526'], [/walnut/i, '#6b4a33'], [/red mahogany|mahogany/i, '#7a3b28'],
-  [/cherry/i, '#9a4e33'], [/golden oak|golden/i, '#c08a48'], [/early american|provincial/i, '#7f5a3a'], [/natural/i, '#d9b98c'],
+  [/white oak/i, '#c9a46e'], [/ebony|jacobean|espresso|black/i, '#3a2a22'], [/dark walnut/i, '#4e3526'], [/walnut/i, '#6b4a33'], [/red mahogany|mahogany/i, '#7a3b28'],
+  [/cherry/i, '#9a4e33'], [/golden oak|golden/i, '#c08a48'], [/early american|provincial/i, '#7f5a3a'], [/natural|clear/i, '#e8d4b0'],
   [/honey|pecan/i, '#b07a45'], [/grey|gray|weathered/i, '#8a8580'], [/white|pickl|whitewash/i, '#e8e2d6'], [/oak/i, '#a87444'],
   [/blue/i, '#41607d'], [/green/i, '#4f6a46'], [/red/i, '#8a2f24'], [/brown/i, '#6e4b32']
 ]
@@ -168,10 +172,12 @@ export function finishLook(s: FinishSchedule | undefined): FinishLook {
       coated = true
       continue
     }
-    if (st.kind === 'colour' && f && (f.role === 'colour' || /stain|dye/i.test(f.name))) {
-      const hex = firstMatch(STAINS, words) ?? (f.base.startsWith('dye') ? '#8a5a35' : '#7f5a3a')
-      // Glaze sits on top and colours less; dyes go deep.
-      out = { ...out, tint: hexToRgb(hex), tintAmount: f.id === 'glaze' ? 0.4 : f.base.startsWith('dye') ? 0.85 : 0.7 }
+    if (st.kind === 'colour' && ((f && (f.role === 'colour' || /stain|dye/i.test(f.name))) || (!f && /stain|dye|glaze|toner/i.test(words)))) {
+      const dye = f ? f.base.startsWith('dye') : /dye/i.test(words)
+      const hex = firstMatch(STAINS, words) ?? (dye ? '#8a5a35' : '#7f5a3a')
+      // Glaze sits on top and colours less; dyes go deep; a "natural" stain barely colours.
+      const amount = /natural|clear/i.test(words) ? 0.3 : f?.id === 'glaze' || /glaze/i.test(words) ? 0.4 : dye ? 0.85 : 0.7
+      out = { ...out, tint: hexToRgb(hex), tintAmount: amount }
       continue
     }
     if (f && (f.role === 'topcoat' || f.role === 'sealer' || f.id === 'shellac')) {
@@ -193,7 +199,8 @@ export function finishLook(s: FinishSchedule | undefined): FinishLook {
 export function swatch(look: WoodLook, fin: FinishLook): Rgb {
   if (fin.paint) return fin.paint
   let c = mix(look.light, look.dark, look.contrast * 0.4)
-  if (fin.tint) c = mix(c, [c[0] * fin.tint[0] * 1.25, c[1] * fin.tint[1] * 1.25, c[2] * fin.tint[2] * 1.25], fin.tintAmount)
+  // As the shader does it: the colour as seen (sRGB) multiplied by the stain, a little lifted.
+  if (fin.tint) { const t = fin.tint; c = mix(c, [c[0] * Math.min(1, t[0] * 1.15), c[1] * Math.min(1, t[1] * 1.15), c[2] * Math.min(1, t[2] * 1.15)], fin.tintAmount) }
   if (fin.amber) c = mix(c, [c[0] * 0.98, c[1] * 0.86, c[2] * 0.62], fin.amber * 0.5)
   return c
 }
@@ -211,7 +218,7 @@ export type Lighting = {
 }
 export const LIGHTS: Record<LightPreset, Lighting> = {
   studio: { label: 'Studio', background: '#f2eee8', floor: '#e8e2d9', env: 0.55, ambient: { color: '#ffffff', intensity: 0.15 },
-    key: { color: '#ffffff', intensity: 1.8, dir: [-0.45, -0.7, 0.85] }, fill: { color: '#e8eeff', intensity: 0.5, dir: [0.7, 0.4, 0.4] } },
+    key: { color: '#ffffff', intensity: 1.8, dir: [0.75, -0.4, 0.9] }, fill: { color: '#e8eeff', intensity: 0.5, dir: [0.7, 0.4, 0.4] } },
   workshop: { label: 'Workshop', background: '#3d3630', floor: '#8f877c', env: 0.3, ambient: { color: '#ffe2bd', intensity: 0.25 },
     key: { color: '#ffd8a6', intensity: 2.6, dir: [-0.15, -0.25, 1] }, fill: { color: '#ffe9cc', intensity: 0.35, dir: [0.8, -0.6, 0.3] } },
   daylight: { label: 'Daylight', background: '#dfe8f1', floor: '#d6d0c3', env: 0.5, ambient: { color: '#ffffff', intensity: 0.05 },

@@ -49,13 +49,15 @@ vec3 woodColour() {
   float ring = fract(r / uRing);
   // Earlywood grows light and fast; latewood is the darker band at the end of each year.
   float late = smoothstep(0.55, 0.92, ring) * (1.0 - smoothstep(0.96, 1.0, ring));
-  float streak = wNoise(vec3(a * 0.6, u * 34.0, v * 34.0) + seed) - 0.5;
+  // Fibres and pores finer than a pixel fade out instead of shimmering.
+  float fine = 1.0 - smoothstep(0.25, 0.9, fwidth(u * 34.0) + fwidth(v * 34.0));
+  float streak = (wNoise(vec3(a * 0.6, u * 34.0, v * 34.0) + seed) - 0.5) * fine;
   float t = clamp(late * uContrast + streak * 0.12 * uStreaks + (wNoise(vec3(a * 0.05, u * 0.3, v * 0.3) + seed) - 0.5) * 0.12, 0.0, 1.0);
   vec3 c = mix(uLight, uDark, t);
   if (uPores > 0.5) {
     // Open pores: dark flecks along the grain in the earlywood.
     float pore = step(0.78, wNoise(vec3(a * 1.2, u * 70.0, v * 70.0) + seed)) * (1.0 - smoothstep(0.0, 0.35, ring));
-    c = mix(c, uDark * 0.7, pore * 0.55);
+    c = mix(c, uDark * 0.7, pore * 0.55 * (1.0 - smoothstep(0.25, 0.9, fwidth(u * 70.0) + fwidth(v * 70.0))));
   }
   // End grain soaks up more and reads darker.
   c *= 1.0 - 0.22 * smoothstep(0.5, 0.9, endGrain);
@@ -66,8 +68,10 @@ vec3 finished(vec3 c) {
   vec3 N = normalize(vWoodNormal);
   float endGrain = smoothstep(0.5, 0.9, abs(mix(N.x, N.y, uAlongY)));
   float amt = clamp(uTintAmt * (1.0 + 0.3 * endGrain), 0.0, 1.0);
-  // A stain is see-through: its colour (as on the can, not linearised) multiplies the wood's, a little lifted.
-  c = mix(c, c * uTint * 1.25, amt);
+  // A stain is see-through: it multiplies the wood's colour as you'd see it (in sRGB), a little lifted.
+  vec3 s = pow(max(c, vec3(0.0)), vec3(1.0 / 2.2));
+  s = s * min(uTint * 1.15, vec3(1.0));
+  c = mix(c, pow(s, vec3(2.2)), amt);
   c = mix(c, c * vec3(0.98, 0.86, 0.62), uAmber * 0.5);
   return c;
 }
@@ -96,7 +100,7 @@ export function woodMaterial(input: WoodUniformsIn, clip: THREE.Plane[] = []): T
   const { finish } = input
   const m = new THREE.MeshPhysicalMaterial({
     color: '#ffffff', roughness: finish.roughness, clearcoat: finish.clearcoat, clearcoatRoughness: finish.clearcoatRoughness,
-    clippingPlanes: clip, side: THREE.FrontSide
+    clippingPlanes: clip, clipShadows: true, side: THREE.FrontSide
   })
   const uniforms = woodUniforms(input)
   m.userData.wood = uniforms

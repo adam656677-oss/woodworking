@@ -63,13 +63,15 @@ export default function Scene() {
   const bounds: Box | null = useMemo(() => {
     // Parts, and the pictures being designed over (so Fit shows them).
     const pics = (project.references ?? []).filter(r => !r.hidden).map(r => ({ min: r.position, max: worldAt(r, { u: 1, v: 1 }) }))
-    const bs = [...project.boards.map(worldBox), ...pics, ...(kidsMode ? [] : (project.models ?? []).filter(m => !m.hidden).map(modelBox))]
+    // Parts where they're drawn (pulled apart in an exploded view), so Fit, the floor and the shadows take them in.
+    const drawn = project.boards.map(b => { const w = worldBox(b), o = offsets.get(b.id); return o ? { min: { x: w.min.x + o.x, y: w.min.y + o.y, z: w.min.z + o.z }, max: { x: w.max.x + o.x, y: w.max.y + o.y, z: w.max.z + o.z } } : w })
+    const bs = [...drawn, ...pics, ...(kidsMode ? [] : (project.models ?? []).filter(m => !m.hidden).map(modelBox))]
     if (bs.length === 0) return null
     return {
       min: { x: Math.min(...bs.map(b => b.min.x)), y: Math.min(...bs.map(b => b.min.y)), z: Math.min(...bs.map(b => b.min.z)) },
       max: { x: Math.max(...bs.map(b => b.max.x)), y: Math.max(...bs.map(b => b.max.y)), z: Math.max(...bs.map(b => b.max.z)) }
     }
-  }, [project.boards, project.references, project.models, kidsMode])
+  }, [project.boards, project.references, project.models, kidsMode, offsets])
 
   useEffect(() => {
     if (!measuring) setPoints([])
@@ -125,11 +127,12 @@ export default function Scene() {
       data-testid="scene"
       onPointerMissed={() => !studio.getState().measuring && studio.getState().select([])}
       gl={{ preserveDrawingBuffer: true }}
-      shadows="soft"
+      shadows
+      frameloop={real ? 'demand' : 'always'}
       style={{ background: real ? LIGHTS[light].background : CAD_BACKGROUND }}
     >
       <ViewControls view={view} bounds={bounds} projectKey={projectKey} boardCount={project.boards.length} />
-      <Camera real={real} />
+      <Camera real={real} section={!!clip} />
       {real ? <RealStage bounds={bounds} /> : (
         <>
           <ambientLight intensity={0.6} />

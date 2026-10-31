@@ -39,17 +39,34 @@ export function RenderControls() {
 export function KidsLookButton() {
   const mode = useRender(s => s.mode)
   return (
-    <button onClick={() => render.getState().set({ mode: mode === 'real' ? 'cad' : 'real' })} className={`rounded px-2 py-1 text-sm ${mode === 'real' ? 'bg-amber-700 text-white' : 'hover:bg-stone-200'}`}>
+    <button onClick={() => render.getState().set(mode === 'real' ? { mode: 'cad' } : { mode: 'real', effects: false })} className={`rounded px-2 py-1 text-sm ${mode === 'real' ? 'bg-amber-700 text-white' : 'hover:bg-stone-200'}`}>
       🌳 Real wood
     </button>
   )
 }
 
 /** Front, 3D and exploded pictures of the design for the plan packet, from the view as it's set up (look, light). */
+/** Runs `fn` with nothing selected and no measuring (no highlight or move arrows in the picture), then puts them back. */
+export async function cleanView<T>(fn: () => Promise<T> | T): Promise<T> {
+  const s = studio.getState()
+  const keep = { selection: s.selection, measuring: s.measuring }
+  if (keep.selection.length) s.select([])
+  if (keep.measuring) studio.setState({ measuring: false })
+  await frames(3)
+  try { return await fn() } finally {
+    if (keep.selection.length) studio.getState().select(keep.selection)
+    if (keep.measuring) studio.setState({ measuring: true })
+  }
+}
+
 export async function renderViews(): Promise<RenderedView[]> {
+  return cleanView(shootViews)
+}
+async function shootViews(): Promise<RenderedView[]> {
   const s = studio.getState()
   const saved = { view: s.view, explode: s.explode }
   const out: RenderedView[] = []
+  window.dispatchEvent(new Event('aa:camera-save'))
   const shots: [RenderedView['key'], string, typeof s.view, number][] = [['iso', '3D view', '3d', 0], ['front', 'Front', 'front', 0], ['exploded', 'Exploded', '3d', 0.6]]
   try {
     for (const [key, label, view, explode] of shots) {
@@ -64,6 +81,8 @@ export async function renderViews(): Promise<RenderedView[]> {
   } finally {
     studio.getState().set({ view: saved.view })
     studio.getState().setView({ explode: saved.explode })
+    await frames(3)
+    window.dispatchEvent(new Event('aa:camera-restore'))
   }
   render.setState({ views: out })
   return out
@@ -84,10 +103,14 @@ export function PictureDialog() {
   const size = exportSize(css.w, css.h, scale)
   const close = () => { render.getState().set({ exportOpen: false }); setMsg(null) }
   const save = async () => {
-    const r = render.getState().capture?.({ scale, transparent: clear })
+    const r = await cleanView(() => render.getState().capture?.({ scale, transparent: clear }))
     if (!r) return setMsg("Couldn't make the picture — the 3D view isn't ready.")
-    const path = await window.aa.savePng(imageName(name), r.dataUrl)
-    setMsg(path ? `Saved ${r.width} × ${r.height} px to ${path}` : null)
+    try {
+      const path = await window.aa.savePng(imageName(name), r.dataUrl)
+      setMsg(path ? `Saved ${r.width} × ${r.height} px to ${path}` : null)
+    } catch (e) {
+      setMsg(`Couldn't save the picture: ${(e as Error).message.replace(/^Error invoking remote method '[^']+': (Error: )?/, '')}`)
+    }
   }
   const views3 = async () => {
     setBusy(true)
@@ -95,7 +118,7 @@ export function PictureDialog() {
   }
   return (
     <div role="dialog" aria-label="Save a picture" className="fixed inset-0 z-40 flex items-center justify-center bg-black/30" onKeyDown={e => e.key === 'Escape' && close()}>
-      <div className="flex w-[28rem] flex-col gap-3 rounded-lg bg-white p-4 shadow-xl">
+      <div autoFocus tabIndex={-1} className="flex w-[28rem] flex-col gap-3 rounded-lg bg-white p-4 shadow-xl outline-none">
         <h2 className="text-lg font-bold">Save a picture</h2>
         <p className="text-sm text-stone-600">A picture of the 3D view as it is now — camera, look and light.</p>
         <fieldset className="flex gap-3 text-sm">

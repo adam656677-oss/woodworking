@@ -6,6 +6,7 @@ import type { Box } from '../../model/geometry'
 import type { View } from '../store'
 
 const UP = new THREE.Vector3(0, 0, 1)
+let saved: { pos: THREE.Vector3; up: THREE.Vector3; zoom: number; target: THREE.Vector3 | null } | null = null
 
 /** Camera for each view: orbit 3D (perspective) or flat Front / Side / Top (orthographic, no rotation). */
 export function ViewControls({ view, bounds, projectKey, boardCount }: { view: View; bounds: Box | null; projectKey: number; boardCount: number }) {
@@ -46,6 +47,20 @@ export function ViewControls({ view, bounds, projectKey, boardCount }: { view: V
     window.addEventListener('aa:zoom-fit', onFit)
     return () => window.removeEventListener('aa:zoom-fit', onFit)
   }, [fit])
+  // Pictures for the plan packet move the camera; it's put back where the user had it afterwards.
+  useEffect(() => {
+    const save = () => { saved = { pos: camera.position.clone(), up: camera.up.clone(), zoom: (camera as THREE.OrthographicCamera).zoom ?? 1, target: controls.current?.target.clone() ?? null } }
+    const restore = () => {
+      if (!saved) return
+      camera.position.copy(saved.pos); camera.up.copy(saved.up)
+      if (camera instanceof THREE.OrthographicCamera) { camera.zoom = saved.zoom; camera.updateProjectionMatrix() }
+      if (controls.current && saved.target) { controls.current.target.copy(saved.target); controls.current.update() }
+      saved = null
+    }
+    window.addEventListener('aa:camera-save', save)
+    window.addEventListener('aa:camera-restore', restore)
+    return () => { window.removeEventListener('aa:camera-save', save); window.removeEventListener('aa:camera-restore', restore) }
+  }, [camera])
 
   return (
     <>

@@ -171,9 +171,9 @@ export const BoardMesh = forwardRef<THREE.Group, Props>(function BoardMesh({ boa
       rotation={new THREE.Euler(deg(board.rotation.x), deg(board.rotation.y), deg(board.rotation.z), 'XYZ')}
     >
       {realMat ? (
-        <mesh geometry={geometry} onClick={onSelect} userData={{ boardId: board.id }} material={realMat} castShadow receiveShadow />
+        <mesh key="real" geometry={geometry} onClick={onSelect} userData={{ boardId: board.id }} material={realMat} castShadow receiveShadow />
       ) : (
-        <mesh geometry={geometry} onClick={onSelect} userData={{ boardId: board.id }}>
+        <mesh key="cad" geometry={geometry} onClick={onSelect} userData={{ boardId: board.id }}>
           <meshStandardMaterial flatShading color={color} roughness={0.85} emissive={selected ? '#ff9800' : '#000000'} emissiveIntensity={selected ? 0.35 : 0} clippingPlanes={clip ?? []} />
         </mesh>
       )}

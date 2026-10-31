@@ -2,6 +2,7 @@
 // saved in the project file.
 import { createStore, useStore } from 'zustand'
 import type { LightPreset } from './materials'
+import { studio } from '../ui/store'
 
 export type CaptureOpts = { scale: number; transparent: boolean }
 export type Capture = (o: CaptureOpts) => { dataUrl: string; width: number; height: number } | null
@@ -25,6 +26,10 @@ export const render = createStore<State>(set => ({
   set: p => set(p)
 }))
 export const useRender = <T,>(sel: (s: State) => T) => useStore(render, sel)
+
+// Pictures belong to the project they were made of: a new or opened project starts without them.
+let lastKey = studio.getState().projectKey
+studio.subscribe(s => { if (s.projectKey !== lastKey) { lastKey = s.projectKey; if (render.getState().views.length) render.setState({ views: [] }) } })
 
 /** A file name for the picture. */
 export const imageName = (project: string, what = '') => `${project || 'Project'}${what ? ` - ${what}` : ''}`

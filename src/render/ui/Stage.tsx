@@ -22,11 +22,12 @@ export function RealStage({ bounds }: { bounds: Box | null }) {
   const { gl, scene } = useThree()
   useEffect(() => {
     const pm = new THREE.PMREMGenerator(gl)
-    const env = pm.fromScene(new RoomEnvironment(), 0.04).texture
+    const room = new RoomEnvironment()
+    const env = pm.fromScene(room, 0.04).texture
     scene.environment = env
     // The room is built Y-up; the design is Z-up.
     scene.environmentRotation.set(Math.PI / 2, 0, 0)
-    return () => { scene.environment = null; env.dispose(); pm.dispose() }
+    return () => { scene.environment = null; env.dispose(); pm.dispose(); room.dispose() }
   }, [gl, scene])
   useEffect(() => { scene.environmentIntensity = L.env }, [scene, L.env])
   // Neutral tone mapping keeps the wood's own colours (the default film curve washes light woods out).
@@ -53,7 +54,8 @@ export function RealStage({ bounds }: { bounds: Box | null }) {
       <ambientLight color={L.ambient.color} intensity={L.ambient.intensity} />
       {L.hemi && <hemisphereLight args={[L.hemi.sky, L.hemi.ground, L.hemi.intensity]} position={[0, 0, 1]} />}
       <directionalLight
-        key={`${light}-${effects}`}
+        // A new light when the design's size changes: the shadow camera only takes its size when it's made.
+        key={`${light}-${effects}-${Math.round(ext)}`}
         position={at(L.key.dir, 2.5)} target={target} color={L.key.color} intensity={L.key.intensity}
         castShadow={effects} shadow-mapSize={[2048, 2048]} shadow-bias={-0.0004} shadow-normalBias={0.02}
         shadow-camera-left={-ext} shadow-camera-right={ext} shadow-camera-top={ext} shadow-camera-bottom={-ext}
@@ -89,7 +91,8 @@ function Occlusion({ onComposer }: { onComposer(c: EffectComposer | null): void 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gl, scene, camera])
   useEffect(() => { composer.setPixelRatio(gl.getPixelRatio()); composer.setSize(size.width, size.height) }, [composer, gl, size.width, size.height])
-  useEffect(() => { onComposer(composer); return () => { onComposer(null); composer.dispose() } }, [composer, onComposer])
+  // The composer doesn't dispose its passes' own buffers and textures; do it here.
+  useEffect(() => { onComposer(composer); return () => { onComposer(null); for (const p of composer.passes) (p as { dispose?: () => void }).dispose?.(); composer.dispose() } }, [composer, onComposer])
   useFrame(() => composer.render(), 1)
   return null
 }
@@ -98,7 +101,7 @@ let current: EffectComposer | null = null
 const setComposer = (c: EffectComposer | null) => { current = c }
 
 /** Registers the picture export for whichever look is showing, and the occlusion pass when it's on. */
-export function Camera({ real }: { real: boolean }) {
+export function Camera({ real, section }: { real: boolean; section: boolean }) {
   const effects = useRender(s => s.effects)
   const { gl, scene, camera, size } = useThree()
   useEffect(() => {
@@ -120,7 +123,8 @@ export function Camera({ real }: { real: boolean }) {
           if (shadow) shadow.visible = real
           if (grid) grid.visible = false
         } else scene.background = new THREE.Color(real ? LIGHTS[render.getState().light].background : CAD_BACKGROUND)
-        const useComposer = !transparent && current
+        // A huge picture with the occlusion buffers can run a small graphics card out of memory: plain above 2×.
+        const useComposer = !transparent && current && ratio <= 2
         if (useComposer) {
           current!.setPixelRatio(ratio)
           current!.setSize(size.width, size.height)
@@ -143,5 +147,6 @@ export function Camera({ real }: { real: boolean }) {
     render.setState({ capture })
     return () => { if (render.getState().capture === capture) render.setState({ capture: null }) }
   }, [gl, scene, camera, size.width, size.height, real])
-  return real && effects ? <Occlusion onComposer={setComposer} /> : null
+  // Occlusion is worked out without the section plane, so it's off while a section is shown.
+  return real && effects && !section ? <Occlusion onComposer={setComposer} /> : null
 }
