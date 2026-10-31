@@ -1,3 +1,4 @@
+import type { GameId } from '../games/ui/GamesHome'
 // The Kids' Workshop store: the child's progress, which page is showing, and the PIN-guarded actions.
 import { createStore, useStore } from 'zustand'
 import { findProject } from './content'
@@ -18,6 +19,8 @@ export type KidsPage =
   | { name: 'certificate'; badgeId: string }
   | { name: 'plans' }
   | { name: 'calc' }
+  | { name: 'games' }
+  | { name: 'game'; id: GameId }
 
 export type KidsState = {
   loaded: boolean
@@ -31,6 +34,7 @@ export type KidsState = {
   confirmBuilt(projectId: string, pin: string): Promise<boolean>
   setPhoto(projectId: string, photo: string): Promise<void>
   setTier(tier: ChildTier, pin: string): Promise<boolean>
+  setGames(on: boolean, pin: string): Promise<boolean>
   resetQuiz(quizId: string, pin: string): Promise<boolean>
   setNameAndPin(name: string, pin: string): Promise<void>
 }
@@ -95,6 +99,11 @@ export function createKidsStore() {
       setTier: async (tier, pin) => {
         if (!(await pinOk(pin))) return false
         await update(p => ({ ...p, tier }))
+        return true
+      },
+      setGames: async (on, pin) => {
+        if (!(await pinOk(pin))) return false
+        await update(p => { const { gamesOff: _g, ...rest } = p; return on ? rest : { ...rest, gamesOff: true } })
         return true
       },
       resetQuiz: async (quizId, pin) => {

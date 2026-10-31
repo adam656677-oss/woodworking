@@ -10,13 +10,15 @@ const TILES = [
   { page: 'projects', label: 'Projects', art: 'birdhouse', color: 'border-amber-500 bg-amber-100' },
   { page: 'learn', label: 'Learn', art: 'tree', color: 'border-sky-500 bg-sky-100' },
   { page: 'badges', label: 'My Badges', art: 'first-aid', color: 'border-rose-400 bg-rose-100' },
-  { page: 'calc', label: 'Math Helpers', art: 'square', color: 'border-orange-400 bg-orange-100' }
+  { page: 'calc', label: 'Math Helpers', art: 'square', color: 'border-orange-400 bg-orange-100' },
+  { page: 'games', label: 'Games', art: 'tape-measure', color: 'border-yellow-400 bg-yellow-100' }
 ] as const
 
 /** The Kids' Workshop front door: big tiles and the parent gear. */
 export function KidsHome() {
   const name = useKids(s => s.progress.childName)
   const notice = useKids(s => s.notice)
+  const gamesOff = useKids(s => !!s.progress.gamesOff)
   const [blocked, setBlocked] = useState(false)
   const k = kids.getState()
   return (
@@ -35,7 +37,7 @@ export function KidsHome() {
       )}
       {blocked && <p role="alert" className="mt-4 rounded-xl bg-amber-100 px-4 py-2 text-lg text-amber-900">Ask your grown-up to save their Master Shop project first.</p>}
       <div className="mt-10 grid grid-cols-3 gap-6">
-        {TILES.map(t => (
+        {TILES.filter(t => t.page !== 'games' || !gamesOff).map(t => (
           <button key={t.page} onClick={() => k.go({ name: t.page })} className={`flex h-48 w-60 flex-col items-center justify-center gap-3 rounded-3xl border-4 shadow-lg hover:scale-105 ${t.color}`}>
             <Art name={t.art} className="block h-20 w-20" />
             <span className="text-2xl font-bold">{t.label}</span>

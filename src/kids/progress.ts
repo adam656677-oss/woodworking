@@ -12,6 +12,8 @@ export type Progress = {
   openedLessons: string[]
   /** project id → date the parent confirmed it was built, and its photo file name */
   builtProjects: Record<string, { date: string; photo?: string }>
+  /** The parent turned the Games off. */
+  gamesOff?: boolean
 }
 
 export function newProgress(): Progress {
@@ -27,6 +29,7 @@ export function isProgress(v: unknown): v is Progress {
   if (!['beginner', 'intermediate', 'advanced'].includes(v.tier)) return false
   if (!isObj(v.passedQuizzes) || !Object.values(v.passedQuizzes).every(isDate)) return false
   if (!Array.isArray(v.openedLessons) || !v.openedLessons.every((x: unknown) => typeof x === 'string')) return false
+  if (v.gamesOff !== undefined && typeof v.gamesOff !== 'boolean') return false
   if (!isObj(v.builtProjects)) return false
   return Object.values(v.builtProjects).every(b => isObj(b) && isDate(b.date) && (b.photo === undefined || typeof b.photo === 'string'))
 }
