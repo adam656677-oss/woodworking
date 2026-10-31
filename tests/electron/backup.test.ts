@@ -63,7 +63,7 @@ test('a damaged or doctored backup is refused before anything is touched', async
 
 test('a project package round-trips; other files are refused', async () => {
   const f = join(out, 'p.aapkg')
-  const pkg = { format: 'aa-package', version: 1, name: 'Shelf', project: '{"x":1}', journal: [] }
+  const pkg = { format: 'aa-package' as const, version: 1 as const, name: 'Shelf', project: '{"x":1}', journal: [] }
   await writePackage(f, pkg)
   expect(await readPackage(f)).toEqual(pkg)
   await writeFile(f, gzipSync('{"format":"other"}'))
