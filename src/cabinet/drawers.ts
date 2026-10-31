@@ -4,11 +4,12 @@ import { makeBoard, ORIENT } from '../templates/place'
 import type { Board, HardwareUse, Hole, Joint, Project } from '../model/types'
 import { snap64 } from '../model/units'
 import { addHardware, PULL_CC } from './hardware'
+import { addJoint } from '../model/ops'
 import { addAsGroup, joint, nextName, seat, woodById, type Opening } from './build'
 import { lap, type Mounting } from './doors'
 
 export type SlideKind = 'side' | 'under' | 'runners'
-export type BoxJoint = 'butt' | 'rabbet' | 'dado'
+export type BoxJoint = 'butt' | 'rabbet' | 'dado' | 'dovetail'
 export type DrawerOptions = {
   slides: SlideKind
   joinery: BoxJoint
@@ -57,19 +58,21 @@ export function addDrawer(p0: Project, o: Opening, opts: DrawerOptions): { proje
   const D = size.depth, W = size.width, H = size.height
 
   const boards: Board[] = [], joints: Joint[] = []
-  const left = makeBoard('Drawer side', wood, H, D, ORIENT.wallY, { x: x0, y: y0, z: z0 })
-  const right = makeBoard('Drawer side', wood, H, D, ORIENT.wallY, { x: x0 + W - t, y: y0, z: z0 })
+  // Dovetailed: the sides run between the front and back (tails on the sides, pins on the front and back).
+  const dt = opts.joinery === 'dovetail'
+  const left = makeBoard('Drawer side', wood, H, dt ? D - 2 * t : D, ORIENT.wallY, { x: x0, y: dt ? y0 + t : y0, z: z0 })
+  const right = makeBoard('Drawer side', wood, H, dt ? D - 2 * t : D, ORIENT.wallY, { x: x0 + W - t, y: dt ? y0 + t : y0, z: z0 })
   // Front and back: between the sides (butt), or into 1/2"-deep rabbets or dados in them.
-  const into = opts.joinery === 'butt' ? 0 : t / 2
-  const across = W - 2 * t + 2 * into
+  const into = opts.joinery === 'butt' || dt ? 0 : t / 2
+  const across = dt ? W : W - 2 * t + 2 * into
   const fy = opts.joinery === 'dado' ? y0 + DADO_IN : y0
   const by = opts.joinery === 'dado' ? y0 + D - DADO_IN - t : y0 + D - t
-  const bx = x0 + t - into
+  const bx = dt ? x0 : x0 + t - into
   const front = makeBoard('Drawer front', wood, H, across, ORIENT.wallX, { x: bx, y: fy, z: z0 })
   const back = makeBoard('Drawer back', wood, H, across, ORIENT.wallX, { x: bx, y: by, z: z0 })
   boards.push(left, right, front, back)
-  for (const s of [left, right]) for (const fb of [front, back]) {
-    joints.push(opts.joinery === 'butt' ? joint('butt', s, fb, { fastener: 'screws', count: 2 }) : seat(opts.joinery, s, fb, 'width'))
+  if (!dt) for (const s of [left, right]) for (const fb of [front, back]) {
+    joints.push(opts.joinery === 'butt' ? joint('butt', s, fb, { fastener: 'screws', count: 2 }) : seat(opts.joinery as 'rabbet' | 'dado', s, fb, 'width'))
   }
   // The bottom: in a 1/4" groove 1/2" up — 1/4" deep, or less in thin box wood (no more than half its thickness) —
   // 1/32" short of the groove bottom all round.
@@ -105,6 +108,14 @@ export function addDrawer(p0: Project, o: Opening, opts: DrawerOptions): { proje
   const name = nextName(p0, 'Drawer')
   const g = addAsGroup(p0, boards, joints, name, { kind: 'slide', dir: { x: 0, y: -1, z: 0 }, travel })
   let p = g.project
+  if (dt) {
+    // Half-blind dovetails at the front (the front's face stays whole), through dovetails at the back.
+    for (const s of [left, right]) for (const [fb, style] of [[front, 'halfBlindDovetail'], [back, 'dovetail']] as const) {
+      const r = addJoint(p, 'joinery', fb.id, s.id, { style })
+      if ('error' in r) return r
+      p = r.project
+    }
+  }
   for (const h of hardware) p = addHardware(p, { ...h, groupId: g.id })
   const note = addNote(p, { x: x0 + W / 2, y: y0, z: z0 + H }, `${name}: ${SLIDE_NOTE}`)
   if (!('error' in note)) p = note.project

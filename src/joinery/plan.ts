@@ -59,7 +59,9 @@ export function joineryChange(style: JoineryStyle, jp: JoineryParams, host: Boar
     case 'boxJoint': case 'dovetail': case 'bridle': case 'halfLap': return { extend: { along: 'length', by: snap64(ext) } }
     case 'halfBlindDovetail': return { extend: { along: 'length', by: snap64(ext - (jp.lap ?? 0.1875)) } }
     case 'tongueGroove': return { extend: { along: 'width', by: jp.depth ?? 0.375 } }
-    case 'koshikakeAri': case 'kama': case 'okkakeDaisen': case 'kanawa': case 'custom': return { extend: { along: 'length', by: jp.depth ?? ext } }
+    case 'koshikakeAri': case 'kama': case 'okkakeDaisen': case 'kanawa': return { extend: { along: 'length', by: jp.depth ?? ext } }
+    // A designed in-line joint: a cube-ish overlap as long as the beam is wide or thick.
+    case 'custom': return { extend: { along: 'length', by: jp.depth ?? snap64(Math.max(host.width, host.thickness)) } }
     default: return {}
   }
 }

@@ -165,3 +165,12 @@ test('a designed joint: every cell given to the partner takes the whole overlap 
   expect(v.get('A')!).toBeCloseTo(3.5 * 3.5 * (30 - 3.5), 3)
   expect(v.get('B')!).toBeCloseTo(3.5 * 3.5 * 33.5, 3)
 }, 30000)
+
+test('a dovetailed drawer: half-blind at the front, through at the back, no warnings', async () => {
+  const { addDrawer, DRAWER_DEFAULTS } = await import('../../src/cabinet/drawers')
+  const r = addDrawer(emptyProject('T'), { x: 0, y: 0, z: 0, width: 16, height: 6, depth: 22 }, { ...DRAWER_DEFAULTS, joinery: 'dovetail' })
+  if ('error' in r) throw new Error(r.error)
+  const js = r.project.joints.filter(j => j.type === 'joinery').map(j => (j.params as JoineryParams).style).sort()
+  expect(js).toEqual(['dovetail', 'dovetail', 'halfBlindDovetail', 'halfBlindDovetail'])
+  expect(validate(r.project).filter(w => w.kind === 'badJoint' || w.kind === 'overlap').map(w => w.message)).toEqual([])
+}, 60000)

@@ -1,0 +1,20 @@
+{
+  "id": "joint-dowel",
+  "title": "Dowel joint",
+  "level": 0,
+  "cards": [
+    {
+      "image": "drill",
+      "text": [
+        "Round wooden pins glued into matching holes in both pieces.",
+        "A doweling jig helps you drill the holes straight and lined up."
+      ]
+    },
+    {
+      "image": "drill",
+      "text": [
+        "How strong is it? \u25cf\u25cf\u25cf\u25cb\u25cb (3 out of 5)"
+      ]
+    }
+  ]
+}

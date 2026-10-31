@@ -1,0 +1,20 @@
+{
+  "id": "joint-butt",
+  "title": "Butt joint",
+  "level": 0,
+  "cards": [
+    {
+      "image": "nail",
+      "text": [
+        "Two pieces just meet, held with glue, nails or screws.",
+        "Quick and easy, but the weakest joint \u2014 glue alone doesn't hold end grain well."
+      ]
+    },
+    {
+      "image": "nail",
+      "text": [
+        "How strong is it? \u25cf\u25cb\u25cb\u25cb\u25cb (1 out of 5)"
+      ]
+    }
+  ]
+}

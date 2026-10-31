@@ -242,7 +242,7 @@ export type TemplateState = { templateId: string; params: Record<string, number 
 
 export type Project = {
   /** 2 adds drawings; version 1 files are upgraded when opened. */
-  formatVersion: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11
+  formatVersion: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12
   name: string
   units: 'in'
   boards: Board[]

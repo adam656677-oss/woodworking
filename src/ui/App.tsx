@@ -5,6 +5,7 @@ import { Designer } from './designer/Designer'
 import { Home } from './Home'
 import { FinishingSchool } from '../finish/ui/FinishingSchool'
 import { Library } from '../library/ui/Library'
+import { JointDesigner } from '../joinery/ui/JointDesigner'
 import { KidsShell } from '../kids/ui/KidsShell'
 import { PlansShell } from '../plans/ui/PlansShell'
 import { DrawingBoard } from '../sketch/ui/DrawingBoard'
@@ -38,7 +39,7 @@ export default function App() {
 
   return (
     <>
-      {screen === 'kids' ? <KidsShell /> : screen === 'master' ? <Designer /> : screen === 'plans' ? <PlansShell /> : screen === 'draw' ? <DrawingBoard /> : screen === 'finish' ? <FinishingSchool /> : screen === 'library' ? <Library /> : <Home />}
+      {screen === 'kids' ? <KidsShell /> : screen === 'master' ? <Designer /> : screen === 'plans' ? <PlansShell /> : screen === 'draw' ? <DrawingBoard /> : screen === 'finish' ? <FinishingSchool /> : screen === 'library' ? <Library /> : screen === 'joints' ? <JointDesigner /> : <Home />}
       <UnsavedDialog />
       <ShopMode />
     </>

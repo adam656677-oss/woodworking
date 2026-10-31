@@ -125,7 +125,7 @@ function DrawerMaker() {
       <OpeningFields o={o} set={setO} depth />
       <div className="grid grid-cols-3 gap-2">
         <Select<SlideKind> label="Slides" value={d.slides} onChange={slides => set({ slides })} options={[['side', 'Side-mount ball-bearing'], ['under', 'Undermount'], ['runners', 'Wood runners']]} />
-        <Select<BoxJoint> label="Box joints" value={d.joinery} onChange={joinery => set({ joinery })} options={[['butt', 'Butt (screws)'], ['rabbet', 'Rabbets'], ['dado', 'Dados']]} />
+        <Select<BoxJoint> label="Box joints" value={d.joinery} onChange={joinery => set({ joinery })} options={[['butt', 'Butt (screws)'], ['rabbet', 'Rabbets'], ['dado', 'Dados'], ['dovetail', 'Dovetails']]} />
         <WoodSelect label="Box wood" value={d.boxWood} onChange={boxWood => set({ boxWood })} />
         <WoodSelect label="Bottom wood" value={d.bottomWood} onChange={bottomWood => set({ bottomWood })} sheetsOnly />
         <Select<Mounting | 'none'> label="Drawer face" value={d.front} onChange={front => set({ front })} options={[...MOUNTINGS, ['none', 'None']]} />

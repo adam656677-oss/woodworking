@@ -7,7 +7,7 @@ import type { Project } from './types'
 import { pruneGroups } from '../assemblies/ops'
 import { isPackedMesh } from '../exchange/models'
 
-export const FORMAT_VERSION = 11
+export const FORMAT_VERSION = 12
 
 export class ProjectFileError extends Error {
   constructor(public code: 'corrupt' | 'newerVersion' | 'invalid', message: string) {
@@ -38,7 +38,9 @@ const MIGRATIONS: Record<number, Migration> = {
   // Version 10 adds edge banding, cutting settings and lumber prices by length (all optional).
   9: raw => ({ ...raw, formatVersion: 10 }),
   // Version 11 adds the finishing schedule (optional).
-  10: raw => ({ ...raw, formatVersion: 11 })
+  10: raw => ({ ...raw, formatVersion: 11 }),
+  // Version 12 adds cut joints (joinery) and joints designed in the joint designer.
+  11: raw => ({ ...raw, formatVersion: 12 })
 }
 
 export function serialize(p: Project): string {
@@ -64,6 +66,7 @@ function invalid(msg: string): never {
   throw new ProjectFileError('invalid', `This file isn't a valid A&A project: ${msg}.`)
 }
 
+const JOINERY_STYLES = ['halfLap', 'dowel', 'biscuit', 'looseTenon', 'boxJoint', 'dovetail', 'halfBlindDovetail', 'mortiseTenon', 'bridle', 'tongueGroove', 'spline', 'kanawa', 'okkakeDaisen', 'koshikakeAri', 'kama', 'watariAgo', 'hozoSashi', 'shachiSen', 'custom']
 const oneOf = (v: unknown, options: string[]) => typeof v === 'string' && options.includes(v)
 const isStr = (v: unknown): v is string => typeof v === 'string'
 
@@ -110,6 +113,12 @@ function jointParamsOk(type: string, p: Record<string, any>): boolean {
       return isNum(p.count) && isNum(p.spacing) && isNum(p.screwLength)
     case 'miter':
       return isNum(p.angle) && oneOf(p.fastener, ['glue', 'nails', 'splines'])
+    case 'joinery': {
+      const pos = (k: string) => p[k] === undefined || (isNum(p[k]) && p[k] >= 0 && p[k] < 1000)
+      return oneOf(p.style, JOINERY_STYLES) && ['depth', 'size', 'count', 'shoulder', 'slope', 'lap'].every(pos) &&
+        (p.through === undefined || typeof p.through === 'boolean') && (p.haunch === undefined || typeof p.haunch === 'boolean') &&
+        (p.biscuit === undefined || oneOf(p.biscuit, ['0', '10', '20'])) && (p.customId === undefined || isStr(p.customId))
+    }
     default:
       return false
   }
@@ -206,6 +215,13 @@ function check(raw: any): Project {
             : r.kind === 'count' ? isStr(r.expr) && isStr(r.first) && ids(r.copies) && ax(r.axis) && isStr(r.from) && isStr(r.to)
               : false)
     if (!Array.isArray(raw.rules) || !raw.rules.every(ruleOk)) invalid('a layout rule is damaged')
+  }
+  if (raw.customJoints !== undefined) {
+    // A damaged designed joint is dropped (joints that use it then report it missing).
+    const ok = (c: any) => isObj(c) && isStr(c.id) && isStr(c.name) && oneOf(c.layout, ['inline', 'cross']) && Number.isInteger(c.n) && c.n >= 2 && c.n <= 8 &&
+      isStr(c.cells) && c.cells.length === c.n ** 3 && /^[01]+$/.test(c.cells) && oneOf(c.slide, ['x+', 'x-', 'y+', 'y-', 'z+', 'z-'])
+    raw.customJoints = Array.isArray(raw.customJoints) ? raw.customJoints.filter(ok) : []
+    if (!raw.customJoints.length) delete raw.customJoints
   }
   for (const j of raw.joints) {
     if (!isObj(j) || typeof j.type !== 'string' || !isObj(j.params)) invalid('a joint is damaged')

@@ -225,7 +225,7 @@ const Glues = () => <T label="Glues" head={['Glue', 'Open time', 'Clamp', 'Full 
 function Articles() {
   return (
     <div className="flex max-w-3xl flex-col gap-4">
-      {(['Techniques', 'Sharpening', 'Safety'] as const).map(g => (
+      {(['Techniques', 'Joinery', 'Sharpening', 'Japanese tools', 'Safety'] as const).map(g => (
         <section key={g} aria-label={g}>
           <h2 className="mb-2 text-xl font-bold">{g}</h2>
           {ARTICLES.filter(a => a.group === g).map(a => (

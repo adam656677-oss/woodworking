@@ -1,0 +1,20 @@
+{
+  "id": "joint-box",
+  "title": "Box joint",
+  "level": 0,
+  "cards": [
+    {
+      "image": "boards",
+      "text": [
+        "Square fingers on both pieces lock together at a corner.",
+        "Lots of glue surface \u2014 very strong, and it looks great on boxes."
+      ]
+    },
+    {
+      "image": "boards",
+      "text": [
+        "How strong is it? \u25cf\u25cf\u25cf\u25cf\u25cb (4 out of 5)"
+      ]
+    }
+  ]
+}

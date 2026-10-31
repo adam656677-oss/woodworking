@@ -436,7 +436,9 @@ const custom: Builder = (p, host, partner, jp) => {
   const ha = localAxes(host), pa = localAxes(partner)
   const I = ha.length.axis, J = c.layout === 'cross' ? pa.length.axis : ha.width.axis, K = AX.find(a => a !== I && a !== J)!
   const n = c.n
-  const cell = (i: number, j: number, k: number) => c.cells[i + n * (j + n * k)]
+  // Cell i = 0 is on the host's side (where its body is), as in the designer.
+  const flip = c.layout === 'inline' && H.min[I] >= O!.min[I] - 1e-6
+  const cell = (i: number, j: number, k: number) => c.cells[(flip ? n - 1 - i : i) + n * (j + n * k)]
   const cuts: Cut[] = []
   const step = (a: Axis) => (O!.max[a] - O!.min[a]) / n
   for (let j = 0; j < n; j++) for (let k = 0; k < n; k++) {
