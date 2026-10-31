@@ -66,7 +66,8 @@ function intersect(a: Box, b: Box): Box | null {
 const vol = (b: Box) => AX.reduce((v, a) => v * Math.max(0, b.max[a] - b.min[a]), 1)
 const sub = (b: Box, a: Axis, lo: number, hi: number): Box => ({ min: { ...b.min, [a]: lo }, max: { ...b.max, [a]: hi } })
 
-export type Built = { cuts: Cut[]; notes: { boardId: string; text: string }[]; problem?: string; hardware?: string }
+/** `hardware`: what goes in the joint and has to be bought or made (dowels, biscuits, loose tenons, splines). */
+export type Built = { cuts: Cut[]; notes: { boardId: string; text: string }[]; problem?: string; hardware?: { qty: number; what: string }; /** How many fingers, tails, dowels … were actually cut. */ count?: number }
 const none = (problem: string): Built => ({ cuts: [], notes: [], problem })
 
 /** The cuts a joinery joint makes on its two parts. */
@@ -82,6 +83,17 @@ export function joineryCuts(p: Project, j: Joint): Built {
   }
 }
 export const joineryProblem = (p: Project, j: Joint) => joineryCuts(p, j).problem ?? null
+/** Everything the project's cut joints need put in them, added up by kind. */
+export function joineryHardware(p: Project): { qty: number; what: string }[] {
+  const m = new Map<string, number>()
+  for (const j of p.joints) {
+    if (j.type !== 'joinery') continue
+    const h = joineryCuts(p, j).hardware
+    if (h && h.qty > 0) m.set(h.what, (m.get(h.what) ?? 0) + h.qty)
+  }
+  return [...m].map(([what, qty]) => ({ what, qty }))
+}
+
 export function joineryNotes(p: Project, j: Joint, boardId: string): string[] {
   const b = joineryCuts(p, j)
   return b.notes.filter(n => n.boardId === boardId).map(n => n.text)
@@ -103,18 +115,18 @@ function overlap(host: Board, partner: Board, along: 'length' | 'width'): { O: B
 
 /** Cuts the partner keeps a box `keep` of, inside region R: everything else in R comes off (as up to 6 boxes). */
 function allBut(b: Board, R: Box, keep: Box): (PocketCut | null)[] {
+  // Whole slabs of R on each side of `keep`: they overlap one another at the corners (so the solid code never
+  // has to join cutters that only touch), and none reaches into `keep`.
   const out: (PocketCut | null)[] = []
-  let rest = R
   for (const a of AX) {
-    if (keep.min[a] > rest.min[a] + E) out.push(pocket(b, sub(rest, a, rest.min[a], keep.min[a])))
-    if (keep.max[a] < rest.max[a] - E) out.push(pocket(b, sub(rest, a, keep.max[a], rest.max[a])))
-    rest = sub(rest, a, Math.max(rest.min[a], keep.min[a]), Math.min(rest.max[a], keep.max[a]))
+    if (keep.min[a] > R.min[a] + E) out.push(pocket(b, sub(R, a, R.min[a], keep.min[a])))
+    if (keep.max[a] < R.max[a] - E) out.push(pocket(b, sub(R, a, keep.max[a], R.max[a])))
   }
   return out
 }
 
 const mortiseTenon: Builder = (p, host, partner, jp) => {
-  const { O } = overlap(host, partner, 'length')
+  const { O, L, inSign } = overlap(host, partner, 'length')
   const ax = localAxes(partner)
   const T = ax.thickness.axis, W = ax.width.axis
   const P = worldBox(partner)
@@ -133,8 +145,28 @@ const mortiseTenon: Builder = (p, host, partner, jp) => {
   notes.push({ boardId: partner.id, text: `${name[0].toUpperCase()}${name.slice(1)} ${inch(t)} thick × ${inch(partner.width - 2 * sh)} wide × ${inch(dep)} long${sh ? `, ${inch(sh)} shoulders` : ''}` })
   notes.push({ boardId: host.id, text: `Mortise ${inch(t)} × ${inch(partner.width - 2 * sh)} × ${inch(dep)} deep${jp.through ? ' (through)' : ''} for ${partner.name}` })
   if (jp.style === 'hozoSashi') notes.push({ boardId: partner.id, text: 'Saw two kerfs in the tenon for wedges; flare the far end of the mortise a little so the wedges lock it' })
-  if (jp.haunch) notes.push({ boardId: partner.id, text: 'Leave a short haunch at the top of the tenon to fill the panel groove' })
-  const cuts: (Cut | null)[] = [pocket(host, tenon), ...allBut(partner, O, tenon)]
+  let cuts: (Cut | null)[] = [pocket(host, tenon), ...allBut(partner, O, tenon)]
+  if (jp.haunch && sh > E) {
+    // A haunch: a short stub of tenon over the top shoulder that fills the end of the panel groove.
+    const hl = Math.min(dep / 3, 0.375)
+    const entry = inSign > 0 ? O.min[L] : O.max[L]
+    const big = sub(tenon, W, tenon.min[W], P.max[W])
+    const strip = sub(big, W, tenon.max[W], P.max[W])
+    const stub = sub(strip, L, inSign > 0 ? entry : entry - hl, inSign > 0 ? entry + hl : entry)
+    const beyond = sub(strip, L, inSign > 0 ? entry + hl : O.min[L], inSign > 0 ? O.max[L] : entry - hl)
+    // Reach a little past the strip's sides into wood already coming off, so the cutters overlap.
+    const pad = { min: { ...beyond.min }, max: { ...beyond.max } } as Box
+    pad.min[T] -= 0.01; pad.max[T] += 0.01; pad.max[W] += 0.01
+    const stubIn = { min: { ...stub.min }, max: { ...stub.max } } as Box
+    stubIn.min[W] -= 0.01
+    cuts = [pocket(host, tenon), pocket(host, stubIn), ...allBut(partner, O, big), pocket(partner, pad)]
+    notes.push({ boardId: partner.id, text: `Haunch ${inch(hl)} long over the top shoulder, to fill the panel groove` })
+  }
+  // A stopped tenon has to stop inside the host; past its far side the part would come out at full size.
+  const Pb = worldBox(partner)
+  const poking = inSign > 0 ? Pb.max[L] > H.max[L] + E : Pb.min[L] < H.min[L] - E
+  if (poking && !jp.through) return { cuts: cuts as Cut[], notes, problem: `The tenon is longer than ${host.name} is thick — make it shorter, or tick Through` }
+  if (wall < 0 - E) return { cuts: cuts as Cut[], notes, problem: `The tenon is wider than ${host.name} — make it thinner or add shoulders` }
   if (wall < 0.1875 - E && wall >= 0) return { cuts: cuts as Cut[], notes, problem: `The mortise walls in ${host.name} are only ${inch(Math.max(0, wall))} — move or thin the tenon` }
   return { cuts: cuts as Cut[], notes }
 }
@@ -197,7 +229,7 @@ const boxJoint: Builder = (p, host, partner, jp) => {
     cuts.push(k % 2 === 0 ? pocket(host, r) : pocket(partner, r))
   }
   const note = `${n} fingers, ${inch(fw)} wide`
-  return { cuts: cuts as Cut[], notes: [{ boardId: host.id, text: `Box joint: ${note}` }, { boardId: partner.id, text: `Box joint: ${note}` }] }
+  return { count: n, cuts: cuts as Cut[], notes: [{ boardId: host.id, text: `Box joint: ${note}` }, { boardId: partner.id, text: `Box joint: ${note}` }] }
 }
 
 /** Dovetail layout across a width: tails' centres and widths at the baseline (inner) and the end (outer). */
@@ -235,7 +267,7 @@ const dovetail: Builder = (p, host, partner, jp) => {
   ]
   const kind = jp.style === 'halfBlindDovetail' ? 'Half-blind dovetails' : 'Through dovetails'
   const lay1 = `${n} tail${n === 1 ? '' : 's'}, 1:${slope} slope, pins ${inch(pin)} at the narrow end, ${inch(depth)} deep`
-  return { cuts, notes: [{ boardId: partner.id, text: `${kind} (tails): ${lay1}` }, { boardId: host.id, text: `${kind} (pins): ${lay1}${jp.style === 'halfBlindDovetail' ? `, ${inch(jp.lap ?? 0.1875)} lap left on the face` : ''}` }] }
+  return { count: n, cuts, notes: [{ boardId: partner.id, text: `${kind} (tails): ${lay1}` }, { boardId: host.id, text: `${kind} (pins): ${lay1}${jp.style === 'halfBlindDovetail' ? `, ${inch(jp.lap ?? 0.1875)} lap left on the face` : ''}` }] }
 }
 
 const bridle: Builder = (p, host, partner, jp) => {
@@ -297,8 +329,8 @@ const dowel: Builder = (p, host, partner, jp) => {
     const at = { [t]: c, [s.long]: x, [s.across]: s.mid } as unknown as Vec3
     cuts.push(bore(host, at, t, hostSide, d, dh), bore(partner, at, t, (-hostSide) as 1 | -1, d, dp))
   }
-  const hw = `${n} × ${inch(d)} dowels, ${inch(dh + dp - 0.0625)} long`
-  return { cuts, hardware: hw, notes: [{ boardId: host.id, text: `${n} × ${inch(d)} dowel holes, ${inch(dh)} deep` }, { boardId: partner.id, text: `${n} × ${inch(d)} dowel holes, ${inch(dp)} deep` }] }
+  const hw = { qty: n, what: `${inch(d)} dowel, ${inch(dh + dp - 0.0625)} long` }
+  return { count: n, cuts, hardware: hw, notes: [{ boardId: host.id, text: `${n} × ${inch(d)} dowel holes, ${inch(dh)} deep` }, { boardId: partner.id, text: `${n} × ${inch(d)} dowel holes, ${inch(dp)} deep` }] }
 }
 
 const BISCUIT = { '0': { len: 2.125, half: 0.3125, label: '#0' }, '10': { len: 2.375, half: 0.375, label: '#10' }, '20': { len: 2.5, half: 0.4375, label: '#20' } }
@@ -320,16 +352,28 @@ function slots(host: Board, partner: Board, n: number, len: number, deep: number
 
 const biscuit: Builder = (p, host, partner, jp) => {
   const b = BISCUIT[jp.biscuit ?? '20']
-  const n = jp.count ?? 2
-  return { cuts: slots(host, partner, n, b.len, b.half, SLOT_T, 2), hardware: `${n} × ${b.label} biscuits`, notes: [host, partner].map(x => ({ boardId: x.id, text: `${n} × ${b.label} biscuit slots` })) }
+  // Each slot is a little longer than the biscuit; they need room side by side, inside the joint.
+  const { box, t } = patch(host, partner)
+  const long = spots(box, t, 1, 0).long
+  const room = box.max[long] - box.min[long]
+  const fits = Math.floor((room + E) / (b.len + 0.25))
+  // Unless told: about one every 6", as many as fit.
+  const n = jp.count ?? Math.max(1, Math.min(fits, Math.round(room / 6)))
+  {
+    if (n * (b.len + 0.25) > room + E) fail(`${n} ${b.label} biscuit${n === 1 ? '' : 's'} need ${inch(n * (b.len + 0.25))} of joint; this one is ${inch(room)} — use fewer or smaller biscuits, or dowels`)
+  }
+  return { count: n, cuts: slots(host, partner, n, b.len, b.half, SLOT_T, 2), hardware: { qty: n, what: `${b.label} biscuit` }, notes: [host, partner].map(x => ({ boardId: x.id, text: `${n} × ${b.label} biscuit slots` })) }
 }
 
 const looseTenon: Builder = (p, host, partner, jp) => {
   const t = jp.size ?? 0.25
   const n = jp.count ?? 1
-  const deep = jp.depth ?? 1
   if (t > Math.min(host.thickness, partner.thickness) / 2 + E) fail('The loose tenon is thicker than half the stock')
-  return { cuts: slots(host, partner, n, 4 * t, deep, t, 1.5), hardware: `${n} loose tenon${n === 1 ? '' : 's'} ${inch(t)} × ${inch(4 * t)} × ${inch(2 * deep)}`, notes: [host, partner].map(x => ({ boardId: x.id, text: `${n} mortise${n === 1 ? '' : 's'} ${inch(t)} × ${inch(4 * t)} × ${inch(deep)} deep for loose tenons` })) }
+  // Each mortise stops inside its part: at most three quarters of the way into it.
+  const { t: ax } = patch(host, partner)
+  const H = worldBox(host), P = worldBox(partner)
+  const deep = Math.min(jp.depth ?? 1, (H.max[ax] - H.min[ax]) * 0.75, (P.max[ax] - P.min[ax]) * 0.75)
+  return { count: n, cuts: slots(host, partner, n, 4 * t, deep, t, 1.5), hardware: { qty: n, what: `Loose tenon ${inch(t)} × ${inch(4 * t)} × ${inch(2 * deep - 0.0625)}` }, notes: [host, partner].map(x => ({ boardId: x.id, text: `${n} mortise${n === 1 ? '' : 's'} ${inch(t)} × ${inch(4 * t)} × ${inch(deep)} deep for loose tenons` })) }
 }
 
 const spline: Builder = (p, host, partner, jp) => {
@@ -339,7 +383,7 @@ const spline: Builder = (p, host, partner, jp) => {
   const [a, b] = UV[ax]
   const long = box.max[a] - box.min[a] >= box.max[b] - box.min[b] ? a : b
   const len = box.max[long] - box.min[long]
-  return { cuts: slots(host, partner, 1, len, deep, t, 0), hardware: `Spline ${inch(t)} × ${inch(2 * deep - 0.0625)} × ${inch(len)}`, notes: [host, partner].map(x => ({ boardId: x.id, text: `Spline groove ${inch(t)} wide × ${inch(deep)} deep` })) }
+  return { cuts: slots(host, partner, 1, len, deep, t, 0), hardware: { qty: 1, what: `Spline ${inch(t)} × ${inch(2 * deep - 0.0625)} × ${inch(len)}` }, notes: [host, partner].map(x => ({ boardId: x.id, text: `Spline groove ${inch(t)} wide × ${inch(deep)} deep` })) }
 }
 
 /** In-line splices: the region where the two beams' ends overlap, with length, width and height axes. */
@@ -370,8 +414,10 @@ const koshikakeAri: Builder = (p, host, partner) => {
   const right: [number, number][] = [[0, 0.65], [0, 1], [1, 1], [1, 0.8]]
   const shape = (pts: [number, number][]) => planeShape(s.L, s.W, s.O, s.lIn, s.dir, s.len, pts, s.H)
   const [a0, a1] = [midH, s.O.max[s.H]]
+  // The partner's side prisms reach a little down into its removed lower half, so its cutters overlap.
+  const dip = Math.min(0.05, (midH - s.O.min[s.H]) / 2)
   return {
-    cuts: [prism(host, s.H, a0, a1, shape(tail)), prism(partner, s.H, a0, a1, shape(left)), prism(partner, s.H, a0, a1, shape(right)),
+    cuts: [prism(host, s.H, a0, a1, shape(tail)), prism(partner, s.H, a0 - dip, a1, shape(left)), prism(partner, s.H, a0 - dip, a1, shape(right)),
       pocket(partner, sub(s.O, s.H, s.O.min[s.H], midH))].filter(Boolean) as Cut[],
     notes: [{ boardId: partner.id, text: `Koshikake ari tsugi: dovetail tenon ${inch(s.len)} long on the top half` }, { boardId: host.id, text: `Koshikake ari tsugi: dovetail socket and seat ${inch(s.len)} long` }]
   }
@@ -415,9 +461,10 @@ function scarf(host: Board, partner: Board, line: [number, number][], key: { l: 
   return { cuts, notes: [{ boardId: partner.id, text: `${name}: scarf ${inch(s.len)} long` }, { boardId: host.id, text: `${name}: scarf ${inch(s.len)} long${key ? '; cut the key slot through both after fitting' : ''}` }] }
 }
 
-// Partner's kept profile in (fraction along, fraction of height): it keeps the top over its own end, stepping down.
-const okkakeDaisen: Builder = (p, host, partner) => scarf(host, partner, [[0, 1], [1, 1], [1, 0.3], [0.55, 0.42], [0.55, 0.58], [0, 0.7]], { l: 0.5, h: 0.5, dl: 0.08, dh: 0.9 }, 'Okkake daisen tsugi')
-const kanawa: Builder = (p, host, partner) => scarf(host, partner, [[0, 1], [1, 1], [1, 0.25], [0.92, 0.25], [0.92, 0.35], [0.5, 0.42], [0.5, 0.58], [0.08, 0.65], [0.08, 0.75], [0, 0.75]], { l: 0.5, h: 0.5, dl: 0.06, dh: 0.95 }, 'Kanawa tsugi')
+// The partner's lower edge from where it enters (f = 0, thick: its body) to its tip (f = 1, thin), stepping
+// up through the middle where the key goes. Kanawa adds a small hooked step at each end.
+const okkakeDaisen: Builder = (p, host, partner) => scarf(host, partner, [[0, 0.3], [0.5, 0.42], [0.5, 0.58], [1, 0.7]], { l: 0.5, h: 0.5, dl: 0.08, dh: 0.9 }, 'Okkake daisen tsugi')
+const kanawa: Builder = (p, host, partner) => scarf(host, partner, [[0, 0.25], [0.08, 0.25], [0.08, 0.35], [0.5, 0.42], [0.5, 0.58], [0.92, 0.65], [0.92, 0.75], [1, 0.75]], { l: 0.5, h: 0.5, dl: 0.06, dh: 0.95 }, 'Kanawa tsugi')
 
 const shachiSen: Builder = (p, host, partner, jp) => {
   const r = mortiseTenon(p, host, partner, { ...jp, through: true })

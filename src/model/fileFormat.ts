@@ -117,6 +117,7 @@ function jointParamsOk(type: string, p: Record<string, any>): boolean {
       const pos = (k: string) => p[k] === undefined || (isNum(p[k]) && p[k] >= 0 && p[k] < 1000)
       return oneOf(p.style, JOINERY_STYLES) && ['depth', 'size', 'count', 'shoulder', 'slope', 'lap'].every(pos) &&
         (p.through === undefined || typeof p.through === 'boolean') && (p.haunch === undefined || typeof p.haunch === 'boolean') &&
+        (p.count === undefined || p.count >= 1) && (p.slope === undefined || p.slope >= 2) &&
         (p.biscuit === undefined || oneOf(p.biscuit, ['0', '10', '20'])) && (p.customId === undefined || isStr(p.customId))
     }
     default:

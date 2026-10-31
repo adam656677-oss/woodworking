@@ -3,6 +3,8 @@ import { makeBoard, ORIENT } from '../../src/templates/place'
 import { addJoint, removeJoint, updateJoint } from '../../src/model/ops'
 import { contactBetween } from '../../src/model/contact'
 import { localSolids, volumeAndCentroid } from '../../src/checks/solids'
+import { cutGeometry, pointRemovedBy } from '../../src/model/joints'
+import { toLocal, worldBox } from '../../src/model/geometry'
 import { validate } from '../../src/model/validate'
 import { cutList } from '../../src/model/cutlist'
 import { dovetailLayout } from '../../src/joinery/cuts'
@@ -174,3 +176,141 @@ test('a dovetailed drawer: half-blind at the front, through at the back, no warn
   expect(js).toEqual(['dovetail', 'dovetail', 'halfBlindDovetail', 'halfBlindDovetail'])
   expect(validate(r.project).filter(w => w.kind === 'badJoint' || w.kind === 'overlap').map(w => w.message)).toEqual([])
 }, 60000)
+
+/** Samples the overlap of two parts: how many points both keep, and how many neither keeps (outside `skip`). */
+function balance(q: Project, aId: string, bId: string, skip: (p: { x: number; y: number; z: number }) => boolean = () => false) {
+  const cuts = cutGeometry(q)
+  const A = q.boards.find(b => b.id === aId)!, B = q.boards.find(b => b.id === bId)!
+  const kept = (b: typeof A, w: { x: number; y: number; z: number }) => {
+    const l = toLocal(b, w)
+    const inside = l.x > 1e-6 && l.y > 1e-6 && l.z > 1e-6 && l.x < b.width - 1e-6 && l.y < b.length - 1e-6 && l.z < b.thickness - 1e-6
+    return inside && !cuts.some(c => c.boardId === b.id && pointRemovedBy(c, l, b))
+  }
+  const a = worldBox(A), b = worldBox(B)
+  const lo = { x: Math.max(a.min.x, b.min.x), y: Math.max(a.min.y, b.min.y), z: Math.max(a.min.z, b.min.z) }
+  const hi = { x: Math.min(a.max.x, b.max.x), y: Math.min(a.max.y, b.max.y), z: Math.min(a.max.z, b.max.z) }
+  let both = 0, neither = 0, n = 0
+  const N = Number(process.env.SAMPLES ?? 16)
+  for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) for (let k = 0; k < N; k++) {
+    const w = { x: lo.x + ((i + 0.5) / N) * (hi.x - lo.x), y: lo.y + ((j + 0.5) / N) * (hi.y - lo.y), z: lo.z + ((k + 0.5) / N) * (hi.z - lo.z) }
+    if (skip(w)) continue
+    n++
+    const ka = kept(A, w), kb = kept(B, w)
+    if (ka && kb) both++
+    if (!ka && !kb) { neither++; if (process.env.DBG && neither < 6) console.log('neither', w) }
+  }
+  return { both: both / n, neither: neither / n }
+}
+
+test.each(['okkakeDaisen', 'kanawa', 'koshikakeAri', 'kama'] as const)('%s splice: every bit of the overlap belongs to exactly one beam (outside the key slot)', style => {
+  const p = base()
+  p.woods.push({ ...wood(p, 'hw-4-4'), id: 'beam', name: 'Beam', thickness: 3.5, width: 3.5, builtIn: false })
+  const a = makeBoard('A', wood(p, 'beam'), 3.5, 30, ORIENT.flatX, { x: 0, y: 0, z: 0 })
+  const b = makeBoard('B', wood(p, 'beam'), 3.5, 30, ORIENT.flatX, { x: 30, y: 0, z: 0 })
+  const p0 = { ...p, boards: [a, b] }
+  const c = contactBetween(p0, a.id, b.id)!
+  const { project: q } = ok(addJoint(p0, 'joinery', c.host, c.partner, { style }))
+  const A = worldBox(q.boards[0]), B = worldBox(q.boards[1])
+  const x0 = Math.max(A.min.x, B.min.x), x1 = Math.min(A.max.x, B.max.x), mid = (x0 + x1) / 2
+  // The key slot sits in the middle of the scarf.
+  const r = balance(q, a.id, b.id, w => Math.abs(w.x - mid) < (x1 - x0) * 0.06)
+  expect(r.both).toBe(0)
+  expect(r.neither).toBeLessThan(0.02)
+}, 60000)
+
+test('a tenon longer than the post is thick, not through: a problem', () => {
+  const p0 = legAndRail()
+  const c = contactBetween(p0, p0.boards[0].id, p0.boards[1].id)!
+  const r = addJoint(p0, 'joinery', c.host, c.partner, { style: 'mortiseTenon', depth: 2.5 })
+  expect('error' in r ? r.error : 'added').toMatch(/added|longer than/)
+  if (!('error' in r)) {
+    const ws = validate(r.project).filter(w => w.kind === 'badJoint').map(w => w.message).join(' ')
+    expect(ws).toMatch(/longer than|Through/i)
+  }
+})
+
+test('loose tenon mortises never run out the far face of thin stock; biscuits that do not fit are refused', () => {
+  const p = base()
+  const w = wood(p, 'ply-3-4')
+  const side = makeBoard('Side', w, 12, 30, ORIENT.uprightY, { x: 0, y: 0, z: 0 })
+  const shelf = makeBoard('Shelf', w, 12, 20, ORIENT.flatX, { x: 0.71875, y: 0, z: 10 })
+  const p0 = { ...p, boards: [side, shelf] }
+  const c = contactBetween(p0, side.id, shelf.id)!
+  const { project: q } = ok(addJoint(p0, 'joinery', c.host, c.partner, { style: 'looseTenon' }))
+  const host = q.boards.find(b => b.id === q.joints[0].hostBoardId)!
+  for (const cut of cutGeometry(q).filter(x => x.boardId === host.id && x.kind === 'pocket')) {
+    if (cut.kind !== 'pocket') continue
+    // In the host's own axes z is the thickness: the mortise stops inside it.
+    expect(cut.max.z - cut.min.z).toBeLessThan(host.thickness * 0.8)
+  }
+  // A 2-1/2" rail can't take two #20 biscuits.
+  const p1 = base()
+  const rw = wood(p1, '1x3')
+  const stile = makeBoard('Stile', rw, 2.5, 30, ORIENT.uprightY, { x: 0, y: 0, z: 0 })
+  const rail = makeBoard('Rail', rw, 2.5, 20, ORIENT.flatX, { x: 0.75, y: 0, z: 10 })
+  const p2 = { ...p1, boards: [stile, rail] }
+  const c2 = contactBetween(p2, stile.id, rail.id)
+  expect(c2).toBeTruthy()
+  if (c2) {
+    const r2 = addJoint(p2, 'joinery', c2.host, c2.partner, { style: 'biscuit', count: 2, biscuit: '20' })
+    const msg = 'error' in r2 ? r2.error : validate(r2.project).filter(w => w.kind === 'badJoint').map(w => w.message).join(' ')
+    expect(msg).toMatch(/biscuit/i)
+  }
+})
+
+test('a cut joint is not reported as interference (shelf mortise and tenon with shoulders, koshikake splice)', async () => {
+  const { interferences } = await import('../../src/checks/solids')
+  const p = base()
+  const w = wood(p, '1x12')
+  const side = makeBoard('Side', w, 11.25, 30, ORIENT.uprightY, { x: 0, y: 0, z: 0 })
+  const shelf = makeBoard('Shelf', w, 11.25, 20, ORIENT.flatX, { x: 0.75, y: 0, z: 10 })
+  const p0 = { ...p, boards: [side, shelf] }
+  const c = contactBetween(p0, side.id, shelf.id)!
+  const { project: q } = ok(addJoint(p0, 'joinery', c.host, c.partner, { style: 'mortiseTenon', shoulder: 1, size: 0.25 }))
+  expect(interferences(q).map(x => x.volume)).toEqual([])
+  p.woods.push({ ...wood(p, 'hw-4-4'), id: 'beam', name: 'Beam', thickness: 3.5, width: 3.5, builtIn: false })
+  const a = makeBoard('A', wood(p, 'beam'), 3.5, 30, ORIENT.flatX, { x: 0, y: 0, z: 0 })
+  const b = makeBoard('B', wood(p, 'beam'), 3.5, 30, ORIENT.flatX, { x: 30, y: 0, z: 0 })
+  const p1 = { ...p, boards: [a, b] }
+  const c1 = contactBetween(p1, a.id, b.id)!
+  for (const style of ['koshikakeAri', 'okkakeDaisen', 'kanawa', 'kama'] as const) {
+    const { project: r } = ok(addJoint(p1, 'joinery', c1.host, c1.partner, { style }))
+    expect([style, interferences(r).map(x => x.volume)]).toEqual([style, []])
+  }
+}, 60000)
+
+test('flat patterns (DXF) show the cut joints on their own layer', async () => {
+  const { flatPatterns } = await import('../../src/exchange/flat')
+  const { addDrawer, DRAWER_DEFAULTS } = await import('../../src/cabinet/drawers')
+  const r = addDrawer(emptyProject('T'), { x: 0, y: 0, z: 0, width: 16, height: 6, depth: 22 }, { ...DRAWER_DEFAULTS, joinery: 'dovetail' })
+  if ('error' in r) throw new Error(r.error)
+  const dxf = flatPatterns(r.project)
+  expect(dxf).toContain('2\nJOINERY')
+  expect((dxf.match(/8\nJOINERY/g) ?? []).length).toBeGreaterThan(8)
+}, 30000)
+
+test('changing settings keeps them sensible: whole counts, a slope, a lap thinner than the part', () => {
+  const p0 = legAndRail()
+  const c = contactBetween(p0, p0.boards[0].id, p0.boards[1].id)!
+  const { project: q } = ok(addJoint(p0, 'joinery', c.host, c.partner, { style: 'mortiseTenon' }))
+  const id = q.joints[0].id
+  const r = updateJoint(q, id, { count: 0, slope: 0, lap: 9, depth: -1 })
+  const jp = r.joints[0].params as JoineryParams
+  expect(jp.count).toBe(1)
+  expect(jp.slope).toBe(2)
+  expect(jp.lap).toBeLessThan(q.boards.find(b => b.id === q.joints[0].hostBoardId)!.thickness)
+  expect(jp.depth).toBeGreaterThan(0)
+  expect('count' in (updateJoint(r, id, { count: undefined }).joints[0].params as object)).toBe(false)
+})
+
+test('a haunched tenon: the stub over the top shoulder fills its own socket; the wood is shared out exactly', () => {
+  const p0 = legAndRail()
+  const c = contactBetween(p0, p0.boards[0].id, p0.boards[1].id)!
+  const { project: q } = ok(addJoint(p0, 'joinery', c.host, c.partner, { style: 'mortiseTenon', shoulder: 0.75, haunch: true }))
+  const r = balance(q, q.boards[0].id, q.boards[1].id)
+  expect(r.both).toBe(0)
+  expect(r.neither).toBe(0)
+  const plain = ok(addJoint(p0, 'joinery', c.host, c.partner, { style: 'mortiseTenon', shoulder: 0.75 })).project
+  const rail = (x: Project) => vols(x).get('Rail')!
+  expect(rail(q)).toBeGreaterThan(rail(plain) + 0.01)
+}, 30000)

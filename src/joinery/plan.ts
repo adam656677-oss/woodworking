@@ -37,7 +37,7 @@ export function joineryDefaults(p: Project, style: JoineryStyle, host: Board, pa
     case 'tongueGroove': return { style, size: s16(T / 3), depth: snap64(Math.min(0.375, host.width / 4)) }
     case 'spline': return { style, size: 0.25, depth: 0.375 }
     case 'dowel': return { style, size: Math.min(0.375, s16(Math.min(host.thickness, partner.thickness) / 2)), count: 2, depth: 1 }
-    case 'biscuit': return { style, biscuit: '20', count: 2 }
+    case 'biscuit': return { style, biscuit: '20' }
     case 'looseTenon': return { style, size: Math.min(0.375, s16(Math.min(host.thickness, partner.thickness) / 3)), count: 1, depth: 1 }
     case 'koshikakeAri': case 'kama': return { style, depth: snap64(1.5 * Math.max(host.thickness, host.width)) }
     case 'okkakeDaisen': case 'kanawa': return { style, depth: snap64(3 * Math.max(host.thickness, host.width)) }

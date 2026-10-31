@@ -33,3 +33,8 @@ test('crossing beams: a cross lap lifts out upward only', () => {
   expect(slideDirs(g)).toEqual(['z+'])
   expect(report(g, 3.5).ok).toBe(true)
 })
+
+test('the dovetail preset only goes together from above', () => {
+  const r = report(preset('dovetail', 'inline', 8), 4)
+  expect(r.slides).toEqual(['z+'])
+})

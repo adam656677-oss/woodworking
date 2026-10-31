@@ -174,7 +174,8 @@ export function preset(name: 'lap' | 'tenon' | 'dovetail' | 'empty', layout: Gri
     let b = false
     if (name === 'lap') b = layout === 'inline' ? k >= half : k >= half
     if (name === 'tenon') b = layout === 'inline' ? j >= Math.floor(n / 3) && j < n - Math.floor(n / 3) && k >= Math.floor(n / 3) && k < n - Math.floor(n / 3) : k >= half
-    if (name === 'dovetail') b = layout === 'inline' ? (k >= half && Math.abs(j - (n - 1) / 2) <= (n / 4) * (i / Math.max(1, n - 1) + 0.5)) || k < 0 : k >= half
+    // The tail flares toward its tip (i = 0) and narrows toward B's body, so it can only drop in from above.
+    if (name === 'dovetail') b = layout === 'inline' ? k >= half && Math.abs(j - (n - 1) / 2) <= (n / 4) * (1.5 - i / Math.max(1, n - 1)) : k >= half
     if (b) g = setCell(g, i, j, k, '1')
   })
   return g

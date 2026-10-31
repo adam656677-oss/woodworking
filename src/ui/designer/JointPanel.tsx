@@ -1,7 +1,8 @@
+import { useMemo } from 'react'
 import { contactBetween, jointOffers } from '../../model/contact'
 import { addJoint, removeJoint, updateJoint } from '../../model/ops'
 import type { ButtParams, GrooveParams, Joint, JointType, JoineryParams, JoineryStyle, MiterParams, PocketParams } from '../../model/types'
-import { STYLE_NAMES } from '../../joinery/cuts'
+import { joineryCuts, STYLE_NAMES } from '../../joinery/cuts'
 import { joineryOffers } from '../../joinery/plan'
 import { studio, useStudio } from '../store'
 import { NumberInput } from '../common/NumberInput'
@@ -23,6 +24,8 @@ function JoinerySettings({ joint }: { joint: Joint }) {
   const apply = studio.getState().apply
   const jp = joint.params as JoineryParams
   const set = (patch: Partial<JoineryParams>) => apply(p => updateJoint(p, joint.id, patch))
+  const project = useStudio(s => s.project)
+  const built = useMemo(() => joineryCuts(project, joint), [project, joint])
   const problem = useStudio(s => s.warnings.find(w => w.kind === 'badJoint' && w.boardIds.includes(joint.hostBoardId) && w.boardIds.includes(joint.partnerBoardId))?.message)
   return (
     <div className="flex flex-col gap-2">
@@ -30,8 +33,16 @@ function JoinerySettings({ joint }: { joint: Joint }) {
       {(FIELDS[jp.style] ?? []).map(f => {
         if (f === 'through' || f === 'haunch') return <label key={f} className="flex items-center gap-2 text-xs"><input type="checkbox" checked={!!jp[f]} onChange={e => set({ [f]: e.target.checked })} />{LABELS[f]}</label>
         if (f === 'biscuit') return <label key={f} className="flex items-center justify-between text-xs">Biscuit<select aria-label="Biscuit size" value={jp.biscuit ?? '20'} onChange={e => set({ biscuit: e.target.value as JoineryParams['biscuit'] })} className="rounded border px-1 text-sm"><option value="0">#0</option><option value="10">#10</option><option value="20">#20</option></select></label>
-        if (f === 'count') return <NumberField key={f} label={LABELS[f]} value={jp.count ?? 1} min={1} max={40} onChange={v => set({ count: v })} />
+        if (f === 'count') return (
+          <div key={f} className="flex flex-col gap-0.5">
+            <NumberField label={LABELS[f]} value={built.count ?? jp.count ?? 1} min={1} max={40} onChange={v => set({ count: v })} />
+            {jp.count === undefined ? <span className="text-xs text-stone-500">Worked out from the size; type a number to set it.</span>
+              : jp.style === 'boxJoint' && built.count !== jp.count ? <span className="text-xs text-stone-500">Box joints need an odd number: cutting {built.count}.</span>
+              : <button className="self-start text-xs text-amber-800 underline" onClick={() => set({ count: undefined })}>Work it out for me</button>}
+          </div>
+        )
         if (f === 'slope') return <NumberField key={f} label={LABELS[f]} value={jp.slope ?? 8} min={4} max={12} onChange={v => set({ slope: v })} />
+        if (f === 'depth' && jp.through) return <p key={f} className="text-xs text-stone-500">Length: right through {joint.hostBoardId && project.boards.find(b => b.id === joint.hostBoardId)?.name}</p>
         return <InchInput key={f} label={LABELS[f]} allowZero={f === 'shoulder'} value={jp[f] ?? 0} onChange={v => set({ [f]: v })} />
       })}
       {problem && <p role="alert" className="text-xs text-red-700">{problem}</p>}

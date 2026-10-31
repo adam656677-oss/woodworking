@@ -84,6 +84,8 @@ export function weigh(p: Project, solids = localSolids(p)): WeightReport {
 export type Interference = { a: string; b: string; volume: number }
 /** Less than this (cu in) shared is touching, not running into each other. */
 export const INTERFERENCE_MIN = 0.0005
+/** Between parts joined by a cut joint: at least this (cubic inches), or 1% of the space they share. */
+export const JOINED_MIN = 0.25
 
 const boxesOverlap = (a: Box, b: Box) =>
   a.min.x < b.max.x - 1e-6 && b.min.x < a.max.x - 1e-6 && a.min.y < b.max.y - 1e-6 && b.min.y < a.max.y - 1e-6 && a.min.z < b.max.z - 1e-6 && b.min.z < a.max.z - 1e-6
@@ -98,13 +100,18 @@ export function interferences(p: Project, solids = localSolids(p)): Interference
     return br
   }
   const out: Interference[] = []
+  // Parts joined by a cut joint share many faces exactly; the solid code leaves crumbs along them. The joints'
+  // own cuts are checked to share the wood out exactly, so only something bigger counts there.
+  const joined = new Set(p.joints.filter(j => j.type === 'joinery').flatMap(j => [`${j.hostBoardId}|${j.partnerBoardId}`, `${j.partnerBoardId}|${j.hostBoardId}`]))
   for (let i = 0; i < p.boards.length; i++) {
     for (let j = i + 1; j < p.boards.length; j++) {
       const A = p.boards[i], B = p.boards[j]
       if (!boxesOverlap(boxes.get(A.id)!, boxes.get(B.id)!)) continue
       const r = evaluator.evaluate(brush(A), brush(B), INTERSECTION) as Brush
       const v = volumeAndCentroid(r.geometry).volume
-      if (v > INTERFERENCE_MIN) out.push({ a: A.id, b: B.id, volume: v })
+      const a = boxes.get(A.id)!, b = boxes.get(B.id)!
+      const shared = ['x', 'y', 'z'].reduce((k, ax) => k * Math.max(0, Math.min(a.max[ax as 'x'], b.max[ax as 'x']) - Math.max(a.min[ax as 'x'], b.min[ax as 'x'])), 1)
+      if (v > (joined.has(`${A.id}|${B.id}`) ? Math.max(JOINED_MIN, shared * 0.01) : INTERFERENCE_MIN)) out.push({ a: A.id, b: B.id, volume: v })
     }
   }
   // Reference models (an appliance, say) count too, unless left out of the checks.

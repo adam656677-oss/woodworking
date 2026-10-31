@@ -429,6 +429,17 @@ export function updateJoint(p: Project, id: string, params: Record<string, unkno
   let next = p
   let restore = j.restore
   const merged = { ...j.params, ...params } as Joint['params']
+  if (j.type === 'joinery') {
+    // The same limits adding a joint has: whole counts, a real slope, a lap thinner than the part it's left on.
+    const jp = merged as JoineryParams
+    const host = getBoard(p, j.hostBoardId)
+    if (jp.count !== undefined) jp.count = Math.max(1, Math.round(jp.count))
+    if (jp.slope !== undefined) jp.slope = Math.max(2, jp.slope)
+    if (jp.lap !== undefined && host) jp.lap = Math.min(Math.max(0, jp.lap), Math.max(0, host.thickness - 0.125))
+    if (jp.depth !== undefined) jp.depth = Math.max(0.0625, jp.depth)
+    if (jp.size !== undefined) jp.size = Math.max(0.0625, jp.size)
+    for (const k of Object.keys(jp) as (keyof JoineryParams)[]) if (jp[k] === undefined) delete jp[k]
+  }
   if ((j.type === 'dado' || j.type === 'rabbet') && params.depth !== undefined) {
     const old = (j.params as GrooveParams).depth
     const nd = snap64(params.depth as number)

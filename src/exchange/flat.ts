@@ -1,5 +1,5 @@
 // Flat patterns for laser, CNC and cutting templates: each part's outline, holes and grooves, laid out in rows (DXF R12, inches).
-import { cutGeometry, type BoxCut } from '../model/joints'
+import { cutGeometry, type BoxCut, type Cut } from '../model/joints'
 import { outlinePolygons } from '../model/shaped'
 import type { Board, Project } from '../model/types'
 import { formatInches } from '../model/units'
@@ -12,12 +12,12 @@ const GAP = 1
 const TEXT_H = 0.5
 
 function line(a: Pt, b: Pt, layer: string): string[] {
-  return ['0\nLINE', pair(8, layer), ...(layer === 'GROOVES' ? [pair(6, 'DASHED')] : []), pair(10, a.x), pair(20, a.y), pair(30, 0), pair(11, b.x), pair(21, b.y), pair(31, 0)]
+  return ['0\nLINE', pair(8, layer), ...(layer === 'GROOVES' || layer === 'JOINERY' ? [pair(6, 'DASHED')] : []), pair(10, a.x), pair(20, a.y), pair(30, 0), pair(11, b.x), pair(21, b.y), pair(31, 0)]
 }
 const loop = (pts: Pt[], layer: string) => pts.flatMap((p, i) => line(p, pts[(i + 1) % pts.length], layer))
 
 /** One part's drawing in its own flat coordinates: length across (x), width up (y). */
-function partEntities(p: Project, b: Board, at: Pt, cuts: BoxCut[]): string[] {
+function partEntities(p: Project, b: Board, at: Pt, cuts: BoxCut[], joinery: Cut[] = []): string[] {
   // Seen from the top face: local (u across the width, v along the length) → flat (v, width − u), a turn, not a mirror.
   const P = (u: number, v: number): Pt => ({ x: at.x + v, y: at.y + b.width - u })
   const out: string[] = []
@@ -33,6 +33,26 @@ function partEntities(p: Project, b: Board, at: Pt, cuts: BoxCut[]): string[] {
     if (u1 - u0 < 1e-9 || v1 - v0 < 1e-9) continue
     out.push(...loop([P(u0, v0), P(u1, v0), P(u1, v1), P(u0, v1)], 'GROOVES'))
   }
+  // Cut joints seen from the face: mortises, sockets, fingers and tails as their outlines, dowel holes as circles.
+  const rect = (u0: number, v0: number, u1: number, v1: number) => {
+    const a = Math.max(0, Math.min(u0, u1)), c = Math.min(b.width, Math.max(u0, u1)), d0 = Math.max(0, Math.min(v0, v1)), d1 = Math.min(b.length, Math.max(v0, v1))
+    if (c - a > 1e-6 && d1 - d0 > 1e-6) out.push(...loop([P(a, d0), P(c, d0), P(c, d1), P(a, d1)], 'JOINERY'))
+  }
+  for (const c of joinery) {
+    if (c.kind === 'pocket') rect(c.min.x, c.min.y, c.max.x, c.max.y)
+    else if (c.kind === 'prism') {
+      if (c.axis === 'z') out.push(...loop(c.poly.map(([u, v]) => P(Math.max(0, Math.min(b.width, u)), Math.max(0, Math.min(b.length, v)))), 'JOINERY'))
+      else {
+        // Cut in from an edge or end: its footprint on the face.
+        const lo = Math.min(...c.poly.map(q => q[0])), hi = Math.max(...c.poly.map(q => q[0]))
+        if (c.axis === 'x') rect(c.from, lo, c.to, hi)
+        else rect(lo, c.from, hi, c.to)
+      }
+    } else if (c.kind === 'bore' && c.axis === 'z') {
+      const q = P(c.center.x, c.center.y)
+      out.push('0\nCIRCLE', pair(8, 'JOINERY'), pair(10, q.x), pair(20, q.y), pair(30, 0), pair(40, c.diameter / 2))
+    }
+  }
   out.push('0\nTEXT', pair(8, 'TEXT'), pair(10, at.x), pair(20, at.y - TEXT_H - 0.25), pair(30, 0), pair(40, TEXT_H), pair(1, `${b.name} ${formatInches(b.width)} x ${formatInches(b.length)}`))
   return out
 }
@@ -40,18 +60,20 @@ function partEntities(p: Project, b: Board, at: Pt, cuts: BoxCut[]): string[] {
 /** Every part (or the chosen ones) laid out in rows 1" apart, labelled. */
 export function flatPatterns(p: Project, ids?: string[]): string {
   const boards = ids ? p.boards.filter(b => ids.includes(b.id)) : p.boards
-  const cuts = cutGeometry(p).filter((c): c is BoxCut => c.kind === 'dado' || c.kind === 'rabbet')
+  const all = cutGeometry(p)
+  const cuts = all.filter((c): c is BoxCut => c.kind === 'dado' || c.kind === 'rabbet')
+  const joinery = all.filter(c => c.kind === 'pocket' || c.kind === 'prism' || c.kind === 'bore')
   const ents: string[] = []
   let x = 0, y = 0, rowH = 0
   for (const b of boards) {
     const w = b.length, h = b.width
     if (x > 0 && x + w > ROW) { x = 0; y += rowH + GAP + TEXT_H + 0.5; rowH = 0 }
-    ents.push(...partEntities(p, b, { x, y: y + TEXT_H + 0.5 }, cuts.filter(c => c.boardId === b.id)))
+    ents.push(...partEntities(p, b, { x, y: y + TEXT_H + 0.5 }, cuts.filter(c => c.boardId === b.id), joinery.filter(c => c.boardId === b.id)))
     x += w + GAP
     rowH = Math.max(rowH, h)
   }
-  const layers = ['OUTLINE', 'CUTOUTS', 'GROOVES', 'TEXT']
-  const layerTable = layers.flatMap((name, i) => ['0\nLAYER', pair(2, name), pair(70, 0), pair(62, i + 1), pair(6, name === 'GROOVES' ? 'DASHED' : 'CONTINUOUS')])
+  const layers = ['OUTLINE', 'CUTOUTS', 'GROOVES', 'TEXT', 'JOINERY']
+  const layerTable = layers.flatMap((name, i) => ['0\nLAYER', pair(2, name), pair(70, 0), pair(62, i + 1), pair(6, name === 'GROOVES' || name === 'JOINERY' ? 'DASHED' : 'CONTINUOUS')])
   const ltypes = ['0\nLTYPE', pair(2, 'CONTINUOUS'), pair(70, 0), pair(3, 'Solid line'), pair(72, 65), pair(73, 0), pair(40, 0),
     '0\nLTYPE', pair(2, 'DASHED'), pair(70, 0), pair(3, '__ __ __'), pair(72, 65), pair(73, 2), pair(40, 0.375), pair(49, 0.25), pair(49, -0.125)]
   return [
