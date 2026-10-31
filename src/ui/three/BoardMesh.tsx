@@ -1,5 +1,5 @@
 import type { ThreeEvent } from '@react-three/fiber'
-import { forwardRef, useMemo } from 'react'
+import { forwardRef, useEffect, useMemo } from 'react'
 import { bandOf } from '../../optimize/banding'
 import * as THREE from 'three'
 import { Brush, Evaluator, SUBTRACTION } from 'three-bvh-csg'
@@ -9,6 +9,7 @@ import type { Pt } from '../../sketch/types'
 import { extrudeOutline, type OutlineProfile } from './shapeGeometry'
 import { profileBrush } from './profileCutter'
 import { turnedLeg, type TurnedLeg } from './turnedGeometry'
+import { woodMaterial, type WoodUniformsIn } from '../../render/woodMaterial'
 
 export type BoardShape = { outer: Pt[]; holes: Pt[][]; profiles?: OutlineProfile[] }
 
@@ -133,11 +134,13 @@ type Props = {
   offset?: { x: number; y: number; z: number }
   /** Section planes: the cut-away side is hidden and the inside shows as a solid cap colour. */
   clip?: THREE.Plane[]
+  /** The realistic look: grown wood grain and the finish, with shadows. CAD colours when absent. */
+  real?: WoodUniformsIn
 }
 
 const deg = (d: number) => (d * Math.PI) / 180
 
-export const BoardMesh = forwardRef<THREE.Group, Props>(function BoardMesh({ board, cuts, kind, shape, turned, selected, warned, onSelect, offset, clip }, ref) {
+export const BoardMesh = forwardRef<THREE.Group, Props>(function BoardMesh({ board, cuts, kind, shape, turned, selected, warned, onSelect, offset, clip, real }, ref) {
   const geometry = useBoardGeometry(board, cuts, shape, turned)
   // Outline the board's overall shape (cut seams would show triangulation lines across flat faces).
   const shapeKey = JSON.stringify([shape ?? null, turned ?? null])
@@ -151,6 +154,15 @@ export const BoardMesh = forwardRef<THREE.Group, Props>(function BoardMesh({ boa
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [board.width, board.length, board.thickness, shapeKey])
   const color = warned ? '#e57373' : COLORS[kind]
+  const realKey = real ? JSON.stringify(real) : ''
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const realMat = useMemo(() => (real ? woodMaterial(real) : null), [realKey])
+  useEffect(() => () => realMat?.dispose(), [realMat])
+  if (realMat) {
+    realMat.clippingPlanes = clip ?? []
+    realMat.emissive.set(selected ? '#ff9800' : '#000000')
+    realMat.emissiveIntensity = selected ? 0.3 : 0
+  }
   return (
     <group
       ref={ref}
@@ -158,9 +170,13 @@ export const BoardMesh = forwardRef<THREE.Group, Props>(function BoardMesh({ boa
       position={[board.position.x + (offset?.x ?? 0), board.position.y + (offset?.y ?? 0), board.position.z + (offset?.z ?? 0)]}
       rotation={new THREE.Euler(deg(board.rotation.x), deg(board.rotation.y), deg(board.rotation.z), 'XYZ')}
     >
-      <mesh geometry={geometry} onClick={onSelect} userData={{ boardId: board.id }}>
-        <meshStandardMaterial flatShading color={color} roughness={0.85} emissive={selected ? '#ff9800' : '#000000'} emissiveIntensity={selected ? 0.35 : 0} clippingPlanes={clip ?? []} />
-      </mesh>
+      {realMat ? (
+        <mesh geometry={geometry} onClick={onSelect} userData={{ boardId: board.id }} material={realMat} castShadow receiveShadow />
+      ) : (
+        <mesh geometry={geometry} onClick={onSelect} userData={{ boardId: board.id }}>
+          <meshStandardMaterial flatShading color={color} roughness={0.85} emissive={selected ? '#ff9800' : '#000000'} emissiveIntensity={selected ? 0.35 : 0} clippingPlanes={clip ?? []} />
+        </mesh>
+      )}
       {clip && clip.length > 0 && (
         // Inside faces seen through the cut read as the solid cut face.
         <mesh geometry={geometry} raycast={() => null}>
@@ -168,9 +184,12 @@ export const BoardMesh = forwardRef<THREE.Group, Props>(function BoardMesh({ boa
         </mesh>
       )}
       {board.banding && !shape && !turned && <BandStrips board={board} clip={clip} />}
-      <lineSegments geometry={outline} raycast={() => null}>
-        <lineBasicMaterial color={selected ? '#e65100' : '#5d4037'} clippingPlanes={clip ?? []} />
-      </lineSegments>
+      {/* Realistic: no drawn edges, except round the selected part. */}
+      {(!real || selected) && (
+        <lineSegments geometry={outline} raycast={() => null}>
+          <lineBasicMaterial color={selected ? '#e65100' : '#5d4037'} clippingPlanes={clip ?? []} />
+        </lineSegments>
+      )}
     </group>
   )
 })

@@ -18,6 +18,10 @@ import { References3D } from '../../shop/ui/References3D'
 import { worldAt } from '../../shop/references'
 import { Models3D } from '../../exchange/ui/Models3D'
 import { modelBox } from '../../exchange/models'
+import { useRender } from '../../render/renderStore'
+import { finishLook, grainFrame, LIGHTS, seedOf, varied, woodLook } from '../../render/materials'
+import type { WoodUniformsIn } from '../../render/woodMaterial'
+import { CAD_BACKGROUND, Camera, RealStage } from '../../render/ui/Stage'
 
 export default function Scene() {
   const project = useStudio(s => s.project)
@@ -99,6 +103,19 @@ export default function Scene() {
     const multi = e.nativeEvent.ctrlKey || e.nativeEvent.metaKey || e.nativeEvent.shiftKey
     s.select(multi ? (s.selection.includes(id) ? s.selection.filter(x => x !== id) : [...s.selection, id]) : [id])
   }
+  const mode = useRender(r => r.mode)
+  const light = useRender(r => r.light)
+  const real = mode === 'real'
+  // Each part's wood, grain and finish for the realistic look.
+  const looks = useMemo(() => {
+    if (!real) return null
+    const fin = finishLook(project.finish)
+    const byWood = new Map(project.woods.map(w => [w.id, woodLook(w)]))
+    return new Map(project.boards.map((b): [string, WoodUniformsIn] => {
+      const g = grainFrame(b)
+      return [b.id, { look: varied(byWood.get(b.woodId) ?? woodLook(undefined), b.id), finish: fin, seed: seedOf(b.id), alongY: g.along === 'y', pith: g.pith, thickness: b.thickness }]
+    }))
+  }, [real, project.boards, project.woods, project.finish])
   const kindOf = (woodId: string) => project.woods.find(w => w.id === woodId)?.kind ?? 'lumber'
   const gridSize = bounds ? Math.ceil(Math.max(bounds.max.x - bounds.min.x, bounds.max.y - bounds.min.y, 24) / 12) * 12 + 24 : 48
 
@@ -108,13 +125,19 @@ export default function Scene() {
       data-testid="scene"
       onPointerMissed={() => !studio.getState().measuring && studio.getState().select([])}
       gl={{ preserveDrawingBuffer: true }}
-      style={{ background: '#f5f1ea' }}
+      shadows="soft"
+      style={{ background: real ? LIGHTS[light].background : CAD_BACKGROUND }}
     >
       <ViewControls view={view} bounds={bounds} projectKey={projectKey} boardCount={project.boards.length} />
-      <ambientLight intensity={0.6} />
-      <directionalLight position={[-40, -60, 90]} intensity={1.6} />
-      <directionalLight position={[50, 40, 30]} intensity={0.5} />
-      <gridHelper args={[gridSize, gridSize, '#c8bba8', '#e3dacd']} rotation={[Math.PI / 2, 0, 0]} position={[gridSize / 2 - 12, gridSize / 2 - 12, -0.01]} />
+      <Camera real={real} />
+      {real ? <RealStage bounds={bounds} /> : (
+        <>
+          <ambientLight intensity={0.6} />
+          <directionalLight position={[-40, -60, 90]} intensity={1.6} />
+          <directionalLight position={[50, 40, 30]} intensity={0.5} />
+          <gridHelper name="cad-grid" args={[gridSize, gridSize, '#c8bba8', '#e3dacd']} rotation={[Math.PI / 2, 0, 0]} position={[gridSize / 2 - 12, gridSize / 2 - 12, -0.01]} />
+        </>
+      )}
       {shown.map(b => {
         // Doors swing about their hinge line and drawers slide out when "Open doors & drawers" is up.
         const mover = openAmount > 0 ? moverOf(project, b) : undefined
@@ -139,6 +162,7 @@ export default function Scene() {
             onSelect={onSelect(b.id)}
             offset={offset}
             clip={clip}
+            real={looks?.get(b.id)}
           />
         )
         if (m?.kind !== 'swing') return mesh
