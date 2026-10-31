@@ -13,6 +13,7 @@ export type DraftPlan = { name: string; parts: PlanPart[]; steps: string[] }
 export type Known = { dim: 'width' | 'depth' | 'height'; value: number }
 
 const num = (v: unknown, lo: number, hi: number) => typeof v === 'number' && Number.isFinite(v) && v >= lo && v <= hi
+const isLies = (v: unknown): v is Lies => typeof v === 'string' && Object.hasOwn(LIES, v)
 const str = (v: unknown, max = 200) => typeof v === 'string' && v.trim().length > 0 && v.length <= max
 
 /** The helper's answer as a plan, or what's wrong with it. */
@@ -24,7 +25,7 @@ export function checkPlan(raw: unknown): DraftPlan | { error: string } {
   const parts: PlanPart[] = []
   for (const p of r.parts) {
     if (!p || !str(p.name, 60) || !num(p.width, 0.1, 120) || !num(p.length, 0.1, 144) || !num(p.thickness, 0.1, 8) ||
-      !num(p.x, -200, 200) || !num(p.y, -200, 200) || !num(p.z, -200, 200) || !(p.lies in LIES)) {
+      !num(p.x, -200, 200) || !num(p.y, -200, 200) || !num(p.z, -200, 200) || !isLies(p.lies)) {
       return { error: `The helper sent a part that doesn't make sense${p && typeof p.name === 'string' ? ` (${p.name.slice(0, 40)})` : ''}.` }
     }
     parts.push({ name: p.name.trim(), width: p.width, length: p.length, thickness: p.thickness, x: p.x, y: p.y, z: p.z, lies: p.lies })
@@ -56,6 +57,15 @@ export function scalePlan(plan: DraftPlan, known: Known | null): DraftPlan {
   if (!(span > 0)) return plan
   const k = known.value / span
   return { ...plan, parts: plan.parts.map(p => ({ ...p, width: p.width * k, length: p.length * k, thickness: p.thickness * k, x: p.x * k, y: p.y * k, z: p.z * k })) }
+}
+
+/** After scaling: what's wrong if the parts came out too big or too small to build, else null. */
+export function checkScaled(plan: DraftPlan): string | null {
+  for (const p of plan.parts) {
+    if (p.width > 120 || p.length > 144 || Math.abs(p.x) > 400 || Math.abs(p.y) > 400 || Math.abs(p.z) > 400) return `Scaled to that measurement, a part comes out too big to build (${p.name.slice(0, 40)}). Check the measurement and which one it is.`
+    if (p.width < 0.1 || p.length < 0.1) return `Scaled to that measurement, a part comes out too small to make sense (${p.name.slice(0, 40)}). Check the measurement.`
+  }
+  return null
 }
 
 /** The stock wood that fits a part best: the nearest thickness, and wide enough if it can be. */

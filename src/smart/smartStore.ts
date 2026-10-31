@@ -2,12 +2,21 @@
 import { createStore, useStore } from 'zustand'
 
 export type HelperKind = 'photoPlan' | 'woodId' | 'describe'
+export type HelperNote = {
+  kind: 'plan' | 'trace'
+  name: string
+  steps: string[]
+  /** A warning about the design (parts that overlap after snapping to stock). */
+  note?: string
+  /** The design it belongs to (studio projectKey); it's put away when another design opens. */
+  projectKey: number
+}
 type State = {
   hasKey: boolean | null
   model: string
   open: HelperKind | 'settings' | null
-  /** Build steps the photo helper suggested, shown beside the design it made. */
-  steps: { name: string; steps: string[] } | null
+  /** Build steps a helper suggested (or how to trace a photo), shown beside the design they belong to. */
+  steps: HelperNote | null
   refresh(): Promise<void>
   set(p: Partial<Omit<State, 'set' | 'refresh'>>): void
 }

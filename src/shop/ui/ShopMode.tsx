@@ -37,6 +37,8 @@ export function ShopMode() {
       // Space on a focused button or the Done box presses it, as usual.
       const t = e.target as HTMLElement | null
       if (e.key === ' ' && t && (t.tagName === 'BUTTON' || t.tagName === 'INPUT')) return
+      // Arrows on a slider (the hands-free sensitivity) move the slider, not the step.
+      if (e.key.startsWith('Arrow') && t instanceof HTMLInputElement && t.type === 'range') return
       if (['ArrowRight', 'PageDown', ' '].includes(e.key)) { e.preventDefault(); go(i + 1) }
       else if (['ArrowLeft', 'PageUp'].includes(e.key)) { e.preventDefault(); go(i - 1) }
       else if (e.key.toLowerCase() === 'd' && !e.ctrlKey && !e.metaKey) { const s = shop.getState().session; if (s && step) shop.getState().setProgress(toggleDone(s.progress, step.key)) }

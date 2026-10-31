@@ -19,7 +19,7 @@ test.beforeAll(async () => {
           { name: 'Top', width: 12, length: 12, thickness: 0.75, x: 0, y: 0, z: 17.25, lies: 'flat-x' },
           { name: 'Leg', width: 3.5, length: 17.25, thickness: 0.75, x: 0, y: 0, z: 0, lies: 'upright-x' },
           { name: 'Leg', width: 3.5, length: 17.25, thickness: 0.75, x: 8.5, y: 0, z: 0, lies: 'upright-x' }] }
-        : { template: 'bookshelf', params: { W: 40, shelves: 2 } }
+        : { template: 'bookshelf', params: { W: 40, shelves: 2, wood: 'unobtainium' } } // a wood the app doesn't have is dropped
       res.writeHead(200, { 'content-type': 'application/json' })
       res.end(JSON.stringify({ content: [{ type: 'text', text: '```json\n' + JSON.stringify(answer) + '\n```' }] }))
     })
@@ -50,6 +50,13 @@ test('smart helpers: offline describe without a key; with a key, describe, photo
     await st.getByLabel('API key').fill('sk-ant-test-0123456789abcdef')
     await st.getByRole('button', { name: 'Save' }).click()
     await expect(st.getByRole('status', { name: 'Helper status' })).toContainText('A key is set')
+    // Changing only the model keeps the key.
+    await st.getByLabel('Model').fill('claude-sonnet-5-5-test')
+    await st.getByRole('button', { name: 'Save' }).click()
+    await expect(st.getByText('Saved.', { exact: false })).toBeVisible()
+    await expect(st.getByRole('status', { name: 'Helper status' })).toContainText('A key is set')
+    await st.getByLabel('Model').fill('claude-sonnet-5-5')
+    await st.getByRole('button', { name: 'Save' }).click()
     await st.getByRole('button', { name: 'Close' }).click()
 
     // Describe online → template.
@@ -82,6 +89,26 @@ test('smart helpers: offline describe without a key; with a key, describe, photo
     await w.getByRole('button', { name: 'What wood is it?' }).click()
     await expect(w.getByRole('list', { name: 'Wood guesses' })).toContainText('Red oak')
     expect(asked.every(k => k === 'sk-ant-test-0123456789abcdef')).toBe(true)
+  } finally {
+    kill(app)
+  }
+})
+
+test('without a key, "trace it instead" puts the chosen photo in Pictures with the steps to scale it', async () => {
+  const { app, win } = await launch(newDirs())
+  try {
+    await enterMasterShop(win)
+    await win.getByRole('button', { name: '✨ Helpers ▾' }).click()
+    await win.getByRole('menuitem', { name: 'Photo → plan…' }).click()
+    const pp = win.getByRole('dialog', { name: 'Photo → plan' })
+    await pp.getByLabel('Photo').setInputFiles(join(process.cwd(), 'tests/plans/fixtures/photo-page.jpg'))
+    await expect(pp.getByAltText('Chosen photo')).toBeVisible()
+    await pp.getByLabel('Known size').fill('30')
+    await pp.getByRole('button', { name: 'trace it instead' }).click()
+    await expect(win.getByRole('region', { name: 'Pictures' }).getByRole('listitem', { name: 'Picture Photo to trace' })).toBeVisible()
+    const steps = win.getByRole('complementary', { name: 'Helper build steps' })
+    await expect(steps).toContainText('Trace your photo')
+    await expect(steps).toContainText('type 30"')
   } finally {
     kill(app)
   }

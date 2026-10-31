@@ -210,7 +210,10 @@ function register(): void {
   // Smart Helpers: the key stays in this process (the page only learns whether there is one).
   const aiDir = async () => { const d = app.getPath('userData'); await mkdir(d, { recursive: true }); return d }
   // Tests on machines without a key store use a stand-in (never set in the installed app).
-  const crypt = process.env.AA_TEST_PLAIN_KEY ? { isEncryptionAvailable: () => true, encryptString: (t: string) => Buffer.from(t), decryptString: (b: Buffer) => b.toString() } : safeStorage
+  // Test-only switches (a plain key store for Linux CI, a stand-in server): never honoured in the installed app.
+  const testing = !app.isPackaged
+  const aiUrl = testing && process.env.AA_AI_URL && /^http:\/\/127\.0\.0\.1:\d+$/.test(process.env.AA_AI_URL) ? process.env.AA_AI_URL : 'https://api.anthropic.com'
+  const crypt = testing && process.env.AA_TEST_PLAIN_KEY ? { isEncryptionAvailable: () => true, encryptString: (t: string) => Buffer.from(t), decryptString: (b: Buffer) => b.toString() } : safeStorage
   ipcMain.handle('smart:status', async () => {
     const d = await aiDir()
     return { hasKey: !!(await readKey(d, crypt)), model: (await readSettings(d)).model, canStore: crypt.isEncryptionAvailable() }
@@ -221,8 +224,14 @@ function register(): void {
     const d = await aiDir()
     const key = await readKey(d, crypt)
     if (!key) throw new Error('Add an Anthropic API key in Smart Helpers settings (on the Home screen) to use this.')
-    if (!t || !['photoPlan', 'woodId', 'describe'].includes(t.task)) throw new Error('Unknown helper')
-    return aiAsk(t, key, (await readSettings(d)).model, process.env.AA_AI_URL || 'https://api.anthropic.com')
+    const str = (v: unknown, max: number) => typeof v === 'string' && v.length <= max
+    const img = (v: unknown) => str(v, 12_000_000) && /^data:image\/(jpeg|png|webp|gif);base64,/.test(v as string)
+    const ok = t && typeof t === 'object' && (
+      (t.task === 'photoPlan' && img(t.image) && str(t.known, 200)) ||
+      (t.task === 'woodId' && img(t.image)) ||
+      (t.task === 'describe' && str(t.text, 4000) && str(t.templates, 20_000)))
+    if (!ok) throw new Error("That request couldn't be sent (the picture may be too big).")
+    return aiAsk(t, key, (await readSettings(d)).model, aiUrl, net.fetch.bind(net) as unknown as typeof fetch)
   })
   // Family & sharing: a whole backup (app data + the projects folder) and project packages.
   const BACKUP = [{ name: 'A&A Woodworking backup', extensions: ['aabackup'] }]

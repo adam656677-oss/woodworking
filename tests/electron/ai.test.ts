@@ -47,3 +47,25 @@ test('plain messages for a refused key, a busy service and no internet', async (
   expect(await ask(t, 'k', 'm', 'http://x', ok)).toEqual({ guesses: [{ species: 'red-oak' }] })
   expect(sent.model).toBe('m')
 })
+
+test('reads one JSON value even with text after it, and a cut-off answer says so', () => {
+  expect(answerJson({ content: [{ type: 'text', text: '{"a":{"b":"}"}} and that is {all}' }] })).toEqual({ a: { b: '}' } })
+  expect(answerJson({ content: [{ type: 'text', text: 'Sure! [1,2] ok' }] })).toEqual([1, 2])
+  expect(() => answerJson({ stop_reason: 'max_tokens', content: [{ type: 'text', text: '{"parts":[{"name":"Le' }] })).toThrow(/too long|simpler/)
+})
+
+test('plain messages for a wrong model, a too-big picture, and a huge or slow answer', async () => {
+  const reply = (status: number, body: unknown = {}) => (async () => new Response(JSON.stringify(body), { status })) as unknown as typeof fetch
+  const t = { task: 'woodId' as const, image: IMG }
+  await expect(ask(t, 'k', 'm', 'http://x', reply(404))).rejects.toThrow(/model/)
+  await expect(ask(t, 'k', 'm', 'http://x', reply(413))).rejects.toThrow(/picture/)
+  const huge = (async () => new Response('{"content":[{"type":"text","text":"' + 'x'.repeat(2_000_000) + '"}]}', { status: 200 })) as unknown as typeof fetch
+  await expect(ask(t, 'k', 'm', 'http://x', huge)).rejects.toThrow(/too long|couldn't be read/)
+  // Headers arrive, then the body never finishes: the time limit still applies while reading it.
+  const slow = (async (_u: string, init: any) => new Response(new ReadableStream({ start(c) { init.signal.addEventListener('abort', () => c.error(Object.assign(new Error('aborted'), { name: 'AbortError' }))) } }), { status: 200 })) as unknown as typeof fetch
+  await expect(ask(t, 'k', 'm', 'http://x', slow, 50)).rejects.toThrow(/too long to answer/)
+})
+
+test('the photo plan asks for room to answer', () => {
+  expect(buildRequest({ task: 'photoPlan', image: IMG, known: 'h 30' }, 'm').max_tokens).toBeGreaterThanOrEqual(8000)
+})
