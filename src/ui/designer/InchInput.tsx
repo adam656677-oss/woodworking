@@ -9,25 +9,29 @@ type Props = {
   disabled?: boolean
 }
 
-/** A size box: shows 11-3/4", accepts 11 3/4 / 11-3/4 / 11.75 / 1' 2", rejects bad input with the reason. */
+const display = (value: number) => formatInches(value, { sixtyFourths: true })
+
+/** An inch field with fractional display, explicit validation, and keyboard cancellation. */
 export function InchInput({ label, value, onChange, allowZero, disabled }: Props) {
   const id = useId()
-  const [text, setText] = useState(formatInches(value))
+  const errorId = `${id}-error`
+  const [text, setText] = useState(() => display(value))
   const [error, setError] = useState<string | null>(null)
   useEffect(() => {
-    setText(formatInches(value))
+    setText(display(value))
     setError(null)
   }, [value])
 
   const commit = () => {
-    const r = parseInches(text, { allowZero })
-    if (!r.ok) {
-      setError(r.reason)
+    if (disabled) return
+    const result = parseInches(text, { allowZero })
+    if (!result.ok) {
+      setError(result.reason)
       return
     }
     setError(null)
-    if (r.value !== value) onChange(r.value)
-    else setText(formatInches(value))
+    if (result.value !== value) onChange(result.value)
+    else setText(display(value))
   }
 
   return (
@@ -35,21 +39,31 @@ export function InchInput({ label, value, onChange, allowZero, disabled }: Props
       <label htmlFor={id} className="text-xs text-stone-600">{label}</label>
       <input
         id={id}
+        type="text"
         value={text}
         disabled={disabled}
+        spellCheck={false}
+        autoComplete="off"
         aria-invalid={error ? true : undefined}
-        onChange={e => setText(e.target.value)}
-        onBlur={() => (error ? undefined : commit())}
+        aria-describedby={error ? errorId : undefined}
+        onChange={e => { setText(e.target.value); setError(null) }}
+        onBlur={commit}
         onKeyDown={e => {
-          if (e.key === 'Enter') commit()
+          if (e.key === 'Enter') {
+            e.preventDefault()
+            e.stopPropagation()
+            commit()
+          }
           if (e.key === 'Escape') {
-            setText(formatInches(value))
+            e.preventDefault()
+            e.stopPropagation()
+            setText(display(value))
             setError(null)
           }
         }}
-        className={`w-full rounded border px-2 py-1 text-sm ${error ? 'border-red-500 bg-red-50' : 'border-stone-300'} disabled:bg-stone-100`}
+        className={`w-full rounded border px-2 py-1 text-sm tabular-nums focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600 ${error ? 'border-red-500 bg-red-50' : 'border-stone-300'} disabled:bg-stone-100`}
       />
-      {error && <span role="alert" className="text-xs text-red-600">{error}</span>}
+      {error && <span id={errorId} role="alert" className="text-xs text-red-600">{error}</span>}
     </div>
   )
 }
