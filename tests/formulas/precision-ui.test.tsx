@@ -36,7 +36,7 @@ it('shows precise replacement dimensions and requires approval', () => {
   fireEvent.keyDown(input, { key: 'Enter' })
   expect(screen.getByRole('dialog').textContent).toContain('7-1/64"')
   expect(onSet).not.toHaveBeenCalled()
-  fireEvent.click(screen.getByRole('button', { name: 'Replace', exact: true }))
+  fireEvent.click(screen.getByRole('button', { name: /^Replace$/ }))
   expect(onSet).toHaveBeenCalledWith({ value: 7 + 1 / 64 })
 })
 
