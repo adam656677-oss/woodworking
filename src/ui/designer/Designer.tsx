@@ -20,12 +20,13 @@ import { GroupPanel } from '../../assemblies/ui/GroupPanel'
 import { ViewTools } from '../../checks/ui/ViewTools'
 import { ChecksPanel } from '../../checks/ui/ChecksPanel'
 import { PicturesPanel } from '../../shop/ui/PicturesPanel'
+import { WorkspacePanel } from './WorkspacePanel'
 
 const Scene = lazy(() => import('../three/Scene'))
 
 function isTyping(e: KeyboardEvent) {
   const t = e.target as HTMLElement | null
-  return !!t && (t.tagName === 'INPUT' || t.tagName === 'SELECT' || t.tagName === 'TEXTAREA')
+  return !!t && (t.isContentEditable || t.tagName === 'INPUT' || t.tagName === 'SELECT' || t.tagName === 'TEXTAREA')
 }
 
 export function Designer() {
@@ -49,12 +50,10 @@ export function Designer() {
         void s.save()
         return
       }
-      // The drawings dialog covers the design: its keys aren't for the parts behind it.
-      if (s.drawingsOpen) return
-      if (isTyping(e)) return
+      if (s.drawingsOpen || isTyping(e)) return
       if (ctrl && e.key.toLowerCase() === 'z') {
         e.preventDefault()
-        s.undo()
+        if (e.shiftKey) s.redo(); else s.undo()
       } else if (ctrl && e.key.toLowerCase() === 'y') {
         e.preventDefault()
         s.redo()
@@ -71,55 +70,48 @@ export function Designer() {
         s.apply(p => deleteBoards(p, s.selection))
         s.select([])
       } else if (e.key === 'Escape') {
-        s.set({ measuring: false }); s.setView({ placingNote: false, pendingNote: null, refPick: null })
+        s.set({ measuring: false })
+        s.setView({ placingNote: false, pendingNote: null, refPick: null })
       }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
+  const parts = <><PartsList /><WarningsList /></>
+  const inspector = <>
+    {!kidsMode && <ChecksPanel />}
+    {!kidsMode && <PicturesPanel />}
+    {!kidsMode && <TemplatePanel />}
+    {whole && <GroupPanel group={whole} />}
+    {selection.length === 2 ? <JointPanel /> : whole && selection.length > 1 ? null : <PropertiesPanel />}
+  </>
+
   return (
     <div className="flex h-full flex-col bg-stone-100 text-stone-900">
       <Toolbar />
-      {error && (
-        <div role="alert" className="flex items-center justify-between bg-red-100 px-4 py-2 text-sm text-red-800">
-          <span>{error}</span>
-          <button className="ml-4 font-bold" onClick={() => studio.getState().setError(null)} aria-label="Dismiss">✕</button>
-        </div>
-      )}
-      {recovery && (
-        <div role="dialog" aria-label="Recover work" className="flex items-center gap-3 bg-amber-100 px-4 py-2 text-sm text-amber-900">
-          <span>There are unsaved changes from last time (autosave). Recover them?</span>
-          <button className="rounded bg-amber-700 px-3 py-1 text-white" onClick={() => studio.getState().resolveRecovery(true)}>Recover</button>
-          <button className="rounded border border-amber-700 px-3 py-1" onClick={() => studio.getState().resolveRecovery(false)}>
-            {recovery.savedText === null ? 'Dismiss' : 'Open saved version'}
-          </button>
-        </div>
-      )}
-      <div className="flex min-h-0 flex-1">
-        <aside className="flex w-60 flex-col border-r border-stone-300 bg-white">
-          <PartsList />
-          <WarningsList />
-        </aside>
+      {error && <div role="alert" className="flex items-center justify-between bg-red-100 px-4 py-2 text-sm text-red-800">
+        <span>{error}</span>
+        <button className="ml-4 font-bold" onClick={() => studio.getState().setError(null)} aria-label="Dismiss">×</button>
+      </div>}
+      {recovery && <div role="dialog" aria-label="Recover work" className="flex flex-wrap items-center gap-3 bg-amber-100 px-4 py-2 text-sm text-amber-900">
+        <span>There are unsaved changes from last time (autosave). Recover them?</span>
+        <button className="rounded bg-amber-700 px-3 py-1 text-white" onClick={() => studio.getState().resolveRecovery(true)}>Recover</button>
+        <button className="rounded border border-amber-700 px-3 py-1" onClick={() => studio.getState().resolveRecovery(false)}>
+          {recovery.savedText === null ? 'Dismiss' : 'Open saved version'}
+        </button>
+      </div>}
+      <div className="flex min-h-0 flex-1 overflow-hidden">
+        {kidsMode ? <aside className="flex w-60 flex-col border-r border-stone-300 bg-white">{parts}</aside> :
+          <WorkspacePanel title="Parts" side="left" initialWidth={240}>{parts}</WorkspacePanel>}
         <section className="relative min-w-0 flex-1" data-testid="viewport">
-          {empty ? (
-            <StartPanel />
-          ) : (
-            <SceneBoundary>
-              {!kidsMode && <ViewTools />}
-              <Suspense fallback={<div className="p-4 text-stone-500">Loading 3D view…</div>}>
-                <Scene />
-              </Suspense>
-            </SceneBoundary>
-          )}
+          {empty ? <StartPanel /> : <SceneBoundary>
+            {!kidsMode && <ViewTools />}
+            <Suspense fallback={<div className="p-4 text-stone-500">Loading 3D view…</div>}><Scene /></Suspense>
+          </SceneBoundary>}
         </section>
-        <aside className="w-72 overflow-y-auto border-l border-stone-300 bg-white p-3">
-          {!kidsMode && <ChecksPanel />}
-          {!kidsMode && <PicturesPanel />}
-          {!kidsMode && <TemplatePanel />}
-          {whole && <GroupPanel group={whole} />}
-          {selection.length === 2 ? <JointPanel /> : whole && selection.length > 1 ? null : <PropertiesPanel />}
-        </aside>
+        {kidsMode ? <aside className="w-72 overflow-y-auto border-l border-stone-300 bg-white p-3">{inspector}</aside> :
+          <WorkspacePanel title="Inspector" side="right" initialWidth={288}><div className="p-3">{inspector}</div></WorkspacePanel>}
       </div>
       {cutListOpen && <CutListView />}
       {drawingsOpen && <DrawingsDialog />}
