@@ -21,6 +21,7 @@ import { ViewTools } from '../../checks/ui/ViewTools'
 import { ChecksPanel } from '../../checks/ui/ChecksPanel'
 import { PicturesPanel } from '../../shop/ui/PicturesPanel'
 import { WorkspacePanel } from './WorkspacePanel'
+import { InspectorTabs } from './InspectorTabs'
 
 const Scene = lazy(() => import('../three/Scene'))
 
@@ -38,6 +39,8 @@ export function Designer() {
   const drawingsOpen = useStudio(s => s.drawingsOpen)
   const woodsOpen = useStudio(s => s.woodsOpen)
   const kidsMode = useStudio(s => s.kidsMode)
+  const checksOpen = useStudio(s => s.checksOpen)
+  const picturesOpen = useStudio(s => s.picturesOpen)
   const project = useStudio(s => s.project)
   const whole = useMemo(() => (kidsMode ? null : wholeGroup(project, selection)), [kidsMode, project, selection])
 
@@ -79,10 +82,7 @@ export function Designer() {
   }, [])
 
   const parts = <><PartsList /><WarningsList /></>
-  const inspector = <>
-    {!kidsMode && <ChecksPanel />}
-    {!kidsMode && <PicturesPanel />}
-    {!kidsMode && <TemplatePanel />}
+  const properties = <>
     {whole && <GroupPanel group={whole} />}
     {selection.length === 2 ? <JointPanel /> : whole && selection.length > 1 ? null : <PropertiesPanel />}
   </>
@@ -110,8 +110,15 @@ export function Designer() {
             <Suspense fallback={<div className="p-4 text-stone-500">Loading 3D view…</div>}><Scene /></Suspense>
           </SceneBoundary>}
         </section>
-        {kidsMode ? <aside className="w-72 overflow-y-auto border-l border-stone-300 bg-white p-3">{inspector}</aside> :
-          <WorkspacePanel title="Inspector" side="right" initialWidth={288}><div className="p-3">{inspector}</div></WorkspacePanel>}
+        {kidsMode ? <aside className="w-72 overflow-y-auto border-l border-stone-300 bg-white p-3">{properties}</aside> :
+          <WorkspacePanel title="Inspector" side="right" initialWidth={288}>
+            <InspectorTabs properties={properties}
+              template={project.template ? <TemplatePanel /> : <p className="text-sm text-stone-500">This project has no live template. Choose a template from New to use project-level sizes.</p>}
+              references={<PicturesPanel />}
+              checks={checksOpen ? <ChecksPanel /> : <p className="text-sm text-stone-500">Choose Interference, Weight &amp; balance, Clearance, or Dimensions &amp; notes from the Checks menu.</p>}
+              checksRequest={checksOpen} referencesRequest={picturesOpen}
+              onReferences={() => studio.getState().setView({ picturesOpen: true })} />
+          </WorkspacePanel>}
       </div>
       {cutListOpen && <CutListView />}
       {drawingsOpen && <DrawingsDialog />}
