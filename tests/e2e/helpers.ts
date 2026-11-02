@@ -19,7 +19,7 @@ export async function launch(dirs: Dirs): Promise<{ app: ElectronApplication; wi
   return { app, win }
 }
 
-/** Kill without the "save changes?" prompt. */
+/** Kill without the save-changes prompt. */
 export function kill(app: ElectronApplication) {
   app.process().kill('SIGKILL')
 }
@@ -40,9 +40,17 @@ export async function enterMasterShop(win: Page) {
   await win.getByRole('button', { name: /Master Shop/ }).click()
 }
 
+export async function selectInspectorTab(win: Page, name: 'Properties' | 'Template' | 'References' | 'Checks') {
+  const inspector = win.getByRole('complementary', { name: 'Inspector', exact: true })
+  const tab = inspector.getByRole('tab', { name, exact: true })
+  await tab.click()
+  await expect(tab).toHaveAttribute('aria-selected', 'true')
+}
+
 export async function startTemplate(win: Page, name: 'Box' | 'Bookshelf' | 'Birdhouse') {
   await win.getByRole('button', { name: 'New ▾' }).click()
   await win.getByRole('menuitem', { name }).click()
+  await selectInspectorTab(win, 'Template')
 }
 
 /** Open the cut list and return each row's cells as text. */
@@ -59,7 +67,13 @@ export async function cutListRows(win: Page): Promise<string[][]> {
 
 export async function typeInches(win: Page, label: string, value: string) {
   const input = win.getByLabel(label, { exact: true })
-  // A re-render landing between fill's select-all and its typing can leave old text in the box; refill until it holds.
+  // Reveal an Inspector field through its real tab, never by forcing a hidden control.
+  const panel = input.locator('xpath=ancestor::*[@role="tabpanel"][1]')
+  if (await panel.count() === 1 && !(await input.isVisible())) {
+    const panelId = await panel.getAttribute('id')
+    if (panelId) await win.locator(`[role="tab"][aria-controls="${panelId}"]`).click()
+  }
+  // Retry only the fill if a model update lands during typing.
   await expect(async () => {
     await input.fill(value)
     await expect(input).toHaveValue(value, { timeout: 300 })
@@ -71,8 +85,10 @@ export function part(win: Page, name: string, nth = 0) {
   return win.getByRole('list', { name: 'Parts' }).getByRole('listitem').filter({ hasText: new RegExp(`^(⚠ )?${name}`) }).nth(nth)
 }
 
-/** Turn a live template into free-form parts (Unlock, then confirm). */
+/** Unlock through the Template tab, then expose the free-form part controls. */
 export async function unlockTemplate(win: Page) {
+  await selectInspectorTab(win, 'Template')
   await win.getByRole('button', { name: 'Unlock for free-form editing' }).click()
   await win.getByRole('button', { name: 'Unlock', exact: true }).click()
+  await selectInspectorTab(win, 'Properties')
 }
