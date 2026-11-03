@@ -14,6 +14,7 @@ import { PlansShell } from '../plans/ui/PlansShell'
 import { DrawingBoard } from '../sketch/ui/DrawingBoard'
 import { flushDrawing } from '../sketch/ui/session'
 import { APP_NAME, studio, useStudio } from './store'
+import { WorkspaceNavigation } from './WorkspaceNavigation'
 
 const AUTOSAVE_MS = 30_000
 
@@ -43,7 +44,12 @@ export default function App() {
 
   return (
     <>
-      {screen === 'kids' ? <KidsShell /> : screen === 'master' ? <Designer /> : screen === 'plans' ? <PlansShell /> : screen === 'draw' ? <DrawingBoard /> : screen === 'finish' ? <FinishingSchool /> : screen === 'library' ? <Library /> : screen === 'joints' ? <JointDesigner /> : screen === 'tools' ? <ShopTools /> : <Home />}
+      <div className="flex h-full min-h-0 flex-col">
+        <WorkspaceNavigation />
+        <div className="min-h-0 flex-1">
+          {screen === 'kids' ? <KidsShell /> : screen === 'master' ? <Designer /> : screen === 'plans' ? <PlansShell /> : screen === 'draw' ? <DrawingBoard /> : screen === 'finish' ? <FinishingSchool /> : screen === 'library' ? <Library /> : screen === 'joints' ? <JointDesigner /> : screen === 'tools' ? <ShopTools /> : <Home />}
+        </div>
+      </div>
       {screen === 'master' && !kidsMode && <CommandPalette />}
       <UnsavedDialog />
       <ShopMode />
