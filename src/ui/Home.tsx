@@ -74,20 +74,20 @@ export function Home() {
         <section aria-labelledby="workshop-heading">
           <h2 id="workshop-heading" className="mb-4 text-lg font-semibold">Workshop resources</h2>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <button type="button" onClick={() => studio.getState().goto('kids')} className={card}>
+            <button type="button" aria-labelledby="kids-workshop-title" aria-describedby="kids-workshop-description" onClick={() => studio.getState().goto('kids')} className={card}>
               <span className="text-xs font-semibold uppercase tracking-wider text-sky-800">Learn together</span>
-              <span className="text-xl font-semibold">Kids' Workshop</span>
-              <span className="text-sm text-stone-600">A separate, simpler space for young makers.</span>
+              <span id="kids-workshop-title" className="text-xl font-semibold">Kids' Workshop</span>
+              <span id="kids-workshop-description" className="text-sm text-stone-600">A separate, simpler space for young makers.</span>
             </button>
-            <button type="button" onClick={() => openFinishing('home')} className={card}>
+            <button type="button" aria-labelledby="finishing-school-title" aria-describedby="finishing-school-description" onClick={() => openFinishing('home')} className={card}>
               <span className="text-xs font-semibold uppercase tracking-wider text-emerald-800">Surface &amp; finish</span>
-              <span className="text-xl font-semibold">Finishing School</span>
-              <span className="text-sm text-stone-600">Explore finishing guidance and schedules.</span>
+              <span id="finishing-school-title" className="text-xl font-semibold">Finishing School</span>
+              <span id="finishing-school-description" className="text-sm text-stone-600">Explore finishing guidance and schedules.</span>
             </button>
-            <button type="button" onClick={() => openShopTools('home')} className={card}>
+            <button type="button" aria-labelledby="shop-tools-title" aria-describedby="shop-tools-description" onClick={() => openShopTools('home')} className={card}>
               <span className="text-xs font-semibold uppercase tracking-wider text-amber-800">Prepare the shop</span>
-              <span className="text-xl font-semibold">Shop Tools</span>
-              <span className="text-sm text-stone-600">Open calculators, inventory, and shop utilities.</span>
+              <span id="shop-tools-title" className="text-xl font-semibold">Shop Tools</span>
+              <span id="shop-tools-description" className="text-sm text-stone-600">Open calculators, inventory, and shop utilities.</span>
             </button>
           </div>
         </section>
