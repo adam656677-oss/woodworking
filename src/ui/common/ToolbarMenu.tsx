@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
 
-/** Dropdown foundation; toolbar integration is a separate change. */
+/** Accessible dropdown with keyboard navigation and a stable trigger name. */
 export function ToolbarMenu({ label, children }: { label: string; children: (close: () => void) => ReactNode }) {
   const [open, setOpen] = useState(false)
   const id = useId()
@@ -42,7 +42,7 @@ export function ToolbarMenu({ label, children }: { label: string; children: (clo
             const available = items()
             available[lastFirst.current ? available.length - 1 : 0]?.focus()
           } else setOpen(true)
-        }}>{label} <span aria-hidden="true">▾</span></button>
+        }}>{label} <span>▾</span></button>
       {open && <div ref={menu} id={id} role="menu" aria-labelledby={`${id}-trigger`} tabIndex={-1}
         className="absolute left-0 top-full z-20 flex max-h-[70vh] min-w-40 flex-col overflow-y-auto rounded border border-stone-300 bg-white py-1 shadow-lg"
         onKeyDown={event => {
