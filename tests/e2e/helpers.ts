@@ -1,5 +1,6 @@
 import { _electron as electron, expect, type ElectronApplication, type Page } from '@playwright/test'
 import { mkdtempSync } from 'node:fs'
+import { spawnSync } from 'node:child_process'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -14,14 +15,30 @@ export async function launch(dirs: Dirs): Promise<{ app: ElectronApplication; wi
     args: ['.', '--no-sandbox', ...GL],
     env: { ...process.env, AA_DOCS_DIR: dirs.docs, AA_USER_DATA: dirs.userData }
   })
-  const win = await app.firstWindow()
-  win.setDefaultTimeout(15_000)
-  return { app, win }
+  try {
+    const win = await app.firstWindow()
+    win.setDefaultTimeout(15_000)
+    return { app, win }
+  } catch (error) {
+    kill(app)
+    throw error
+  }
 }
 
-/** Kill without the save-changes prompt. */
+/** Terminate this test's Electron tree without a save-changes prompt. */
 export function kill(app: ElectronApplication) {
-  app.process().kill('SIGKILL')
+  const child = app.process()
+  if (process.platform === 'win32' && child.pid && child.exitCode === null && child.signalCode === null) {
+    const result = spawnSync('taskkill', ['/PID', String(child.pid), '/T', '/F'], {
+      windowsHide: true, timeout: 10_000, encoding: 'utf8'
+    })
+    if (result.error || result.status !== 0) {
+      console.warn('Electron process-tree cleanup was not confirmed:', result.error?.message ?? result.stderr.trim())
+      child.kill('SIGKILL')
+    }
+    return
+  }
+  if (child.exitCode === null && child.signalCode === null) child.kill('SIGKILL')
 }
 
 export async function stubSaveDialog(app: ElectronApplication, filePath: string) {
