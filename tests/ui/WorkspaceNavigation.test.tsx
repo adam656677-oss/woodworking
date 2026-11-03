@@ -29,7 +29,7 @@ afterEach(cleanup)
 test('marks the current section and ignores an active-section click', () => {
   render(<WorkspaceNavigation />)
   expect(screen.getByRole('navigation', { name: 'Workspace' })).toBeTruthy()
-  const design = screen.getByRole('button', { name: 'Design' })
+  const design = screen.getByRole('link', { name: 'Design' })
   expect(design.getAttribute('aria-current')).toBe('page')
   fireEvent.click(design)
   expect(mocks.enter).not.toHaveBeenCalled()
@@ -44,7 +44,7 @@ test.each([['kids', false], ['master', true], ['draw', true]])('hides adult navi
 
 test('uses the existing resource opener with its return destination', async () => {
   render(<WorkspaceNavigation />)
-  fireEvent.click(screen.getByRole('button', { name: 'Finishing' }))
+  fireEvent.click(screen.getByRole('link', { name: 'Finishing' }))
   await waitFor(() => expect(mocks.finish).toHaveBeenCalledWith('master'))
 })
 
@@ -52,7 +52,7 @@ test('saves the drawing before leaving and blocks navigation if saving fails', a
   mocks.state.screen = 'draw'
   mocks.save.mockReturnValue(false)
   render(<WorkspaceNavigation />)
-  fireEvent.click(screen.getByRole('button', { name: 'Dashboard' }))
+  fireEvent.click(screen.getByRole('link', { name: 'Dashboard' }))
   await waitFor(() => expect(screen.getByRole('alert').textContent).toContain('before leaving'))
   expect(mocks.save).toHaveBeenCalledOnce()
   expect(mocks.goto).not.toHaveBeenCalled()
@@ -61,7 +61,7 @@ test('saves the drawing before leaving and blocks navigation if saving fails', a
 test('keeps a drawing before returning to the dashboard', async () => {
   mocks.state.screen = 'draw'
   render(<WorkspaceNavigation />)
-  fireEvent.click(screen.getByRole('button', { name: 'Dashboard' }))
+  fireEvent.click(screen.getByRole('link', { name: 'Dashboard' }))
   await waitFor(() => expect(mocks.goto).toHaveBeenCalledWith('home'))
   expect(mocks.save).toHaveBeenCalledOnce()
 })
@@ -69,7 +69,7 @@ test('keeps a drawing before returning to the dashboard', async () => {
 test('checks recovery before entering Design', async () => {
   mocks.state.screen = 'home'
   render(<WorkspaceNavigation />)
-  fireEvent.click(screen.getByRole('button', { name: 'Design' }))
+  fireEvent.click(screen.getByRole('link', { name: 'Design' }))
   await waitFor(() => expect(mocks.enter).toHaveBeenCalledOnce())
   expect(mocks.recovery).toHaveBeenCalledOnce()
 })
@@ -78,7 +78,7 @@ test('does not enter Design when recovery lookup fails', async () => {
   mocks.state.screen = 'home'
   mocks.recovery.mockRejectedValue(new Error('unavailable'))
   render(<WorkspaceNavigation />)
-  fireEvent.click(screen.getByRole('button', { name: 'Design' }))
+  fireEvent.click(screen.getByRole('link', { name: 'Design' }))
   await waitFor(() => expect(screen.getByRole('alert')).toBeTruthy())
   expect(mocks.enter).not.toHaveBeenCalled()
 })
@@ -86,7 +86,7 @@ test('does not enter Design when recovery lookup fails', async () => {
 test('blocks navigation during an unsaved-project replacement prompt', () => {
   mocks.state.pendingReplace = true
   render(<WorkspaceNavigation />)
-  const dashboard = screen.getByRole('button', { name: 'Dashboard' }) as HTMLButtonElement
+  const dashboard = screen.getByRole('link', { name: 'Dashboard' }) as HTMLButtonElement
   expect(dashboard.disabled).toBe(true)
   fireEvent.click(dashboard)
   expect(mocks.goto).not.toHaveBeenCalled()

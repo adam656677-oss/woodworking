@@ -12,7 +12,7 @@ const example = () => render(<ToolbarMenu label="Actions">{close => <>
 
 test('arrow navigation skips disabled items and Escape restores trigger focus', () => {
   example()
-  const trigger = screen.getByRole('button', { name: 'Actions' })
+  const trigger = screen.getByRole('button', { name: 'Actions ▾' })
   trigger.focus()
   fireEvent.keyDown(trigger, { key: 'ArrowDown' })
   expect(document.activeElement).toBe(screen.getByRole('menuitem', { name: 'First' }))
@@ -27,7 +27,7 @@ test('arrow navigation skips disabled items and Escape restores trigger focus', 
 
 test('mouse leave keeps the menu open but outside pointer input closes it', () => {
   example()
-  fireEvent.click(screen.getByRole('button', { name: 'Actions' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Actions ▾' }))
   fireEvent.mouseLeave(screen.getByRole('menu'))
   expect(screen.getByRole('menu')).toBeTruthy()
   fireEvent.pointerDown(document.body)
@@ -36,7 +36,7 @@ test('mouse leave keeps the menu open but outside pointer input closes it', () =
 
 test('ArrowUp opens at the last action and selecting it restores focus', () => {
   example()
-  const trigger = screen.getByRole('button', { name: 'Actions' })
+  const trigger = screen.getByRole('button', { name: 'Actions ▾' })
   trigger.focus()
   fireEvent.keyDown(trigger, { key: 'ArrowUp' })
   const last = screen.getByRole('menuitem', { name: 'Last' })
