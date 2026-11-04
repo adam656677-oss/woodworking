@@ -22,7 +22,7 @@ export function buildPlanIssues(project: Project): string[] {
   return issues
 }
 
-/** Produces outputs from one immutable model snapshot; it never creates another editable design. */
+/** Drawing-sheet numbering excludes the flowing appendices, whose page count depends on printing. */
 export function createBuildPlan(project: Project, options: SheetOpts, shoppingInputs?: ShoppingInputs) {
   const issues = buildPlanIssues(project)
   if (issues.length) return { ok: false as const, issues }
@@ -32,7 +32,11 @@ export function createBuildPlan(project: Project, options: SheetOpts, shoppingIn
   const parts = partList(model)
   const total = 4 + parts.length
   const sheets = drawingSheets(model, { views: true, exploded: true, section: true, parts: 'all' }, options, { first: 2, total })
-  const cover = coverSheet(model, options, ['Assembly views', 'Exploded view and section', 'Dimensioned part sheets', 'Cut list', 'Assembly guidance'], `1 of ${total}`)
+  const cover = coverSheet(model, options, [
+    'Assembly views', 'Exploded view and section', 'Dimensioned part sheets',
+    'Appendix: cut list', 'Appendix: shopping list', 'Appendix: assembly guidance',
+    'Sheet numbers: drawings only', 'Appendices may span pages'
+  ], `1 of ${total}`)
   return { ok: true as const, plan: {
     name: model.name, sourceSnapshot, options: { ...options },
     sheets: [cover, ...sheets], parts, cutList: cutList(model), steps: stepsFromDesign(model),
