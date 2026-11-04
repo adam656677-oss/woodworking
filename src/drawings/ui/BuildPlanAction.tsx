@@ -2,14 +2,27 @@ import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { studio, useStudio } from '../../ui/store'
 import { formatInches } from '../../model/units'
+import { stock, useStock } from '../../optimize/stockStore'
+import { tools, useTools } from '../../tools/store'
 import { createBuildPlan, isBuildPlanCurrent } from '../buildPlan'
+import type { ShoppingInputs } from '../shoppingSnapshot'
 import { PAPERS } from '../sheet'
 
 type Plan = Extract<ReturnType<typeof createBuildPlan>, { ok: true }>['plan']
 
+function liveInputs(): ShoppingInputs | undefined {
+  const s = stock.getState(), t = tools.getState()
+  return s.loaded && t.loaded ? { stock: s.items, inventory: t.inventory } : undefined
+}
+
 export function BuildPlanAction({ disabled = false }: { disabled?: boolean }) {
   const project = useStudio(s => s.project)
   const projectKey = useStudio(s => s.projectKey)
+  const items = useStock(s => s.items)
+  const stockLoaded = useStock(s => s.loaded)
+  const inventory = useTools(s => s.inventory)
+  const inventoryLoaded = useTools(s => s.loaded)
+  const ready = stockLoaded && inventoryLoaded
   const [plan, setPlan] = useState<Plan | null>(null)
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -17,7 +30,15 @@ export function BuildPlanAction({ disabled = false }: { disabled?: boolean }) {
   const closeButton = useRef<HTMLButtonElement>(null)
   const trigger = useRef<HTMLButtonElement>(null)
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const stale = !!plan && !isBuildPlanCurrent(plan, project)
+  const stale = !!plan && (!ready || !isBuildPlanCurrent(plan, project, { stock: items, inventory }))
+  useEffect(() => {
+    let active = true
+    Promise.all([
+      stock.getState().loaded ? Promise.resolve() : stock.getState().load(),
+      tools.getState().loaded ? Promise.resolve() : tools.getState().load()
+    ]).catch(() => { if (active) setMessage('Shop inventory could not be loaded. Reopen the workspace to retry; no plan was generated.') })
+    return () => { active = false }
+  }, [])
   useEffect(() => { setPlan(null); setOpen(false); setMessage(null) }, [projectKey])
   useEffect(() => () => { if (timer.current) clearTimeout(timer.current) }, [])
   useEffect(() => {
@@ -36,7 +57,7 @@ export function BuildPlanAction({ disabled = false }: { disabled?: boolean }) {
   }, [open])
 
   const generate = () => {
-    if (busy || disabled) return
+    if (busy || disabled || !liveInputs()) return
     if (!open && document.querySelector('dialog[open], [role="dialog"]')) return
     setBusy(true)
     setMessage(null)
@@ -44,9 +65,11 @@ export function BuildPlanAction({ disabled = false }: { disabled?: boolean }) {
     timer.current = setTimeout(() => {
       try {
         const state = studio.getState()
+        const inputs = liveInputs()
+        if (!inputs) throw new Error('Wait for shop inventory to load before generating a plan.')
         const errors = Object.values(state.formulaErrors)
         if (errors.length) throw new Error(`Resolve formula errors first: ${errors.join('; ')}`)
-        const result = createBuildPlan(state.project, { paper: 'letter', scale: 'auto', hidden: true, date: new Date().toISOString().slice(0, 10) })
+        const result = createBuildPlan(state.project, { paper: 'letter', scale: 'auto', hidden: true, date: new Date().toISOString().slice(0, 10) }, inputs)
         if (!result.ok) { setPlan(null); setMessage(result.issues.join(' ')); return }
         setPlan(result.plan)
       } catch (error) { setPlan(null); setMessage(error instanceof Error ? error.message : 'The plan could not be generated.') }
@@ -54,7 +77,8 @@ export function BuildPlanAction({ disabled = false }: { disabled?: boolean }) {
     }, 30)
   }
   const exportPlan = async (print: boolean) => {
-    if (!plan || busy || !isBuildPlanCurrent(plan, studio.getState().project)) return
+    const inputs = liveInputs()
+    if (!plan || busy || !inputs || !isBuildPlanCurrent(plan, studio.getState().project, inputs)) return
     setBusy(true)
     setMessage(null)
     try {
@@ -70,8 +94,9 @@ export function BuildPlanAction({ disabled = false }: { disabled?: boolean }) {
   }
 
   return <>
-    <button ref={trigger} type="button" disabled={disabled || busy} onClick={() => plan && !stale ? setOpen(true) : generate()}
-      className="ml-auto shrink-0 rounded bg-amber-800 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-900 disabled:opacity-50">{busy ? 'Generating…' : plan ? stale ? 'Update Build Plan' : 'View Build Plan' : 'Create Build Plan'}</button>
+    <button ref={trigger} type="button" disabled={disabled || busy || !ready} onClick={() => plan && !stale ? setOpen(true) : generate()}
+      className="ml-auto shrink-0 rounded bg-amber-800 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-900 disabled:opacity-50">{!ready ? 'Loading shop inventory…' : busy ? 'Generating…' : plan ? stale ? 'Update Build Plan' : 'View Build Plan' : 'Create Build Plan'}</button>
+    {!open && message && <p role="status">{message}</p>}
     {open && createPortal(<div role="dialog" aria-label="Build plan preview" className="drawings-print fixed inset-0 z-50 flex flex-col bg-stone-200"
       onKeyDown={event => { event.stopPropagation(); if (event.key === 'Tab') {
         const buttons = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>('button:not(:disabled)'))
@@ -81,12 +106,12 @@ export function BuildPlanAction({ disabled = false }: { disabled?: boolean }) {
       } }}>
       <header className="no-print flex flex-wrap items-center gap-3 border-b bg-white px-4 py-3">
         <h2 className="mr-auto text-lg font-semibold">Build plan — {plan?.name ?? project.name}</h2>
-        <button type="button" disabled={busy} onClick={generate} className="rounded border px-3 py-2">Update Plan</button>
+        <button type="button" disabled={busy || !ready} onClick={generate} className="rounded border px-3 py-2">Update Plan</button>
         <button type="button" disabled={!plan || stale || busy} onClick={() => void exportPlan(false)} className="rounded border px-3 py-2">Save as PDF</button>
         <button type="button" disabled={!plan || stale || busy} onClick={() => void exportPlan(true)} className="rounded border px-3 py-2">Print</button>
         <button ref={closeButton} type="button" onClick={() => setOpen(false)} className="rounded bg-amber-800 px-3 py-2 text-white">Back to Design</button>
       </header>
-      {stale && <p role="alert" className="no-print bg-amber-100 px-4 py-2">The design changed. Update Plan before printing or exporting.</p>}
+      {stale && <p role="alert" className="no-print bg-amber-100 px-4 py-2">The design or shop inventory changed. Update Plan before printing or exporting.</p>}
       {message && <p role="status" className="no-print bg-white px-4 py-2">{message}</p>}
       <div className="packet-inner flex-1 overflow-auto p-6">
         {busy && !plan ? <p role="status">Generating the plan from your design…</p> : plan && <div className="flex flex-col items-center gap-6 print:block">
