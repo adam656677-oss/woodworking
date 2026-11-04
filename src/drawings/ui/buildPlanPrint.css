@@ -1,0 +1,21 @@
+@media print {
+  body.printing-drawings .drawings-print .packet-inner {
+    padding: 0 !important;
+  }
+  body.printing-drawings .drawings-print .flow-page {
+    width: auto !important;
+    max-width: 100% !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+  body.printing-drawings .drawings-print .flow-page h2,
+  body.printing-drawings .drawings-print .flow-page h3 {
+    break-after: avoid;
+  }
+  body.printing-drawings .drawings-print .flow-page thead {
+    display: table-header-group;
+  }
+  body.printing-drawings .drawings-print .flow-page tr {
+    break-inside: avoid;
+  }
+}
