@@ -1,0 +1,55 @@
+name: Windows installer verification
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  installer:
+    runs-on: windows-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run e2e
+      - run: npm run dist
+      - name: Install application and calculate checksum
+        shell: pwsh
+        run: |
+          $setup = @(Get-ChildItem dist -Filter '*Setup*.exe')
+          if ($setup.Count -ne 1) { throw 'Expected exactly one installer' }
+          $hash = (Get-FileHash $setup[0].FullName -Algorithm SHA256).Hash.ToLower()
+          "$hash  $($setup[0].Name)" | Set-Content dist/setup.sha256
+          $target = Join-Path $env:RUNNER_TEMP 'aa-installed'
+          $process = Start-Process -FilePath $setup[0].FullName -ArgumentList @('/S', '/currentuser', "/D=$target") -Wait -PassThru
+          if ($process.ExitCode -ne 0) { throw 'Installer failed' }
+          $exe = Join-Path $target 'A&A Woodworking Studio.exe'
+          if (!(Test-Path $exe)) { throw 'Installed executable missing' }
+          "AA_INSTALLED_EXE=$exe" | Out-File -FilePath $env:GITHUB_ENV -Append
+      - name: Verify installed application
+        run: node scripts/verify-installed.cjs
+      - name: Upload verified installer
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: verified-windows-installer
+          path: |
+            dist/*Setup*.exe
+            dist/setup.sha256
+          if-no-files-found: error
+      - name: Upload verification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer-evidence
+          path: |
+            test-results/
+            installed-test-results/
+          if-no-files-found: ignore
