@@ -7,14 +7,13 @@ import { tools, useTools } from '../../tools/store'
 import { createBuildPlan, isBuildPlanCurrent } from '../buildPlan'
 import type { ShoppingInputs } from '../shoppingSnapshot'
 import { PAPERS } from '../sheet'
+import { BuildPlanShopping } from './BuildPlanShopping'
 
 type Plan = Extract<ReturnType<typeof createBuildPlan>, { ok: true }>['plan']
-
 function liveInputs(): ShoppingInputs | undefined {
   const s = stock.getState(), t = tools.getState()
   return s.loaded && t.loaded ? { stock: s.items, inventory: t.inventory } : undefined
 }
-
 export function BuildPlanAction({ disabled = false }: { disabled?: boolean }) {
   const project = useStudio(s => s.project)
   const projectKey = useStudio(s => s.projectKey)
@@ -39,7 +38,10 @@ export function BuildPlanAction({ disabled = false }: { disabled?: boolean }) {
     ]).catch(() => { if (active) setMessage('Shop inventory could not be loaded. Reopen the workspace to retry; no plan was generated.') })
     return () => { active = false }
   }, [])
-  useEffect(() => { setPlan(null); setOpen(false); setMessage(null) }, [projectKey])
+  useEffect(() => {
+    if (timer.current) { clearTimeout(timer.current); timer.current = null }
+    setBusy(false); setPlan(null); setOpen(false); setMessage(null)
+  }, [projectKey])
   useEffect(() => () => { if (timer.current) clearTimeout(timer.current) }, [])
   useEffect(() => {
     if (!open) return
@@ -55,13 +57,10 @@ export function BuildPlanAction({ disabled = false }: { disabled?: boolean }) {
       trigger.current?.focus()
     }
   }, [open])
-
   const generate = () => {
     if (busy || disabled || !liveInputs()) return
     if (!open && document.querySelector('dialog[open], [role="dialog"]')) return
-    setBusy(true)
-    setMessage(null)
-    setOpen(true)
+    setBusy(true); setMessage(null); setOpen(true)
     timer.current = setTimeout(() => {
       try {
         const state = studio.getState()
@@ -79,8 +78,7 @@ export function BuildPlanAction({ disabled = false }: { disabled?: boolean }) {
   const exportPlan = async (print: boolean) => {
     const inputs = liveInputs()
     if (!plan || busy || !inputs || !isBuildPlanCurrent(plan, studio.getState().project, inputs)) return
-    setBusy(true)
-    setMessage(null)
+    setBusy(true); setMessage(null)
     try {
       if (print) {
         const ok = await window.aa.printPdf(`${plan.name} build plan`)
@@ -92,7 +90,6 @@ export function BuildPlanAction({ disabled = false }: { disabled?: boolean }) {
     } catch { setMessage('Export failed. Your design has not been changed.') }
     finally { setBusy(false) }
   }
-
   return <>
     <button ref={trigger} type="button" disabled={disabled || busy || !ready} onClick={() => plan && !stale ? setOpen(true) : generate()}
       className="ml-auto shrink-0 rounded bg-amber-800 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-900 disabled:opacity-50">{!ready ? 'Loading shop inventory…' : busy ? 'Generating…' : plan ? stale ? 'Update Build Plan' : 'View Build Plan' : 'Create Build Plan'}</button>
@@ -122,6 +119,7 @@ export function BuildPlanAction({ disabled = false }: { disabled?: boolean }) {
             <table className="w-full text-sm"><thead><tr>{['Part', 'Qty', 'Name', 'Thickness', 'Width', 'Length'].map(label => <th key={label} className="border-b px-1 text-left">{label}</th>)}</tr></thead>
               <tbody>{plan.cutList.rows.map((row, index) => <tr key={index}><td>P{index + 1}</td><td>{row.qty}</td><td>{row.part}</td><td>{formatInches(row.thickness, { sixtyFourths: true })}</td><td>{formatInches(row.cutWidth ?? row.width, { sixtyFourths: true })}</td><td>{formatInches(row.cutLength ?? row.length, { sixtyFourths: true })}</td></tr>)}</tbody></table>
           </section>
+          <BuildPlanShopping name={plan.name} snapshot={plan.shoppingSnapshot} />
           <section aria-label="Build plan assembly guidance" className="drawing-page flow-page w-[8.5in] bg-white p-[0.5in] shadow">
             <h2 className="mb-3 text-xl font-semibold">Assembly guidance</h2>
             {plan.reviewNotes.map(note => <p key={note} className="mb-3 text-sm">{note}</p>)}
