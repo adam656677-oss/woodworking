@@ -3,6 +3,7 @@ import { useEffect } from 'react'
 import { UnsavedDialog } from './common/UnsavedDialog'
 import { ShopMode } from '../shop/ui/ShopMode'
 import { Designer } from './designer/Designer'
+import { CommandPalette } from './designer/CommandPalette'
 import { Home } from './Home'
 import { FinishingSchool } from '../finish/ui/FinishingSchool'
 import { Library } from '../library/ui/Library'
@@ -13,6 +14,7 @@ import { PlansShell } from '../plans/ui/PlansShell'
 import { DrawingBoard } from '../sketch/ui/DrawingBoard'
 import { flushDrawing } from '../sketch/ui/session'
 import { APP_NAME, studio, useStudio } from './store'
+import { WorkspaceNavigation } from './WorkspaceNavigation'
 
 const AUTOSAVE_MS = 30_000
 
@@ -20,6 +22,7 @@ export default function App() {
   const screen = useStudio(s => s.screen)
   const name = useStudio(s => s.project.name)
   const dirty = useStudio(s => s.dirty)
+  const kidsMode = useStudio(s => s.kidsMode)
 
   useEffect(() => {
     const s = studio.getState()
@@ -41,7 +44,13 @@ export default function App() {
 
   return (
     <>
-      {screen === 'kids' ? <KidsShell /> : screen === 'master' ? <Designer /> : screen === 'plans' ? <PlansShell /> : screen === 'draw' ? <DrawingBoard /> : screen === 'finish' ? <FinishingSchool /> : screen === 'library' ? <Library /> : screen === 'joints' ? <JointDesigner /> : screen === 'tools' ? <ShopTools /> : <Home />}
+      <div className="flex h-full min-h-0 flex-col">
+        <WorkspaceNavigation />
+        <div className="min-h-0 flex-1">
+          {screen === 'kids' ? <KidsShell /> : screen === 'master' ? <Designer /> : screen === 'plans' ? <PlansShell /> : screen === 'draw' ? <DrawingBoard /> : screen === 'finish' ? <FinishingSchool /> : screen === 'library' ? <Library /> : screen === 'joints' ? <JointDesigner /> : screen === 'tools' ? <ShopTools /> : <Home />}
+        </div>
+      </div>
+      {screen === 'master' && !kidsMode && <CommandPalette />}
       <UnsavedDialog />
       <ShopMode />
       {screen !== 'kids' && <SmartHelpers />}

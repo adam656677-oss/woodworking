@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { cutListRows, enterMasterShop, kill, launch, newDirs, part, startTemplate, typeInches } from './helpers'
+import { cutListRows, enterMasterShop, kill, launch, newDirs, part, selectInspectorTab, startTemplate, typeInches } from './helpers'
 
 const SHOTS = process.env.AA_SHOTS
 const shot = async (win: Page, name: string) => { if (SHOTS) await win.screenshot({ path: `${SHOTS}/${name}.png` }) }
@@ -9,6 +9,7 @@ async function blankWith(win: Page, names: string[]) {
   await startTemplate(win, 'Box')
   await win.getByRole('button', { name: 'New ▾' }).click()
   await win.getByRole('menuitem', { name: 'Blank project' }).click()
+  await selectInspectorTab(win, 'Properties')
   for (let i = 0; i < names.length; i++) await win.getByRole('button', { name: 'Add board' }).click()
   for (let i = 0; i < names.length; i++) {
     await part(win, `Board ${i + 1}`).dblclick()

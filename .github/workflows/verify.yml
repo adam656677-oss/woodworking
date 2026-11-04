@@ -1,0 +1,26 @@
+name: Verify
+on:
+  push:
+    branches: [main, redesign/pro-workspace]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Unit and component tests
+        if: success() || failure()
+        run: npm test
+      - name: Production build
+        if: success() || failure()
+        run: npm run build

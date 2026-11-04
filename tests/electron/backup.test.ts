@@ -72,11 +72,13 @@ test('a project package round-trips; other files are refused', async () => {
 
 test('odd files Windows leaves about are skipped, so every backup can be restored', async () => {
   await writeFile(join(ud, 'kids-photos', 'Thumbs.db'), 'x')
-  await writeFile(join(ud, 'kids-photos', 'Birdhouse.JPG'), 'x')
+  // Use a distinct name: case-only variants overwrite the valid fixture on Windows.
+  await writeFile(join(ud, 'kids-photos', 'Unexpected.JPG'), 'x')
   await writeFile(join(docs, 'desktop.ini'), 'x')
   const { files, skipped } = await collectBackup(ud, docs)
   expect(files.map(f => f.path)).not.toContain('desktop.ini')
-  expect(skipped).toContain('kids-photos/Birdhouse.JPG')
+  expect(skipped).toContain('kids-photos/Unexpected.JPG')
+  expect(files.find(f => f.path === 'kids-photos/birdhouse.jpg')?.data).toBe(Buffer.from([1, 2, 3]).toString('base64'))
   const file = join(out, 'b.aabackup')
   await writeBackup(file, files)
   await expect(readBackup(file)).resolves.toBeTruthy()

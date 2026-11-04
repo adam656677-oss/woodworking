@@ -1,0 +1,27 @@
+name: Electron end-to-end
+on:
+  push:
+    branches: [main, redesign/pro-workspace]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  electron:
+    runs-on: windows-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Run full Electron suite
+        run: npm run e2e
+      - name: Preserve test artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: electron-test-results
+          path: test-results/
+          if-no-files-found: ignore

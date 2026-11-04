@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { join } from 'node:path'
-import { enterMasterShop, kill, launch, newDirs, part, stubOpenDialog, stubSaveDialog, typeInches, unlockTemplate } from './helpers'
+import { enterMasterShop, kill, launch, newDirs, part, selectInspectorTab, stubOpenDialog, stubSaveDialog, typeInches, unlockTemplate } from './helpers'
 
 const SHOTS = process.env.AA_SHOTS
 const shot = async (win: Page, name: string) => { if (SHOTS) await win.screenshot({ path: `${SHOTS}/${name}.png` }) }
@@ -22,30 +22,27 @@ test('bookshelf: explode, section, weight, and a shelf pushed into a side is an 
     await tools.getByLabel('Overall size').check()
     await expect(win.getByTestId('overall-h')).toHaveText('36" H')
     await tools.getByLabel('Overall size').uncheck()
-
     await win.getByRole('button', { name: 'Checks ▾' }).click()
     await win.getByRole('menuitem', { name: 'Weight & balance' }).click()
     await expect(win.getByTestId('total-weight')).toHaveText(/^\d+ lb/)
     await shot(win, 'weight')
-
     await win.getByRole('button', { name: 'Checks ▾' }).click()
     await win.getByRole('menuitem', { name: 'Interference' }).click()
     const panel = win.getByRole('region', { name: 'Interference' })
     await panel.getByRole('button', { name: 'Check for interference' }).click()
     await expect(panel.getByRole('status')).toHaveText('✓ No parts run into each other.')
-    // Type the shelf's X past its dado, so it runs into the left side.
     await part(win, 'Shelf').click()
+    await selectInspectorTab(win, 'Properties')
     const x = await win.getByLabel('X', { exact: true }).inputValue()
     await typeInches(win, 'X', '0')
     const ask = win.getByRole('dialog', { name: 'Replace' })
     if (await ask.isVisible()) await ask.getByRole('button', { name: /^(Replace|Remove the rule)$/ }).click()
     expect(x).not.toBe('0"')
+    await selectInspectorTab(win, 'Checks')
     await panel.getByRole('button', { name: 'Check for interference' }).click()
     await expect(panel.getByRole('list', { name: 'Interferences' })).toContainText(/(Shelf and Side|Side and Shelf) run into each other/)
     await shot(win, 'interference')
-  } finally {
-    kill(app)
-  }
+  } finally { kill(app) }
 })
 
 test('keep a measured dimension and a note; they come back after save and reopen', async () => {
@@ -76,10 +73,7 @@ test('keep a measured dimension and a note; they come back after save and reopen
       await win.getByRole('button', { name: 'Save', exact: true }).click()
       await expect(win).toHaveTitle('A&A Woodworking Studio — dims')
       await app.close()
-    } catch (e) {
-      kill(app)
-      throw e
-    }
+    } catch (e) { kill(app); throw e }
   }
   const { app, win } = await launch(dirs)
   try {
@@ -88,7 +82,5 @@ test('keep a measured dimension and a note; they come back after save and reopen
     await win.getByRole('button', { name: 'Open', exact: true }).click()
     await expect(win.getByTestId('dimension-label')).toHaveCount(1)
     await expect(win.getByTestId('note-label')).toHaveText('📝 Glue the back last')
-  } finally {
-    kill(app)
-  }
+  } finally { kill(app) }
 })

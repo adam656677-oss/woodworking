@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { enterMasterShop, kill, launch, newDirs } from './helpers'
+import { enterMasterShop, kill, launch, newDirs, selectInspectorTab } from './helpers'
 
 const SHOTS = process.env.AA_SHOTS
 const shot = async (win: Page, name: string) => { if (SHOTS) await win.screenshot({ path: `${SHOTS}/${name}.png` }) }
@@ -19,7 +19,6 @@ test('every new template starts with no warnings; the new kids projects have she
       await expect(win.getByRole('region', { name: 'Warnings' })).toHaveCount(0)
       await shot(win, `projects-${name.replace(/\W+/g, '-')}`)
     }
-    // The side table lists its tabletop fasteners.
     await win.getByRole('button', { name: 'New ▾' }).click()
     await win.getByRole('menuitem', { name: 'Side table', exact: true }).click()
     const d0 = win.getByRole('button', { name: /Don.t save|Discard/ })
@@ -28,16 +27,14 @@ test('every new template starts with no warnings; the new kids projects have she
     await expect(win.getByRole('region', { name: 'Hardware' })).toContainText('Tabletop fasteners (figure-8)')
     await win.keyboard.press('Escape')
     await win.getByRole('button', { name: /Close/ }).first().click().catch(() => {})
-
-    // A template stays live: more strips in the cutting board.
     await win.getByRole('button', { name: 'New ▾' }).click()
     await win.getByRole('menuitem', { name: 'Cutting board', exact: true }).click()
     const discard = win.getByRole('button', { name: /Don.t save|Discard/ })
     if (await discard.isVisible().catch(() => false)) await discard.click()
+    await selectInspectorTab(win, 'Template')
     await win.getByLabel('Strips').fill('8')
     await win.getByLabel('Strips').press('Tab')
     await expect(win.getByText('PARTS (8)')).toBeVisible()
-
     await win.getByRole('button', { name: '⌂ Home' }).click()
     const dont = win.getByRole('button', { name: /Don.t save|Discard/ })
     if (await dont.isVisible().catch(() => false)) await dont.click()
@@ -45,11 +42,8 @@ test('every new template starts with no warnings; the new kids projects have she
     await win.getByRole('button', { name: 'Projects' }).click()
     for (const p of ['Coaster set', 'Bookends', 'Phone stand', 'Planter box']) await expect(win.getByRole('button', { name: new RegExp(p) })).toBeVisible()
     await shot(win, 'projects-kids')
-    // A new project's page, with its steps.
     await win.getByRole('button', { name: /Planter box/ }).click()
     await expect(win.getByText(/drain out underneath/)).toBeVisible()
     await shot(win, 'projects-planter')
-  } finally {
-    kill(app)
-  }
+  } finally { kill(app) }
 })

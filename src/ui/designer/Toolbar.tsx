@@ -3,6 +3,7 @@ import { openJointDesigner } from '../../joinery/ui/JointDesigner'
 import { openLibrary } from '../../library/ui/Library'
 import { openFinishing } from '../../finish/ui/FinishingSchool'
 import { useMemo, useState } from 'react'
+import { ToolbarMenu as Menu } from '../common/ToolbarMenu'
 import { worldBox } from '../../model/geometry'
 import { addBoard, alignBoards, deleteBoards, mirrorBoards, rotateBoard } from '../../model/ops'
 import { plans } from '../../plans/plansStore'
@@ -25,20 +26,6 @@ function Btn(props: React.ButtonHTMLAttributes<HTMLButtonElement> & { active?: b
       {...rest}
       className={`rounded px-2 py-1 text-sm disabled:opacity-40 ${active ? 'bg-amber-700 text-white' : 'hover:bg-stone-200'} ${className ?? ''}`}
     />
-  )
-}
-
-function Menu({ label, children }: { label: string; children: (close: () => void) => React.ReactNode }) {
-  const [open, setOpen] = useState(false)
-  return (
-    <div className="relative" onMouseLeave={() => setOpen(false)}>
-      <Btn onClick={() => setOpen(o => !o)} aria-haspopup="menu" aria-expanded={open}>{label} ▾</Btn>
-      {open && (
-        <div role="menu" className="absolute left-0 top-full z-20 flex min-w-40 flex-col rounded border border-stone-300 bg-white py-1 shadow-lg">
-          {children(() => setOpen(false))}
-        </div>
-      )}
-    </div>
   )
 }
 
