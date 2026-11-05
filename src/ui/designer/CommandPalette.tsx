@@ -57,7 +57,9 @@ export function CommandPalette() {
   return <>
     <button type="button" onClick={show} aria-keyshortcuts="Control+k Meta+k"
       className="fixed bottom-3 right-3 z-20 rounded-lg border border-stone-300 bg-white px-3 py-2 text-xs font-semibold text-stone-700 shadow hover:bg-stone-100">Commands · Ctrl/Cmd+K</button>
-    <dialog ref={dialog} aria-labelledby={`${id}-title`} onCancel={() => setOpen(false)} onClose={() => setOpen(false)}
+    <dialog ref={dialog} aria-labelledby={`${id}-title`} onCancel={() => setOpen(false)}
+      // A close event can arrive after the palette was already reopened (Ctrl+K right after running a command); only a closed dialog closes the palette.
+      onClose={() => { if (!dialog.current?.open) setOpen(false) }}
       className="w-full max-w-xl rounded-xl border border-stone-300 bg-white p-0 text-stone-900 shadow-2xl backdrop:bg-stone-900/40"
       onKeyDown={event => {
         event.stopPropagation()
