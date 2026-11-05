@@ -179,10 +179,15 @@ export function recalcFormulas(p0: Project): { project: Project; errors: Formula
  * unless the partner's own size formula sets that size (it already counts the depth).
  */
 function setJointValue(p: Project, id: string, path: string, v: number): Project {
-  const j = p.joints.find(x => x.id === id)
+  const at = jointPosition(p.joints, id)
+  const j = at >= 0 ? p.joints[at] : undefined
   if (!j) return p
   if (path !== 'depth' || (j.type !== 'dado' && j.type !== 'rabbet') || getPath(j.params, 'depth') === v) {
-    return { ...p, joints: p.joints.map(x => (x.id === id ? { ...x, params: setPath(x.params, path, v) } as Joint : x)) }
+    // Same list, same order, one joint replaced: the position stays good for the next lookup.
+    const joints = p.joints.slice()
+    joints[at] = { ...j, params: setPath(j.params, path, v) } as Joint
+    jointPositions.set(joints, jointPositions.get(p.joints)!)
+    return { ...p, joints }
   }
   const before = p.boards.find(b => b.id === j.partnerBoardId)
   const next = updateJoint(p, id, { depth: v })
@@ -190,6 +195,18 @@ function setJointValue(p: Project, id: string, path: string, v: number): Project
   if (!before || !after) return next
   const held = (['width', 'length'] as const).some(k => before[k] !== after[k] && before.formulas?.[k])
   return held ? { ...next, boards: next.boards.map(b => (b.id === before.id ? before : b)) } : next
+}
+
+/** Where each joint is in a joints list (the first with an id), kept for as long as the list is the same list. */
+const jointPositions = new WeakMap<Joint[], Map<string, number>>()
+function jointPosition(joints: Joint[], id: string): number {
+  let m = jointPositions.get(joints)
+  if (!m) {
+    m = new Map()
+    joints.forEach((j, i) => { if (!m!.has(j.id)) m!.set(j.id, i) })
+    jointPositions.set(joints, m)
+  }
+  return m.get(id) ?? -1
 }
 
 function applyBoardValue(b: Board, path: string, v: number): Board {
