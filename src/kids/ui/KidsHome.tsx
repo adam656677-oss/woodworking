@@ -5,6 +5,7 @@ import { studio } from '../../ui/store'
 import { Art } from '../art'
 import { kids, useKids } from '../kidsStore'
 import { WhoIsWorking } from './FamilyPanel'
+import { HelpButton } from '../../help/ui/HelpButton'
 
 const TILES = [
   { page: 'path', label: 'My Path', art: 'rules', color: 'border-green-500 bg-green-100' },
@@ -26,7 +27,10 @@ export function KidsHome() {
     <main className="flex h-full flex-col items-center bg-gradient-to-b from-sky-100 to-sky-50 p-8 text-sky-950">
       <div className="flex w-full max-w-5xl items-center justify-between">
         <button onClick={() => studio.getState().goto('home')} className="rounded-xl bg-white px-5 py-2 text-lg font-semibold shadow hover:bg-sky-100">← Home</button>
-        <button aria-label="Parent" title="Parent settings" onClick={() => k.go({ name: 'parent' })} className="rounded-full bg-white p-3 text-2xl shadow hover:bg-sky-100">⚙️</button>
+        <div className="flex items-center gap-3">
+          <HelpButton className="rounded-xl bg-white px-5 py-2 text-lg font-semibold shadow hover:bg-sky-100" />
+          <button aria-label="Parent" title="Parent settings" onClick={() => k.go({ name: 'parent' })} className="rounded-full bg-white p-3 text-2xl shadow hover:bg-sky-100">⚙️</button>
+        </div>
       </div>
       <h1 className="mt-4 text-5xl font-bold">Kids&apos; Workshop</h1>
       <p className="mt-2 text-2xl">{name ? `Hi, ${name}! What are we making today?` : 'What are we making today?'}</p>

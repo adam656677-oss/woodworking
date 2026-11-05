@@ -1,4 +1,5 @@
 import { SmartHelpers } from '../smart/ui/SmartDialogs'
+import { HelpHost } from '../help/ui/HelpHost'
 import { useEffect } from 'react'
 import { UnsavedDialog } from './common/UnsavedDialog'
 import { ShopMode } from '../shop/ui/ShopMode'
@@ -53,6 +54,7 @@ export default function App() {
       {screen === 'master' && !kidsMode && <CommandPalette />}
       <UnsavedDialog />
       <ShopMode />
+      <HelpHost />
       {screen !== 'kids' && <SmartHelpers />}
     </>
   )
