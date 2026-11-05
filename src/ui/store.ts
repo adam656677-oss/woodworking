@@ -312,6 +312,19 @@ export function createStudioStore() {
         const rec = get().recovery
         if (!rec) return
         if (useAutosave) {
+          // An autosave cut off by a crash must not block opening: fall back to the last saved version.
+          try { deserialize(rec.autosaveText) } catch {
+            const damaged = 'The recovered copy was damaged, so it could not be used.'
+            if (rec.savedText !== null) {
+              loadText(rec.savedText, rec.path, rec.backupPath, false)
+              set({ error: `${damaged} Your last saved version was opened instead.` })
+              void api().deleteAutosave?.(rec.path)
+            } else {
+              set({ recovery: null, error: damaged })
+              void api().deleteAutosave?.(null)
+            }
+            return
+          }
           // Recovered work is unsaved until saved, so leave the autosave in place until then.
           set({ recovery: null })
           void guard(() => loadText(rec.autosaveText, rec.path, rec.backupPath, true))

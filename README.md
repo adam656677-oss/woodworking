@@ -21,6 +21,14 @@ unknown publisher (it isn't code-signed); choose **More info → Run anyway**.
 - Your own wood stock (the **Woods** button) is kept with the app's settings and copied into each project
   that uses it, so project files are self-contained.
 
+## If something goes wrong
+
+The app keeps a short problem log in `%APPDATA%\A&A Woodworking Studio\logs\aa-studio.log` (about 1 MB per file,
+the newest five kept). It lists when the app started (version, Windows and Electron versions), crashes, errors and
+failed saves or exports with the file involved — never what is inside your projects. On the Home screen,
+**About → Open log folder** opens it; the error screen has the same button. Saves are written to a temporary file,
+flushed to disk and swapped in, so a crash during a save can't leave a damaged project; autosaves work the same way.
+
 ## What Piece 1 does
 
 - Home screen: **Kids' Workshop** (coming soon) and **Master Shop**.

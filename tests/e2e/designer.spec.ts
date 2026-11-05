@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { existsSync, mkdirSync, readFileSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import {
   cutListRows, enterMasterShop, kill, launch, newDirs, part, startTemplate, stubOpenDialog, stubSaveDialog, typeInches, unlockTemplate
@@ -84,7 +85,14 @@ test('4. autosave: an unsaved edit survives a crash and can be recovered', async
     await win.getByLabel('Part name').fill('Front Panel')
     await win.getByLabel('Part name').press('Enter')
     await expect(win).toHaveTitle('A&A Woodworking Studio — crash *')
-    await win.waitForTimeout(31_000)
+    // The autosave arrives within one 30 s tick and is a whole, readable file (never half-written).
+    const autosave = `${file}.autosave`
+    await expect.poll(() => existsSync(autosave) && readFileSync(autosave, 'utf8').includes('Front Panel'), { timeout: 45_000 }).toBe(true)
+    expect(() => JSON.parse(readFileSync(autosave, 'utf8'))).not.toThrow()
+    expect(existsSync(`${autosave}.tmp`)).toBe(false)
+    // Mid-edit: a name typed into the box but not yet applied when the app is killed.
+    await part(win, 'Back').dblclick()
+    await win.getByLabel('Part name').fill('Rear half-typed')
     kill(app)
   }
   {
@@ -95,6 +103,73 @@ test('4. autosave: an unsaved edit survives a crash and can be recovered', async
       await win.getByRole('button', { name: 'Open', exact: true }).click()
       await win.getByRole('dialog', { name: 'Recover work' }).getByRole('button', { name: 'Recover' }).click()
       await expect(part(win, 'Front Panel')).toBeVisible()
+      await expect(win).toHaveTitle('A&A Woodworking Studio — crash *')
+    } finally {
+      kill(app)
+    }
+  }
+})
+
+test('4b. a save that fails leaves the saved file untouched, says so plainly, and is logged', async () => {
+  const dirs = newDirs()
+  const file = join(dirs.docs, 'keep.aaw')
+  const { app, win } = await launch(dirs)
+  try {
+    await enterMasterShop(win)
+    await win.getByRole('button', { name: 'Box', exact: true }).click()
+    await unlockTemplate(win)
+    await stubSaveDialog(app, file)
+    await win.getByRole('button', { name: 'Save', exact: true }).click()
+    await expect(win).toHaveTitle('A&A Woodworking Studio — keep')
+    const good = readFileSync(file, 'utf8')
+    await part(win, 'Front').dblclick()
+    await win.getByLabel('Part name').fill('Front Panel')
+    await win.getByLabel('Part name').press('Enter')
+    await expect(win).toHaveTitle('A&A Woodworking Studio — keep *')
+    // A folder where the temporary file must go makes the write fail, like a full disk or a locked file would.
+    mkdirSync(`${file}.tmp`)
+    await win.getByRole('button', { name: 'Save', exact: true }).click()
+    await expect(win.getByRole('alert').filter({ hasText: "Couldn't save" })).toContainText('Your last saved version is safe')
+    expect(readFileSync(file, 'utf8')).toBe(good)
+    await expect(win).toHaveTitle('A&A Woodworking Studio — keep *')
+    // The failure and its cause are in the log, without the project's contents.
+    const log = readFileSync(join(dirs.userData, 'logs', 'aa-studio.log'), 'utf8')
+    expect(log).toContain('aa:saveProject failed')
+    expect(log).toContain('keep.aaw')
+    expect(log).not.toContain('Front Panel')
+    // Once the problem is gone, saving works again.
+    rmSync(`${file}.tmp`, { recursive: true })
+    await win.getByRole('button', { name: 'Save', exact: true }).click()
+    await expect(win).toHaveTitle('A&A Woodworking Studio — keep')
+    expect(readFileSync(file, 'utf8')).toContain('Front Panel')
+    expect(readFileSync(`${file}.bak`, 'utf8')).toBe(good)
+  } finally {
+    kill(app)
+  }
+})
+
+test('4c. a project that was never saved is recovered from its autosave after a crash', async () => {
+  const dirs = newDirs()
+  const autosave = join(dirs.docs, 'A&A Woodworking', 'Untitled.aaw.autosave')
+  {
+    const { app, win } = await launch(dirs)
+    await enterMasterShop(win)
+    await win.getByRole('button', { name: 'Box', exact: true }).click()
+    await unlockTemplate(win)
+    await part(win, 'Front').dblclick()
+    await win.getByLabel('Part name').fill('Unsaved Front')
+    await win.getByLabel('Part name').press('Enter')
+    await expect.poll(() => existsSync(autosave) && readFileSync(autosave, 'utf8').includes('Unsaved Front'), { timeout: 45_000 }).toBe(true)
+    kill(app)
+  }
+  {
+    const { app, win } = await launch(dirs)
+    try {
+      await enterMasterShop(win)
+      const dialog = win.getByRole('dialog', { name: 'Recover work' })
+      await expect(dialog).toBeVisible()
+      await dialog.getByRole('button', { name: 'Recover' }).click()
+      await expect(part(win, 'Unsaved Front')).toBeVisible()
     } finally {
       kill(app)
     }

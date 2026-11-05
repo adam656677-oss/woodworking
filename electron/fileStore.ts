@@ -2,7 +2,7 @@
 import * as nodeFs from 'node:fs/promises'
 import { join } from 'node:path'
 
-export type FsLike = Pick<typeof nodeFs, 'writeFile' | 'rename' | 'stat' | 'readFile' | 'copyFile' | 'mkdir' | 'rm'>
+export type FsLike = Pick<typeof nodeFs, 'writeFile' | 'open' | 'rename' | 'stat' | 'readFile' | 'copyFile' | 'mkdir' | 'rm'>
 
 const SAVE_FAILED = "Couldn't save — disk full or no permission. Your last saved version is safe."
 
@@ -61,16 +61,25 @@ export async function loadJson(path: string, fs: FsLike = nodeFs): Promise<{ dat
   try { return { data: JSON.parse(await fs.readFile(`${path}.bak`, 'utf8')), damaged: true } } catch { return { data: null, damaged: true } }
 }
 
-async function saveNow(path: string, text: string, fs: FsLike, retryDelayMs: number): Promise<void> {
+/** Write beside the file, flush to disk, then swap it in — a crash at any point leaves the old file or the new one, never half. */
+async function atomicWrite(path: string, text: string, fs: FsLike, retryDelayMs: number, beforeSwap?: () => Promise<void>): Promise<void> {
   const tmp = `${path}.tmp`
   try {
     await fs.writeFile(tmp, text, 'utf8')
-    if (await exists(fs, path)) await fs.copyFile(path, `${path}.bak`)
+    const fh = await fs.open(tmp, 'r+')
+    try { await fh.sync() } finally { await fh.close() }
+    if (beforeSwap) await beforeSwap()
     await renameWithRetry(fs, tmp, path, retryDelayMs)
-  } catch {
+  } catch (cause) {
     await fs.rm(tmp, { force: true }).catch(() => {})
-    throw new Error(SAVE_FAILED)
+    throw new Error(SAVE_FAILED, { cause })
   }
+}
+
+async function saveNow(path: string, text: string, fs: FsLike, retryDelayMs: number): Promise<void> {
+  await atomicWrite(path, text, fs, retryDelayMs, async () => {
+    if (await exists(fs, path)) await fs.copyFile(path, `${path}.bak`)
+  })
 }
 
 /** Remove an autosave side file once the real file is saved (a missing file is fine). */
@@ -78,9 +87,12 @@ export async function deleteAutosave(path: string, fs: FsLike = nodeFs): Promise
   await fs.rm(path, { force: true })
 }
 
-/** Write the autosave side file (failures are reported but never touch the real file). */
-export async function writeAutosave(path: string, text: string, fs: FsLike = nodeFs): Promise<void> {
-  await fs.writeFile(path, text, 'utf8')
+/** Write the autosave side file the same careful way (failures are reported but never touch the real file). */
+export function writeAutosave(path: string, text: string, fs: FsLike = nodeFs, retryDelayMs = 100): Promise<void> {
+  const run = (queues.get(path) ?? Promise.resolve()).catch(() => {}).then(() => atomicWrite(path, text, fs, retryDelayMs))
+  queues.set(path, run)
+  void run.finally(() => { if (queues.get(path) === run) queues.delete(path) }).catch(() => {})
+  return run
 }
 
 export async function load(path: string, fs: FsLike = nodeFs) {
