@@ -53,6 +53,8 @@ test('dragging a board near another shows what it snapped to and lands flush', a
     await win.mouse.up()
     await expect(feedback).toHaveCount(0)
     // Flush: board 2 now starts exactly where board 1 ends (3-1/2").
+    // Letting go over the other board keeps this board selected.
+    await expect(win.getByRole('heading', { name: 'Board 2' })).toBeVisible()
     await expect(win.getByLabel('X', { exact: true })).toHaveValue('3-1/2"')
   } finally { kill(app) }
 })

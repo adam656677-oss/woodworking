@@ -8,6 +8,10 @@ import { SnapOverlay } from './SnapOverlay'
 import { studio } from '../store'
 import { controlledBy, ruleLabel } from '../../formulas/rules'
 
+let lastDragEnd = -Infinity
+/** True for a moment after a move-arrow drag ends, so letting go over another part does not select it. */
+export const justDragged = () => performance.now() - lastDragEnd < 400
+
 const SNAP = { tolerance: 0.25, grid: 1 / 16 }
 const KIDS_SNAP = { tolerance: 0.25, grid: 1 / 8 }
 
@@ -47,6 +51,7 @@ export function MoveGizmo({ object, boardId }: { object: THREE.Object3D; boardId
         onObjectChange={onChange}
         onMouseUp={() => {
           dragging.current = false
+          lastDragEnd = performance.now()
           setFeedback(null)
           const p = { x: object.position.x, y: object.position.y, z: object.position.z }
           const st = studio.getState()
