@@ -29,7 +29,7 @@ async function main() {
     await win.getByRole('menuitem', { name: 'Box', exact: true }).click()
     const parts = win.getByRole('list', { name: 'Parts', exact: true })
     await expect(parts).toBeVisible()
-    const names = await parts.innerText()
+    const names = (await parts.textContent()) ?? ""
     await win.screenshot({ path: join(output, 'designer.png') })
     await app.evaluate(({ dialog }, filePath) => { dialog.showSaveDialog = async () => ({ canceled: false, filePath }) }, project)
     await win.getByRole('button', { name: 'Save', exact: true }).click()

@@ -28,5 +28,6 @@ html, body, #root { height: 100%; margin: 0; }
   .drawings-print .packet-inner { display: block !important; overflow: visible !important; }
   .drawings-print .no-print { display: none !important; }
   .drawings-print .drawing-page { box-shadow: none !important; margin: 0 !important; break-after: page; overflow: hidden; }
-  .drawings-print .flow-page { page: flow; overflow: visible; }
+  /* Same type as the drawing sheets (src/drawings/sheet.ts), so the whole packet prints in one font on every computer. */
+  .drawings-print .flow-page { page: flow; overflow: visible; font-family: Arial, Helvetica, sans-serif; }
 }
