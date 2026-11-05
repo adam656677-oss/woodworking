@@ -219,12 +219,33 @@ function plural(n: number, word: string): string {
 }
 
 /** Shop notes for one board: its grooves, holes, fasteners and angled cuts. */
+/**
+ * The joints that name a board as host or partner, in joint order (what a per-part scan of every joint would keep).
+ * The lists are kept for as long as the project's joints list is the same list.
+ */
+const touching = new WeakMap<Joint[], Map<string, Joint[]>>()
+export function jointsTouching(project: Project, boardId: string): Joint[] {
+  let m = touching.get(project.joints)
+  if (!m) {
+    m = new Map()
+    for (const j of project.joints) {
+      for (const id of j.hostBoardId === j.partnerBoardId ? [j.hostBoardId] : [j.hostBoardId, j.partnerBoardId]) {
+        const list = m.get(id)
+        if (list) list.push(j)
+        else m.set(id, [j])
+      }
+    }
+    touching.set(project.joints, m)
+  }
+  return m.get(boardId) ?? []
+}
+
 export function jointNotes(project: Project, boardId: string): string[] {
   const b = boardById(project, boardId)
   if (!b) return []
   const notes: string[] = []
   const rabbetCounts = new Map<string, { count: number; along: 'width' | 'length' }>()
-  for (const j of project.joints) {
+  for (const j of jointsTouching(project, boardId)) {
     if (j.type === 'joinery') {
       if (j.hostBoardId === boardId || j.partnerBoardId === boardId) notes.push(...joineryNotes(project, j, boardId))
       continue

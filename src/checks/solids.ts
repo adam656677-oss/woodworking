@@ -82,6 +82,24 @@ export function weigh(p: Project, solids = localSolids(p)): WeightReport {
 }
 
 export type Interference = { a: string; b: string; volume: number }
+
+/**
+ * How much two finished shapes share, by the two shapes and how one sits against the other. Twin parts in twin
+ * places (a row of identical drawers) are worked out once, and a second check after an edit only redoes the pairs the
+ * edit moved. A shape is named by its object: parts that are alike share one (see buildBoardGeometry).
+ */
+const sharedVolumes = new Map<string, number>()
+const SHARED_MAX = 20000
+/** Forget every worked-out pair (for measuring a cold start). */
+export const clearSharedVolumes = () => sharedVolumes.clear()
+const shapeNames = new WeakMap<THREE.BufferGeometry, number>()
+let shapeCount = 0
+const shapeName = (g: THREE.BufferGeometry) => { let n = shapeNames.get(g); if (n === undefined) shapeNames.set(g, (n = ++shapeCount)); return n }
+/** Where B sits in A's own coordinates, to a hundred-thousandth of an inch. */
+function placement(a: Board, b: Board): string {
+  const rel = boardMatrix(a).invert().multiply(boardMatrix(b))
+  return rel.elements.map(e => Math.round(e * 1e5) + 0).join(',')
+}
 /** Less than this (cu in) shared is touching, not running into each other. */
 export const INTERFERENCE_MIN = 0.0005
 /** Between parts joined by a cut joint: at least this (cubic inches), or 1% of the space they share. */
@@ -107,8 +125,15 @@ export function interferences(p: Project, solids = localSolids(p)): Interference
     for (let j = i + 1; j < p.boards.length; j++) {
       const A = p.boards[i], B = p.boards[j]
       if (!boxesOverlap(boxes.get(A.id)!, boxes.get(B.id)!)) continue
-      const r = evaluator.evaluate(brush(A), brush(B), INTERSECTION) as Brush
-      const v = volumeAndCentroid(r.geometry).volume
+      const sa = solids.get(A.id)!, sb = solids.get(B.id)!
+      const name = `${shapeName(sa)}|${shapeName(sb)}|${placement(A, B)}`
+      let v = sharedVolumes.get(name)
+      if (v === undefined) {
+        const r = evaluator.evaluate(brush(A), brush(B), INTERSECTION) as Brush
+        v = volumeAndCentroid(r.geometry).volume
+        if (sharedVolumes.size >= SHARED_MAX) sharedVolumes.clear()
+        sharedVolumes.set(name, v)
+      }
       const a = boxes.get(A.id)!, b = boxes.get(B.id)!
       const shared = ['x', 'y', 'z'].reduce((k, ax) => k * Math.max(0, Math.min(a.max[ax as 'x'], b.max[ax as 'x']) - Math.max(a.min[ax as 'x'], b.min[ax as 'x'])), 1)
       if (v > (joined.has(`${A.id}|${B.id}`) ? Math.max(JOINED_MIN, shared * 0.01) : INTERFERENCE_MIN)) out.push({ a: A.id, b: B.id, volume: v })

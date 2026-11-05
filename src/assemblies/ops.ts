@@ -55,6 +55,20 @@ export function groupBoardIds(p: Project, gid: string): string[] {
   return out
 }
 
+/** The ids of groups with at least one part in them (sub-groups' parts count for the groups above), in one pass. */
+export function groupsWithParts(p: Project): Set<string> {
+  const m = groupMap(p)
+  const out = new Set<string>()
+  for (const b of p.boards) {
+    let g = b.groupId ? m.get(b.groupId) : undefined
+    for (let hops = 0; g && hops <= m.size; hops++) {
+      out.add(g.id)
+      g = g.parentId ? m.get(g.parentId) : undefined
+    }
+  }
+  return out
+}
+
 /** The outermost group whose parts are exactly these, if any. */
 export function wholeGroup(p: Project, ids: string[]): Group | null {
   if (!ids.length) return null

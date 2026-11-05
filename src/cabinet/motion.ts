@@ -102,13 +102,20 @@ export type { Vec3 }
  * how one of its parts moved.
  */
 export function followMotion(prev: Project, next: Project): Project {
-  if (!groupsOf(next).some(g => g.motion)) return next
+  if (!groupsOf(next).some(g => g.motion) || prev.boards === next.boards) return next
+  const prevById = new Map<string, Board>(), nextById = new Map<string, Board>()
+  for (const b of prev.boards) if (!prevById.has(b.id)) prevById.set(b.id, b)
+  for (const b of next.boards) if (!nextById.has(b.id)) nextById.set(b.id, b)
   let changed = false
   const groups = groupsOf(next).map(g => {
     if (!g.motion) return g
-    const ref = groupBoardIds(next, g.id).map(id => [prev.boards.find(b => b.id === id), next.boards.find(b => b.id === id)] as const).find(([a, b]) => a && b)
-    if (!ref) return g
-    const [a, b] = ref as [Board, Board]
+    // The first of the group's parts that is in both projects.
+    let a: Board | undefined, b: Board | undefined
+    for (const id of groupBoardIds(next, g.id)) {
+      a = prevById.get(id); b = nextById.get(id)
+      if (a && b) break
+    }
+    if (!a || !b) return g
     if (a.position.x === b.position.x && a.position.y === b.position.y && a.position.z === b.position.z &&
       a.rotation.x === b.rotation.x && a.rotation.y === b.rotation.y && a.rotation.z === b.rotation.z) return g
     const m = boardMatrix(b).multiply(boardMatrix(a).invert())

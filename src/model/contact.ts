@@ -70,10 +70,10 @@ export function grooveIndex(joints: Joint[]): (aId: string, bId: string) => Join
 }
 
 /** contactBetween for two boards already in hand (and the groove joint between them, if any). */
-export function contactOfBoards(a: Board, b: Board, groove: Joint | undefined): Contact | null {
+export function contactOfBoards(a: Board, b: Board, groove: Joint | undefined, boxOf: (b: Board) => Box = worldBox): Contact | null {
   if (a === b || !isAxisAligned(a) || !isAxisAligned(b)) return null
-  const A = worldBox(a)
-  const B = worldBox(b)
+  const A = boxOf(a)
+  const B = boxOf(b)
   const ov = AXES.map(ax => overlap1(A.min[ax], A.max[ax], B.min[ax], B.max[ax]))
 
   // Mitered corner: the boxes overlap in a corner region where both boards have mitered ends.
@@ -107,8 +107,8 @@ export function contactOfBoards(a: Board, b: Board, groove: Joint | undefined): 
   const same = pa === pb && (pa === 'edge' || pa === 'end')
   const aFirst = same ? A.min[t] > B.min[t] : order.indexOf(pa) <= order.indexOf(pb)
   const [partner, host, pPart, hPart] = aFirst ? [a, b, pa, pb] : [b, a, pb, pa]
-  const hb = worldBox(host)
-  const pbx = worldBox(partner)
+  const hb = boxOf(host)
+  const pbx = boxOf(partner)
 
   if (pPart === 'end' && hPart !== 'end' && flushWithHostEnd(host, hb, pbx)) {
     return { kind: 'cornerEnds', host: host.id, partner: partner.id, nearHostEnd: true, cornerAngle: 90, hostSurface: hPart === 'face' ? 'face' : 'edge' }

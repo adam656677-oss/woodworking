@@ -1,6 +1,6 @@
 // Design warnings: overlapping boards, parts bigger than the stock, and joints or angles that can't be made.
 import { contactOfBoards, grooveIndex, TOUCH_TOL } from './contact'
-import { boxInLocal, isAxisAligned, worldBox } from './geometry'
+import { type Box, boxInLocal, isAxisAligned, worldBox } from './geometry'
 import { validateBoard, validateJoint } from './joints'
 import type { Board, GrooveParams, Joint, Project } from './types'
 import { formatInches } from './units'
@@ -20,8 +20,8 @@ export type Warning = { kind: 'overlap' | 'exceedsStock' | 'badJoint' | 'badShap
  * Index pairs (i < k, in the order a double loop would find them) of boards whose boxes overlap by more than the
  * touching tolerance on every axis. Sweeps along x instead of testing every pair, and works out each box once.
  */
-export function overlappingPairs(boards: Board[]): [number, number][] {
-  const boxes = boards.map(worldBox)
+export function overlappingPairs(boards: Board[], boxOf: (b: Board) => Box = worldBox): [number, number][] {
+  const boxes = boards.map(boxOf)
   const order = boards.map((_, i) => i).sort((p, q) => boxes[p].min.x - boxes[q].min.x)
   const pairs: [number, number][] = []
   // overlap1(aMin, aMax, bMin, bMax) > TOUCH_TOL on each axis, written out: this is the hot loop.
@@ -46,8 +46,11 @@ export function validate(project: Project): Warning[] {
   const warnings: Warning[] = []
 
   const joined = new Set(project.joints.flatMap(j => [`${j.hostBoardId}|${j.partnerBoardId}`, `${j.partnerBoardId}|${j.hostBoardId}`]))
+  // Each part's box is worked out once and shared by the overlap sweep, the contact checks and the groove seats.
+  const boxCache = new Map<Board, Box>()
+  const boxOf = (b: Board): Box => { let x = boxCache.get(b); if (!x) boxCache.set(b, (x = worldBox(b))); return x }
   const boards = project.boards.filter(isAxisAligned)
-  for (const [i, k] of overlappingPairs(boards)) {
+  for (const [i, k] of overlappingPairs(boards, boxOf)) {
     const a = boards[i]
     const b = boards[k]
     if (joined.has(`${a.id}|${b.id}`)) continue
@@ -97,7 +100,7 @@ export function validate(project: Project): Warning[] {
   const grooveOf = grooveIndex(project.joints)
   const contact = (aId: string, bId: string) => {
     const a = byId.get(aId), b = byId.get(bId)
-    return a && b ? contactOfBoards(a, b, grooveOf(a.id, b.id)) : null
+    return a && b ? contactOfBoards(a, b, grooveOf(a.id, b.id), boxOf) : null
   }
   const NAMES: Record<string, string> = { butt: 'butt', dado: 'dado', rabbet: 'rabbet', pocketScrew: 'pocket-screw', miter: 'miter', joinery: 'cut' }
   for (const j of project.joints) {
@@ -111,7 +114,7 @@ export function validate(project: Project): Warning[] {
     const gp = j.params as GrooveParams
     // Cut joints check where their parts are themselves (joinery problems are reported above).
     const own = j.type === 'joinery' || ((j.type === 'dado' || j.type === 'rabbet') && (gp.face === 'left' || gp.face === 'right' || gp.standalone))
-    if ((!own && !contact(j.hostBoardId, j.partnerBoardId)) || !seatedInGroove(byId, j)) {
+    if ((!own && !contact(j.hostBoardId, j.partnerBoardId)) || !seatedInGroove(byId, j, boxOf)) {
       const name = (id: string) => byId.get(id)?.name ?? '?'
       warnings.push({
         kind: 'badJoint',
@@ -133,14 +136,14 @@ export function validate(project: Project): Warning[] {
 }
 
 /** For a dado or rabbet: the partner board still sits inside the groove (not just somewhere on the host's face). */
-function seatedInGroove(byId: Map<string, Board>, j: Joint): boolean {
+function seatedInGroove(byId: Map<string, Board>, j: Joint, boxOf: (b: Board) => Box): boolean {
   if (j.type !== 'dado' && j.type !== 'rabbet') return true
   const host = byId.get(j.hostBoardId)
   const partner = byId.get(j.partnerBoardId)
   if (!host || !partner || !isAxisAligned(host) || !isAxisAligned(partner)) return true
   const p = j.params as GrooveParams
   if (p.standalone) return true
-  const local = boxInLocal(host, worldBox(partner))
+  const local = boxInLocal(host, boxOf(partner))
   // An edge groove: the partner reaches into it no further than its depth.
   if (p.face === 'left') return local.max.x <= p.depth + TOUCH_TOL
   if (p.face === 'right') return local.min.x >= host.width - p.depth - TOUCH_TOL
