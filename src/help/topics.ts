@@ -94,7 +94,7 @@ export const MASTER_TOPICS: HelpTopic[] = [
     summary: 'Drag parts into place and use the toolbar to copy, turn, mirror and align them.',
     keywords: ['position', 'drag', 'gizmo', 'snap', 'rotate', 'copy', 'duplicate', 'mirror', 'align', 'delete', 'x y z', 'arrows', 'undo'],
     steps: [
-      'Click a part. Drag its arrows in the 3D view to move it. It snaps to the faces, edges and corners of other parts, or to a 1/16 inch grid, and says what it snapped to.',
+      'Click a part. Drag its arrows in the 3D view to move it. It snaps to the faces, edges and corners of other parts, or to a 1/16 inch grid, and says what it snapped to. Hold Alt while dragging to turn snapping off.',
       'For exact spots, type into the **X**, **Y** and **Z** boxes in **Properties**. They give the low corner of the part.',
       'Press **Duplicate** to copy the selected parts. **Delete** removes them.',
       'Use **Rotate 90°** to turn the selection a quarter turn. For other angles, use the **Rotation** boxes in **Properties**.',

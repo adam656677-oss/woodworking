@@ -72,6 +72,8 @@ export const SHORTCUTS: Shortcut[] = [
     handlers: [{ file: 'src/ui/designer/PartsList.tsx', has: ['e.ctrlKey || e.metaKey'] }] },
   { id: 'rename-part', keys: ['Double-click'], does: 'In the parts list, rename a part. Enter keeps the name; Esc leaves it as it was.', area: '3D view and parts list',
     handlers: [{ file: 'src/ui/designer/PartsList.tsx', has: ['onDoubleClick={() => setEditing(b.id)}', "e.key === 'Enter'", "e.key === 'Escape'"] }] },
+  { id: 'move-snap-off', keys: ['Alt (hold)'], does: 'While dragging a part by its arrows, turn snapping off for as long as you hold it.', area: '3D view and parts list', kids: true,
+    handlers: [{ file: 'src/ui/three/MoveGizmo.tsx', has: ["e.key === 'Alt'", "window.addEventListener('keydown', down)"] }] },
   { id: 'orbit', keys: ['Drag', 'Right-drag', 'Wheel'], does: 'Drag to turn the 3D view, right-drag to slide it, wheel to zoom. Front, Side and Top views zoom and slide but do not turn.', area: '3D view and parts list',
     handlers: [{ file: 'src/ui/three/ViewControls.tsx', has: ['<OrbitControls', "enableRotate={view === '3d'}"] }] },
 
@@ -79,6 +81,8 @@ export const SHORTCUTS: Shortcut[] = [
     id: `draw-tool-${key.toLowerCase()}`, keys: [key], does: `Pick the ${v.name} tool.`, area: 'Drawing Board',
     handlers: [{ file: 'src/sketch/ui/ToolBar.tsx', has: ['export const SHORTCUTS'] }, { file: 'src/sketch/ui/DrawingBoard.tsx', has: ['SHORTCUTS[e.key.toLowerCase()]'] }]
   })),
+  { id: 'draw-snap-off', keys: ['Alt (hold)'], does: 'Turn snapping off while you hold it, to place a point exactly where the mouse is.', area: 'Drawing Board',
+    handlers: [{ file: 'src/sketch/ui/Canvas.tsx', has: ['snapOff.current = e.altKey'] }] },
   { id: 'draw-esc', keys: ['Esc'], does: 'Stop the shape you are drawing and go back to the Select tool. Press it again to pick nothing.', area: 'Drawing Board',
     handlers: [{ file: 'src/sketch/ui/DrawingBoard.tsx', has: ["e.key === 'Escape'", "s.setTool('select')"] }, { file: 'src/sketch/ui/Canvas.tsx', has: ["e.key === 'Escape'"] }] },
   { id: 'draw-delete', keys: ['Delete', 'Backspace'], does: 'Delete the picked shapes.', area: 'Drawing Board',
