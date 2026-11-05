@@ -13,7 +13,7 @@ function Btn(props: React.ButtonHTMLAttributes<HTMLButtonElement> & { active?: b
     <button
       {...rest}
       aria-pressed={active === undefined ? undefined : active}
-      className={`rounded px-1.5 py-1 text-[13px] disabled:opacity-40 ${active ? 'bg-amber-700 text-white' : 'hover:bg-stone-200'} ${className ?? ''}`}
+      className={`rounded px-1.5 py-1 text-[13px] leading-5 disabled:opacity-40 ${active ? 'bg-amber-700 text-white' : 'hover:bg-stone-200'} ${className ?? ''}`}
     />
   )
 }
@@ -96,7 +96,7 @@ export function Toolbar() {
             {sec.entries.map(entry)}
             {kidsMode && sec.group === 'Inspect' && <KidsLookButton />}
           </div>
-          <span aria-hidden className="select-none pt-0.5 text-center text-[10px] uppercase tracking-wide text-stone-400">{sec.group}</span>
+          <span aria-hidden className="select-none pt-0.5 text-center text-[10px] leading-3 uppercase tracking-wide text-stone-400">{sec.group}</span>
         </div>
       ))}
       {/* Room for the Help button (F1) at the right-hand end. */}

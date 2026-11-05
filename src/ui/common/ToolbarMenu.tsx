@@ -31,7 +31,7 @@ export function ToolbarMenu({ label, title, children }: { label: string; title?:
       if (open && event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); close() }
     }}>
       <button ref={trigger} type="button" title={title} id={`${id}-trigger`} aria-haspopup="menu" aria-expanded={open} aria-controls={open ? id : undefined}
-        className="rounded px-1.5 py-1 text-[13px] hover:bg-stone-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-700"
+        className="rounded px-1.5 py-1 text-[13px] leading-5 hover:bg-stone-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-700"
         onClick={() => { lastFirst.current = false; setOpen(value => !value) }}
         onKeyDown={event => {
           if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return
