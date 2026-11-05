@@ -34,7 +34,8 @@ export function describeError(e: unknown): string {
     if (e === undefined || e === null) return ''
     if (!(e instanceof Error)) return String(e)
     const code = (e as NodeJS.ErrnoException).code
-    let text = `${e.stack ?? `${e.name}: ${e.message}`}${code ? `\ncode: ${code}` : ''}`
+    const path = (e as { path?: unknown }).path
+    let text = `${typeof path === 'string' ? `path: ${path}\n` : ''}${e.stack ?? `${e.name}: ${e.message}`}${code ? `\ncode: ${code}` : ''}`
     if (e.cause !== undefined) text += `\ncaused by: ${describeError(e.cause)}`
     return text
   } catch {

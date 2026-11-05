@@ -1,6 +1,9 @@
 import { contextBridge, ipcRenderer } from 'electron'
 
 contextBridge.exposeInMainWorld('aa', {
+  logError: (report: { source: string; message: string; stack?: string }) => ipcRenderer.send('aa:logError', report),
+  openLogFolder: () => ipcRenderer.invoke('aa:openLogFolder'),
+  appInfo: () => ipcRenderer.invoke('aa:appInfo'),
   openProject: () => ipcRenderer.invoke('aa:openProject'),
   saveProject: (path: string, text: string) => ipcRenderer.invoke('aa:saveProject', path, text),
   saveAs: (text: string, suggestedName: string) => ipcRenderer.invoke('aa:saveAs', text, suggestedName),

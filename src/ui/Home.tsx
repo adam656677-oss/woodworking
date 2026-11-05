@@ -5,6 +5,7 @@ import { openFinishing } from '../finish/ui/FinishingSchool'
 import { studio, useStudio } from './store'
 import { BackupBar } from '../family/ui/BackupBar'
 import { openHelper } from '../smart/ui/SmartDialogs'
+import { AboutBar } from './common/AboutBar'
 
 const card = 'flex flex-col items-start gap-2 rounded-xl border border-stone-200 bg-white p-5 text-left shadow-sm transition hover:border-amber-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600'
 
@@ -95,7 +96,7 @@ export function Home() {
         {low.length > 0 && <p role="alert" className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-900">
           Running low: {low.join('; ')} — <button type="button" className="underline" onClick={() => openShopTools('home', 'inventory')}>see the inventory</button>
         </p>}
-        <footer className="mt-auto border-t border-stone-200 pt-5"><BackupBar /></footer>
+        <footer className="mt-auto border-t border-stone-200 pt-5"><BackupBar /><AboutBar /></footer>
       </div>
     </main>
   )
