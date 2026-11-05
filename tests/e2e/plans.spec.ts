@@ -23,7 +23,7 @@ async function stubPrint(app: ElectronApplication) {
 
 async function openPlans(win: Page) {
   await enterMasterShop(win)
-  await win.getByRole('button', { name: '📋 My Plans' }).click()
+  await win.getByRole('navigation', { name: 'Workspace', exact: true }).getByRole('link', { name: 'My Plans', exact: true }).click()
   await expect(win.getByRole('heading', { name: 'My Plans' })).toBeVisible()
 }
 
@@ -124,7 +124,7 @@ test("plans 4. a kid-friendly plan shows on the kids' side with grown-up steps m
       await win.getByRole('button', { name: '← My Plans' }).click()
     }
     await win.getByRole('button', { name: '← Back' }).click()
-    await win.getByRole('button', { name: '⌂ Home' }).click()
+    await win.getByRole('navigation', { name: 'Workspace', exact: true }).getByRole('link', { name: 'Dashboard', exact: true }).click()
     await win.getByRole('button', { name: /Kids' Workshop/ }).click()
     // Set the tool level to Beginner (the drill is an Intermediate tool).
     await win.getByRole('button', { name: 'Parent' }).click()

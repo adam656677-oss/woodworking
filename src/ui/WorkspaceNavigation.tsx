@@ -14,6 +14,33 @@ const destinations = [
   ['finish', 'Finishing'], ['tools', 'Shop Tools']
 ] as const
 
+/** Move to another workspace screen. Returns a plain-words problem if it could not, otherwise null. */
+export async function goToWorkspace(target: Screen, screen: Screen): Promise<string | null> {
+  try {
+    if (screen === 'draw' && !saveDrawing()) return 'Your drawing could not be kept in the project. Resolve the drawing error before leaving.'
+    const s = studio.getState()
+    switch (target) {
+      case 'master':
+        await s.checkUntitledAutosave()
+        s.enterMasterShop()
+        break
+      case 'draw': await newDrawing('precise'); break
+      case 'plans':
+        s.goto('plans')
+        await plans.getState().openLibrary(false, () => studio.getState().goto(screen))
+        break
+      case 'finish': openFinishing(screen); break
+      case 'tools': openShopTools(screen); break
+      case 'library': openLibrary(screen); break
+      case 'joints': openJointDesigner(screen); break
+      default: s.goto(target)
+    }
+    return null
+  } catch {
+    return 'This workspace could not be opened. Your current project has not been replaced.'
+  }
+}
+
 export function WorkspaceNavigation() {
   const screen = useStudio(s => s.screen)
   const kidsMode = useStudio(s => s.kidsMode)
@@ -25,31 +52,9 @@ export function WorkspaceNavigation() {
     if (target === screen || busy || pending) return
     setBusy(true)
     setError(null)
-    try {
-      if (screen === 'draw' && !saveDrawing()) {
-        setError('Your drawing could not be kept in the project. Resolve the drawing error before leaving.')
-        return
-      }
-      const s = studio.getState()
-      switch (target) {
-        case 'master':
-          await s.checkUntitledAutosave()
-          s.enterMasterShop()
-          break
-        case 'draw': await newDrawing('precise'); break
-        case 'plans':
-          s.goto('plans')
-          await plans.getState().openLibrary(false, () => studio.getState().goto(screen))
-          break
-        case 'finish': openFinishing(screen); break
-        case 'tools': openShopTools(screen); break
-        case 'library': openLibrary(screen); break
-        case 'joints': openJointDesigner(screen); break
-        default: s.goto(target)
-      }
-    } catch {
-      setError('This workspace could not be opened. Your current project has not been replaced.')
-    } finally { setBusy(false) }
+    const problem = await goToWorkspace(target, screen)
+    if (problem) setError(problem)
+    setBusy(false)
   }
   return <div className="shrink-0 border-b border-stone-300 bg-stone-50">
     <nav aria-label="Workspace" aria-busy={busy} className="flex items-center gap-1 overflow-x-auto px-3 py-2">
