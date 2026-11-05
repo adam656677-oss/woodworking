@@ -236,7 +236,7 @@ function ScheduleBuilder() {
         })}
       </ol>
       <button className="self-start rounded border border-stone-400 px-3 py-1 text-sm" onClick={() => apply(sc => ({ ...sc, steps: [...sc.steps, newStep({ kind: 'topcoat', title: 'Another coat', coats: 1, dryHours: 2 })] }))}>Add a step</button>
-      <p className="text-sm text-stone-600">These steps show up in Shop Mode and in the plan packet.</p>
+      <p className="text-sm text-stone-600">These steps show up in Shop Mode and can be printed from Drawings → Extras.</p>
     </div>
   )
 }

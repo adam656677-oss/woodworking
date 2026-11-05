@@ -6,7 +6,7 @@ import { enterMasterShop, kill, launch, newDirs } from './helpers'
 const SHOTS = process.env.AA_SHOTS
 const shot = async (win: Page, name: string) => { if (SHOTS) await win.screenshot({ path: `${SHOTS}/${name}.png` }) }
 
-test('drawings: views, part sheets, a template and the plan packet saved as a PDF with landscape and portrait pages', async () => {
+test('drawings: views, part sheets, a template and the extras tab; each saved as a PDF at the right page size', async () => {
   const dirs = newDirs()
   const { app, win } = await launch(dirs)
   try {
@@ -34,24 +34,30 @@ test('drawings: views, part sheets, a template and the plan packet saved as a PD
     await expect(pages.nth(1)).toContainText('page A1')
     await shot(win, 'drawings-template')
 
-    await dlg.getByRole('tab', { name: 'Plan packet' }).click()
-    await expect(pages.first()).toContainText('Plan packet', { timeout: 30_000 })
-    await expect(dlg).toContainText('Shopping list — Bookshelf')
-    await expect(dlg).toContainText('Steps — Bookshelf')
-    const n = await pages.count()
-    expect(n).toBeGreaterThan(8)
-    // The first sheet after the cover is numbered 2 of the packet's sheets.
-    await expect(pages.nth(1)).toContainText(/2 of \d+/)
+    // Templates print on portrait letter, true size.
+    const boxesOf = async (name: string) => {
+      const out = join(dirs.docs, name)
+      await app.evaluate(({ dialog }, path) => { dialog.showSaveDialog = (async () => ({ canceled: false, filePath: path })) as never }, out)
+      await dlg.getByRole('button', { name: 'Save as PDF' }).click()
+      await expect(dlg).toContainText('Saved', { timeout: 60_000 })
+      const pdf = readFileSync(out).toString('latin1')
+      return [...pdf.matchAll(/\/MediaBox\s*\[\s*0 0 ([\d.]+) ([\d.]+)\s*\]/g)].map(m => [Math.round(+m[1]), Math.round(+m[2])])
+    }
+    const portrait = await boxesOf('templates.pdf')
+    expect(portrait.length).toBeGreaterThan(1)
+    expect(portrait.every(([w, h]) => w === 612 && h === 792)).toBe(true)
 
-    const out = join(dirs.docs, 'packet.pdf')
-    await app.evaluate(({ dialog }, path) => { dialog.showSaveDialog = (async () => ({ canceled: false, filePath: path })) as never }, out)
-    await dlg.getByRole('button', { name: 'Save as PDF' }).click()
-    await expect(dlg).toContainText('Saved', { timeout: 60_000 })
-    const pdf = readFileSync(out).toString('latin1')
-    const boxes = [...pdf.matchAll(/\/MediaBox\s*\[\s*0 0 ([\d.]+) ([\d.]+)\s*\]/g)].map(m => [Math.round(+m[1]), Math.round(+m[2])])
-    // Letter landscape sheets (792 × 612 points) and letter portrait pages (612 × 792).
-    expect(boxes.some(([w, h]) => w === 792 && h === 612)).toBe(true)
-    expect(boxes.some(([w, h]) => w === 612 && h === 792)).toBe(true)
+    // The old plan packet is now Create Build Plan; the extras tab keeps what it does not cover.
+    await expect(dlg.getByRole('tab', { name: 'Plan packet' })).toHaveCount(0)
+    await dlg.getByRole('tab', { name: 'Extras' }).click()
+    await expect(dlg).toContainText('Nothing extra to print yet')
+
+    // Drawing views print on landscape letter.
+    await dlg.getByRole('tab', { name: 'Views' }).click()
+    await expect(pages).toHaveCount(3, { timeout: 30_000 })
+    const landscape = await boxesOf('views.pdf')
+    expect(landscape.length).toBeGreaterThan(0)
+    expect(landscape.every(([w, h]) => w === 792 && h === 612)).toBe(true)
     await dlg.getByRole('button', { name: 'Close' }).click()
     await expect(dlg).toHaveCount(0)
   } finally {

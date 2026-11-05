@@ -4,7 +4,7 @@ import { enterMasterShop, kill, launch, newDirs } from './helpers'
 const SHOTS = process.env.AA_SHOTS
 const shot = async (win: Page, name: string) => { if (SHOTS) await win.screenshot({ path: `${SHOTS}/${name}.png` }) }
 
-test('Finishing School: a waterborne schedule for the bookshelf shows in Shop Mode and the plan packet', async () => {
+test('Finishing School: a waterborne schedule for the bookshelf shows in Shop Mode and the printable extras', async () => {
   const { app, win } = await launch(newDirs())
   try {
     await enterMasterShop(win)
@@ -34,7 +34,7 @@ test('Finishing School: a waterborne schedule for the bookshelf shows in Shop Mo
 
     await win.getByRole('button', { name: 'Drawings' }).click()
     const dlg = win.getByRole('dialog', { name: 'Drawings' })
-    await dlg.getByRole('tab', { name: 'Plan packet' }).click()
+    await dlg.getByRole('tab', { name: 'Extras' }).click()
     await expect(dlg).toContainText('Finishing schedule — Bookshelf', { timeout: 30_000 })
   } finally {
     kill(app)

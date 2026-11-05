@@ -53,7 +53,7 @@ test('Shop Tools: every calculator answers; a journal entry with a photo; hinges
   }
 })
 
-test('Shop Tools: the stock list survives the Inventory tab; the timer logs its time; bad minutes are refused; low stock shows on Home; kids get Math Helpers; the journal reaches the packet', async () => {
+test('Shop Tools: the stock list survives the Inventory tab; the timer logs its time; bad minutes are refused; low stock shows on Home; kids get Math Helpers; the journal reaches the printable extras', async () => {
   const dirs = newDirs()
   const two = [{ id: 's1', woodId: 'ply-3-4', kind: 'offcut', width: 24, length: 30 }, { id: 's2', woodId: 'ply-3-4', kind: 'sheet', width: 48, length: 96 }]
   writeFileSync(join(dirs.userData, 'stock.json'), JSON.stringify(two))
@@ -100,9 +100,9 @@ test('Shop Tools: the stock list survives the Inventory tab; the timer logs its 
     await win.getByLabel('Log for').selectOption('project')
     await win.getByRole('button', { name: '← Back' }).click()
 
-    // The journal page in the plan packet.
+    // The journal page in the printable extras.
     await win.getByRole('button', { name: 'Drawings' }).click()
-    await win.getByRole('tab', { name: /packet/i }).click()
+    await win.getByRole('tab', { name: 'Extras' }).click()
     await expect(win.getByLabel('Shop journal')).toBeVisible()
 
     // Kids: Math Helpers.
