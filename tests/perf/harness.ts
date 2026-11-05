@@ -20,14 +20,18 @@ import { createStudioStore } from '../../src/ui/store'
 export const FIXTURE = resolve(__dirname, '../fixtures/kitchen.aaw')
 export const fixtureText = () => readFileSync(FIXTURE, 'utf8')
 
-/** Median wall time (ms) of `runs` calls, after one untimed warm-up when `warm` is set. */
-export function time(fn: () => unknown, runs = 5, warm = true): number {
+/**
+ * Median time (ms) of `runs` calls, after one untimed warm-up when `warm` is set. Counts this process's CPU time
+ * (user + system) rather than the wall clock when `cpu` is set, which hardly moves when other jobs share the machine.
+ */
+export function time(fn: () => unknown, runs = 5, warm = true, cpu = process.env.AA_PERF_WALL === undefined): number {
   if (warm) fn()
   const t: number[] = []
   for (let i = 0; i < runs; i++) {
+    const c0 = cpu ? process.cpuUsage() : undefined
     const s = performance.now()
     fn()
-    t.push(performance.now() - s)
+    if (c0) { const c = process.cpuUsage(c0); t.push((c.user + c.system) / 1000) } else t.push(performance.now() - s)
   }
   t.sort((a, b) => a - b)
   return t[Math.floor(t.length / 2)]

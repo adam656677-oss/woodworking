@@ -8,7 +8,20 @@ import { snap64 } from '../model/units'
 const clean = (n: number) => Math.round(n * 1e9) / 1e9 + 0
 
 export const groupsOf = (p: Project): Group[] => p.groups ?? []
-const byId = (p: Project, id: string | undefined) => (id ? groupsOf(p).find(g => g.id === id) : undefined)
+/** Groups by id (the first with an id, as a find would give), kept for as long as the project's groups list is the same list. */
+const groupIndex = new WeakMap<Group[], Map<string, Group>>()
+function groupMap(p: Project): Map<string, Group> {
+  const list = p.groups
+  if (!list) return new Map()
+  let m = groupIndex.get(list)
+  if (!m) {
+    m = new Map()
+    for (const g of list) if (!m.has(g.id)) m.set(g.id, g)
+    groupIndex.set(list, m)
+  }
+  return m
+}
+const byId = (p: Project, id: string | undefined) => (id ? groupMap(p).get(id) : undefined)
 
 /** The group and every group above it, innermost first. */
 export function ancestry(p: Project, gid: string | undefined): Group[] {
@@ -29,7 +42,17 @@ export function subgroups(p: Project, gid: string): Group[] {
 
 /** Every part in a group, its sub-groups included. */
 export function groupBoardIds(p: Project, gid: string): string[] {
-  return p.boards.filter(b => ancestry(p, b.groupId).some(g => g.id === gid)).map(b => b.id)
+  const m = groupMap(p)
+  const out: string[] = []
+  for (const b of p.boards) {
+    // Up the chain of parents; a chain can't be longer than the number of groups unless it loops.
+    let g = b.groupId ? m.get(b.groupId) : undefined
+    for (let hops = 0; g && hops <= m.size; hops++) {
+      if (g.id === gid) { out.push(b.id); break }
+      g = g.parentId ? m.get(g.parentId) : undefined
+    }
+  }
+  return out
 }
 
 /** The outermost group whose parts are exactly these, if any. */
@@ -45,7 +68,8 @@ export function wholeGroup(p: Project, ids: string[]): Group | null {
 }
 
 export function groupBox(p: Project, gid: string): Box | null {
-  const boxes = p.boards.filter(b => groupBoardIds(p, gid).includes(b.id)).map(worldBox)
+  const members = new Set(groupBoardIds(p, gid))
+  const boxes = p.boards.filter(b => members.has(b.id)).map(worldBox)
   if (!boxes.length) return null
   const min = { x: Math.min(...boxes.map(b => b.min.x)), y: Math.min(...boxes.map(b => b.min.y)), z: Math.min(...boxes.map(b => b.min.z)) }
   const max = { x: Math.max(...boxes.map(b => b.max.x)), y: Math.max(...boxes.map(b => b.max.y)), z: Math.max(...boxes.map(b => b.max.z)) }

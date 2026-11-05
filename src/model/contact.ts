@@ -1,6 +1,6 @@
 // How two boards meet, and which joints make sense for that meeting.
 import { AXES, type Axis, type Box, isAxisAligned, localAxes, overlap1, worldBox } from './geometry'
-import type { Board, GrooveParams, JointType, Project } from './types'
+import type { Board, GrooveParams, Joint, JointType, Project } from './types'
 
 export type Contact = {
   kind: 'endToFace' | 'edgeToFace' | 'faceToFace' | 'cornerEnds' | 'endToEdge' | 'edgeToEdge' | 'endToEnd'
@@ -47,7 +47,31 @@ function hasMiteredEnd(b: Board): boolean {
 export function contactBetween(project: Project, aId: string, bId: string): Contact | null {
   const a = project.boards.find(b => b.id === aId)
   const b = project.boards.find(b => b.id === bId)
-  if (!a || !b || a === b || !isAxisAligned(a) || !isAxisAligned(b)) return null
+  if (!a || !b) return null
+  return contactOfBoards(a, b, grooveBetween(project.joints, a.id, b.id))
+}
+
+/** The first dado or rabbet joint between two boards, in either direction. */
+export function grooveBetween(joints: Joint[], aId: string, bId: string): Joint | undefined {
+  return joints.find(
+    j => (j.type === 'dado' || j.type === 'rabbet') &&
+      ((j.hostBoardId === aId && j.partnerBoardId === bId) || (j.hostBoardId === bId && j.partnerBoardId === aId))
+  )
+}
+
+/** Looks up the first dado or rabbet between any two boards without scanning every joint each time. */
+export function grooveIndex(joints: Joint[]): (aId: string, bId: string) => Joint | undefined {
+  const m = new Map<string, Joint>()
+  for (const j of joints) {
+    if (j.type !== 'dado' && j.type !== 'rabbet') continue
+    for (const k of [`${j.hostBoardId}|${j.partnerBoardId}`, `${j.partnerBoardId}|${j.hostBoardId}`]) if (!m.has(k)) m.set(k, j)
+  }
+  return (aId, bId) => m.get(`${aId}|${bId}`)
+}
+
+/** contactBetween for two boards already in hand (and the groove joint between them, if any). */
+export function contactOfBoards(a: Board, b: Board, groove: Joint | undefined): Contact | null {
+  if (a === b || !isAxisAligned(a) || !isAxisAligned(b)) return null
   const A = worldBox(a)
   const B = worldBox(b)
   const ov = AXES.map(ax => overlap1(A.min[ax], A.max[ax], B.min[ax], B.max[ax]))
@@ -60,10 +84,6 @@ export function contactBetween(project: Project, aId: string, bId: string): Cont
   }
 
   // A board seated in a dado/rabbet overlaps its host by up to the groove depth; that still counts as touching.
-  const groove = project.joints.find(
-    j => (j.type === 'dado' || j.type === 'rabbet') &&
-      ((j.hostBoardId === a.id && j.partnerBoardId === b.id) || (j.hostBoardId === b.id && j.partnerBoardId === a.id))
-  )
   const seat = groove ? (groove.params as GrooveParams).depth : 0
 
   // Touching: coplanar on exactly one axis (or seated in a groove), positive area on the other two.
