@@ -4,7 +4,8 @@ import { formatInches } from '../model/units'
 import type * as THREE from 'three'
 import { viewLines } from './lines'
 import { esc, num, svgPage, text, viewSvg } from './sheet'
-import { FACE } from './views'
+import { FACE, partList } from './views'
+import { localSolids } from '../checks/solids'
 
 export const TILE_PAGE = { w: 8.5, h: 11 }
 /** Printers can't print to the edge; this much is left blank all round. */
@@ -102,4 +103,17 @@ function cover(title: string, size: string, t: Tiling, art: (weight: number) => 
   }
   s += '</g>'
   return svgPage(TILE_PAGE.w, TILE_PAGE.h, s)
+}
+
+/** Parts with a shaped outline or a turning: the only ones that need a full-size template. */
+export function shapedParts(p: Project): { boardId: string; no: number }[] {
+  return partList(p).filter(q => { const b = p.boards.find(x => x.id === q.boardId); return !!(b?.outline || b?.turning) }).map(q => ({ boardId: q.boardId, no: q.no }))
+}
+
+/** Templates for the given parts, numbered like the part sheets and the cut list. */
+export function templatesFor(p: Project, parts: { boardId: string; no: number }[]): (Template & { boardId: string; no: number })[] {
+  if (!parts.length) return []
+  const solids = localSolids(p)
+  try { return parts.map(q => ({ ...template(p, q.boardId, q.no, solids), boardId: q.boardId, no: q.no })) }
+  finally { for (const g of solids.values()) g.dispose() }
 }

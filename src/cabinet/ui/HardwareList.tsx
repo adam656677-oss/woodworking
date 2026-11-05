@@ -7,7 +7,7 @@ import { addHardware, addItem, hardwareItems, hardwareList, removeHardware, setH
 
 const money = (n: number) => `$${n.toFixed(2)}`
 /** Glass is listed by size ("12.125 × 27.125" → 12-1/8" × 27-1/8"). */
-const sizeText = (note?: string) => {
+export const sizeText = (note?: string) => {
   const m = note ? /^([\d.]+) × ([\d.]+)$/.exec(note) : null
   return m ? `${formatInches(Number(m[1]))} × ${formatInches(Number(m[2]))}` : note
 }

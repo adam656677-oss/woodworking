@@ -4,12 +4,13 @@ import { studio, useStudio } from '../../ui/store'
 import { formatInches } from '../../model/units'
 import { stock, useStock } from '../../optimize/stockStore'
 import { tools, useTools } from '../../tools/store'
-import { createBuildPlan, isBuildPlanCurrent } from '../buildPlan'
+import { createBuildPlan, isBuildPlanCurrent, type Plan } from '../buildPlan'
 import type { ShoppingInputs } from '../shoppingSnapshot'
 import { PAPERS } from '../sheet'
 import { BuildPlanShopping } from './BuildPlanShopping'
+import { BuildPlanHardware } from './BuildPlanHardware'
+import { BuildPlanTemplates } from './BuildPlanTemplates'
 
-type Plan = Extract<ReturnType<typeof createBuildPlan>, { ok: true }>['plan']
 function liveInputs(): ShoppingInputs | undefined {
   const s = stock.getState(), t = tools.getState()
   return s.loaded && t.loaded ? { stock: s.items, inventory: t.inventory } : undefined
@@ -120,11 +121,13 @@ export function BuildPlanAction({ disabled = false }: { disabled?: boolean }) {
               <tbody>{plan.cutList.rows.map((row, index) => <tr key={index}><td>P{index + 1}</td><td>{row.qty}</td><td>{row.part}</td><td>{formatInches(row.thickness, { sixtyFourths: true })}</td><td>{formatInches(row.cutWidth ?? row.width, { sixtyFourths: true })}</td><td>{formatInches(row.cutLength ?? row.length, { sixtyFourths: true })}</td></tr>)}</tbody></table>
           </section>
           <BuildPlanShopping name={plan.name} snapshot={plan.shoppingSnapshot} />
+          <BuildPlanHardware name={plan.name} hardware={plan.hardware} />
           <section aria-label="Build plan assembly guidance" className="drawing-page flow-page w-[8.5in] bg-white p-[0.5in] shadow">
             <h2 className="mb-3 text-xl font-semibold">Assembly guidance</h2>
             {plan.reviewNotes.map(note => <p key={note} className="mb-3 text-sm">{note}</p>)}
             <ol className="list-inside list-decimal space-y-3">{plan.steps.map(step => <li key={step.key} className="break-inside-avoid"><span className="font-semibold">{step.title}</span><p>{step.text}</p>{step.tools.length > 0 && <p className="text-sm">Tools: {step.tools.join(', ')}</p>}</li>)}</ol>
           </section>
+          <BuildPlanTemplates templates={plan.templates} />
         </div>}
       </div>
     </div>, document.body)}

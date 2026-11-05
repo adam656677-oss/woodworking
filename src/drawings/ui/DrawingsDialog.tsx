@@ -13,16 +13,14 @@ import { scheduleTime, stepText } from '../../finish/schedule'
 import { studio, useStudio } from '../../ui/store'
 import { useRender, type RenderedView } from '../../render/renderStore'
 import { PAPERS, SCALES, type Paper, type ScaleChoice } from '../sheet'
-import { template } from '../tiles'
-import { localSolids } from '../../checks/solids'
+import { shapedParts, templatesFor } from '../tiles'
 import { coverSheet, drawingSheets, partList, pictureSvg, type Sheet } from '../views'
 
 type Tab = 'views' | 'parts' | 'templates' | 'packet'
 type PageSpec = { key: string; kind: 'sheet'; paper: Paper; svg: string } | { key: string; kind: 'tile'; svg: string } | { key: string; kind: 'html'; node: ReactNode }
 
 const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` }
-/** Parts with a shaped outline or a turning: the ones that want a full-size template. */
-const shaped = (p: Project) => partList(p).filter(q => { const b = p.boards.find(x => x.id === q.boardId); return !!(b?.outline || b?.turning) }).map(q => q.boardId)
+const shaped = (p: Project) => shapedParts(p).map(q => q.boardId)
 
 export function DrawingsDialog() {
   const project = useStudio(s => s.project)
@@ -72,10 +70,7 @@ export function DrawingsDialog() {
     const tiles = (ids: string[]): PageSpec[] => {
       const picked = parts.filter(q => ids.includes(q.boardId))
       if (!picked.length) return []
-      const solids = localSolids(project)
-      const out = picked.flatMap(q => template(project, q.boardId, q.no, solids).pages.map((svg, i) => ({ key: `t${q.boardId}${i}`, kind: 'tile' as const, svg })))
-      for (const g of solids.values()) g.dispose()
-      return out
+      return templatesFor(project, picked).flatMap(t => t.pages.map((svg, i) => ({ key: `t${t.boardId}${i}`, kind: 'tile' as const, svg })))
     }
     if (kids) return kidsPages(project)
     if (tab === 'views') return sheetPages(drawingSheets(project, views, opts), 'v')

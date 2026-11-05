@@ -5,6 +5,9 @@ import { BuildPlanAction } from '../../src/drawings/ui/BuildPlanAction'
 import { stock } from '../../src/optimize/stockStore'
 import { tools } from '../../src/tools/store'
 import { studio } from '../../src/ui/store'
+import { addDoors, DOOR_DEFAULTS } from '../../src/cabinet/doors'
+import { addSketch, shapeBoard } from '../../src/model/shaped'
+import { apron } from '../sketch/fixtures'
 
 const button = (name: string) => screen.getByRole('button', { name }) as HTMLButtonElement
 const save = () => button('Save as PDF')
@@ -101,3 +104,27 @@ test('switching projects cancels pending generation', async () => {
   expect(screen.queryByRole('dialog')).toBeNull()
   expect(button('Create Build Plan').disabled).toBe(false)
 })
+
+test('hardware appendix says so plainly when the project has none', async () => {
+  render(<BuildPlanAction />); await generate()
+  const hardware = screen.getByRole('region', { name: 'Build plan hardware list' })
+  expect(hardware.textContent).toContain('needs no hardware')
+  expect(hardware.querySelector('table')).toBeNull()
+  expect(screen.queryByRole('region', { name: 'Build plan full-size templates' })).toBeNull()
+}, 60000)
+
+test('hardware appendix lists doors hinges and shaped parts get true-size template pages', async () => {
+  const door = addDoors(studio.getState().project, { x: 0, y: 0, z: 0, width: 15, height: 30 }, { ...DOOR_DEFAULTS })
+  if ('error' in door) throw new Error(door.error)
+  const shaped = shapeBoard(addSketch(door.project, apron()), null, 'k1', '1x6')
+  if ('error' in shaped) throw new Error(shaped.error)
+  studio.setState({ project: shaped.project })
+  render(<BuildPlanAction />); await generate()
+  expect(screen.getByRole('region', { name: 'Build plan hardware list' }).textContent).toMatch(/hinge/i)
+  const templates = screen.getByRole('region', { name: 'Build plan full-size templates' })
+  const pages = Array.from(templates.querySelectorAll<HTMLElement>('[data-testid="build-plan-template-page"]'))
+  expect(pages.length).toBeGreaterThan(1)
+  for (const page of pages) { expect(page.style.width).toBe('8.5in'); expect(page.style.height).toBe('11in') }
+  expect(pages[0].innerHTML).toContain('width="1" height="1"')
+  expect(screen.getAllByTestId('build-plan-sheet').every(sheet => (sheet as HTMLElement).style.width === '11in')).toBe(true)
+}, 120000)
