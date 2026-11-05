@@ -7,6 +7,7 @@ import { tools } from '../../src/tools/store'
 import { studio } from '../../src/ui/store'
 import { addDoors, DOOR_DEFAULTS } from '../../src/cabinet/doors'
 import { addSketch, shapeBoard } from '../../src/model/shaped'
+import { addBoard } from '../../src/model/ops'
 import { apron } from '../sketch/fixtures'
 
 const button = (name: string) => screen.getByRole('button', { name }) as HTMLButtonElement
@@ -128,3 +129,48 @@ test('hardware appendix lists doors hinges and shaped parts get true-size templa
   expect(pages[0].innerHTML).toContain('width="1" height="1"')
   expect(screen.getAllByTestId('build-plan-sheet').every(sheet => (sheet as HTMLElement).style.width === '11in')).toBe(true)
 }, 120000)
+
+test('editing the model after a plan marks it stale, guards export, and Update Plan recovers', async () => {
+  studio.getState().newBlank()
+  studio.getState().apply(p => addBoard(p, { woodId: '1x6', name: 'Shelf', width: 5.5, length: 24, position: { x: 0, y: 0, z: 0 }, rotation: { x: 0, y: 0, z: 0 } }).project)
+  render(<BuildPlanAction />); await generate()
+  expect(screen.queryByRole('alert')).toBeNull()
+  act(() => studio.getState().apply(p => ({ ...p, boards: p.boards.map((b, i) => i ? b : { ...b, length: b.length + 1 }) })))
+  expect(screen.getByRole('alert').textContent).toContain('Update Plan before printing or exporting')
+  expect(save().disabled).toBe(true); expect(print().disabled).toBe(true)
+  fireEvent.click(save()); fireEvent.click(print())
+  expect(window.aa.savePdf).not.toHaveBeenCalled(); expect(window.aa.printPdf).not.toHaveBeenCalled()
+  fireEvent.click(button('Update Plan'))
+  await waitFor(() => expect(save().disabled).toBe(false), { timeout: 30000 })
+  expect(screen.queryByRole('alert')).toBeNull()
+}, 120000)
+
+test('creating a plan never changes the model, its undo history or its saved state', async () => {
+  const before = JSON.stringify(studio.getState().project)
+  const { dirty, canUndo, canRedo } = studio.getState()
+  render(<BuildPlanAction />); await generate()
+  expect(JSON.stringify(studio.getState().project)).toBe(before)
+  expect(studio.getState().dirty).toBe(dirty)
+  expect(studio.getState().canUndo).toBe(canUndo); expect(studio.getState().canRedo).toBe(canRedo)
+  fireEvent.click(button('Update Plan'))
+  await waitFor(() => expect(save().disabled).toBe(false), { timeout: 30000 })
+  expect(JSON.stringify(studio.getState().project)).toBe(before)
+}, 120000)
+
+test('preview dialog: focus starts inside, Tab stays inside, Escape closes and focus returns to the button', async () => {
+  render(<BuildPlanAction />)
+  const trigger = button('Create Build Plan')
+  trigger.focus()
+  await generate()
+  const dialog = screen.getByRole('dialog', { name: 'Build plan preview' })
+  await waitFor(() => expect(dialog.contains(document.activeElement)).toBe(true))
+  const buttons = Array.from(dialog.querySelectorAll<HTMLButtonElement>('button:not(:disabled)'))
+  const first = buttons[0], last = buttons[buttons.length - 1]
+  last.focus(); fireEvent.keyDown(last, { key: 'Tab' })
+  expect(document.activeElement).toBe(first)
+  first.focus(); fireEvent.keyDown(first, { key: 'Tab', shiftKey: true })
+  expect(document.activeElement).toBe(last)
+  fireEvent.keyDown(document.activeElement!, { key: 'Escape' })
+  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+  expect(document.activeElement).toBe(screen.getByRole('button', { name: 'View Build Plan' }))
+}, 60000)
