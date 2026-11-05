@@ -31,11 +31,15 @@ async function oneFrame(win: Page) {
       // The renderer clears once per frame.
       wrap(proto, 'clear', (_a, t) => { t.frames++ })
     }
-    requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(() => {
+    // Until a frame has actually been drawn (the first can be slow on a software GL), then one more.
+    let waited = 0
+    const tick = () => requestAnimationFrame(() => {
+      if (total.frames === 0 && ++waited < 300) return tick()
       for (const [proto, name, orig] of saved) proto[name] = orig
       const n = Math.max(1, total.frames)
       resolve({ calls: Math.round(total.calls / n), triangles: Math.round(total.triangles / n) })
-    })))
+    })
+    tick()
   }))
 }
 
@@ -72,6 +76,7 @@ test('a full kitchen opens, edits one dimension and the cut list follows, quickl
     console.log(`PERF open to first frames ${openMs} ms; one frame draws ${draw.calls} calls, ${draw.triangles} triangles`)
     expect(openMs, 'open to first frames').toBeLessThan(30_000)
     // About two per part (a mesh and its outline); the sanity limits only catch a lot more than that.
+    expect(draw.calls, 'draw calls per frame').toBeGreaterThan(300)
     expect(draw.calls, 'draw calls per frame').toBeLessThan(2500)
     expect(draw.triangles, 'triangles per frame').toBeLessThan(250_000)
 
