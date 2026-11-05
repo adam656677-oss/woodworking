@@ -9,6 +9,12 @@ Last updated: 2026-10-31. Written by Claude (Opus) for whichever agent picks thi
 
 ## 1. Where things stand
 
+**2026-11-05, version 1.1.0 on branch `finish/release`:** build-plan hardware appendix and full-size templates; in-app
+Help (F1, `src/help/`); problem log (`electron/logger.ts`) and atomic autosaves; grouped toolbar from one command list
+(`src/ui/commands.ts`) with snap feedback; large-kitchen performance work (`docs/perf-baseline.md`). Open follow-ups:
+Create Build Plan takes ~8 s on a 350-part kitchen (hidden-line rays in `src/drawings/lines.ts`); the move arrows
+sometimes need a re-pick right after Add board; the toolbar wraps to 3 rows at 1280 px.
+
 **The roadmap is complete.** All 18 pieces are built, independently reviewed, fixed and merged on `import-export`,
 released as version 1.0.0 (installer delivered in `_parts12`). Last full run: 781 unit tests and 52 e2e tests, all
 passing.

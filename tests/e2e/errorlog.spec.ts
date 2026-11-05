@@ -12,7 +12,7 @@ test('the app writes a start line, forwards page errors, and the About box opens
     // Start line: version, system and Electron version.
     await expect.poll(() => existsSync(logFile(dirs.userData))).toBe(true)
     const start = readFileSync(logFile(dirs.userData), 'utf8')
-    expect(start).toMatch(/INFO \[app\] Started A&A Woodworking Studio 1\.0\.0 — Electron \d+/)
+    expect(start).toMatch(/INFO \[app\] Started A&A Woodworking Studio \d+\.\d+\.\d+ — Electron \d+/)
     expect(start).toContain(process.platform)
 
     // Wait for the app to finish loading so its error listeners are in place.
@@ -31,7 +31,7 @@ test('the app writes a start line, forwards page errors, and the About box opens
     })
     await win.getByRole('button', { name: 'About', exact: true }).click()
     const dialog = win.getByRole('dialog', { name: 'About' })
-    await expect(dialog).toContainText('Version 1.0.0')
+    await expect(dialog).toContainText(`Version ${JSON.parse(readFileSync('package.json', 'utf8')).version}`)
     await dialog.getByRole('button', { name: 'Open log folder' }).click()
     await expect.poll(() => app.evaluate(() => (globalThis as any).__opened as string[])).toEqual([join(dirs.userData, 'logs')])
   } finally {
