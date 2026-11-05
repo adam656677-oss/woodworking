@@ -98,9 +98,10 @@ export const MASTER_TOPICS: HelpTopic[] = [
       'For exact spots, type into the **X**, **Y** and **Z** boxes in **Properties**. They give the low corner of the part.',
       'Press **Duplicate** to copy the selected parts. **Delete** removes them.',
       'Use **Rotate 90°** to turn the selection a quarter turn. For other angles, use the **Rotation** boxes in **Properties**.',
-      'Pick several parts and use **Align** to line them up on one side or centre, or **Mirror** to make a flipped copy.',
+      'Pick two or more parts and use **Align** to line them up on one side or on their centres. **Mirror** flips the selected parts over, around their own centre. (To make a mirrored copy, press **Duplicate** first.)',
       'If something goes wrong, press **Undo**. **Redo** brings it back.'
     ],
+    tip: 'Parts of a live template cannot be moved by hand until you unlock it. See "How do I start from a template?".',
     labels: ['X', 'Y', 'Z', 'Properties', 'Duplicate', 'Delete', 'Rotate 90°', 'Rotation', 'Align', 'Mirror', 'Undo', 'Redo'],
     shortcuts: ['duplicate', 'delete', 'undo', 'redo']
   },
@@ -125,7 +126,7 @@ export const MASTER_TOPICS: HelpTopic[] = [
       'Press **3D**, **Front**, **Side** or **Top** for a different view. **Fit** zooms to show the whole design.',
       'In the 3D view, drag to turn, right-drag to slide and use the wheel to zoom.',
       'Press **Measure**, then click two points on the model. The distance shows. Press **Keep** to keep that dimension.',
-      'The little bar over the 3D view has **Explode** (pulls parts apart), **Section** (cuts through the design) and **Open doors & drawers**.',
+      'The little bar over the 3D view has **Explode** (pulls parts apart), **Section** (cuts through the design), and **Open doors & drawers** when the design has doors or drawers.',
       'Change **Look** to **Realistic wood** to see grain and finish, or back to **Drawing (CAD)**.',
       'Press **📷 Picture…** to save the 3D view as a PNG picture.'
     ],

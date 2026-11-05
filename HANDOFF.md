@@ -33,6 +33,10 @@ passing.
 - **Known false failures:** in a git worktree with a symlinked `node_modules`, 7 jsdom test files fail with
   "Denied ID" from the planegcs wasm. In the main checkout all tests pass. Last full run: 734 unit tests and 48
   e2e tests, all passing.
+- **In-app Help (F1, and a Help button on Home, in the designer toolbar and in the Kids' Workshop):** the words live
+  in `src/help/topics.ts` (Master Shop) and `src/help/kidsTopics.ts` (kids), the keys in `src/help/shortcuts.ts`. Wrap
+  every button name in `**stars**` and list it in `labels`: `tests/help` fails if a named label is no longer in the
+  source, if a shortcut's handler text has gone, or if a new key handler is not in the shortcuts table.
 - **Units:** inches only. The design system uses plain words, no jargon, and every warning teaches something.
 - **The kids' rule:** no streaks, points, currencies or guilt notifications. Badges come only from real built
   projects (confirmed by the parent) and passed quizzes.
