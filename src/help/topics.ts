@@ -237,7 +237,7 @@ export const MASTER_TOPICS: HelpTopic[] = [
     steps: [
       'Finish your design. If a size box shows a formula error, fix it first: a plan cannot be made until it is fixed.',
       'Press **Create Build Plan** in the bar at the top of the Design screen. The plan opens as a preview you can scroll through.',
-      'Read it over: the drawing sheets, the cut list, the shopping list and the assembly guidance.',
+      'Read it over: the drawing sheets, the cut list, the shopping list, the hardware list, the assembly guidance and, for curved or turned parts, full-size templates.',
       'Press **Save as PDF** to keep it, or **Print** to open it in your PDF viewer. Print at Actual size so measurements stay true.',
       'Press **Back to Design** to keep working.',
       'If you change the design afterwards, the button reads **Update Build Plan**. In the preview, press **Update Plan** before saving or printing again.'
@@ -315,9 +315,9 @@ export const MASTER_TOPICS: HelpTopic[] = [
       'Read the **Lessons**. Try **Choose a finish**: say what matters for this piece and how you can apply it, and compare up to three. **Mohawk products** lists the Mohawk finishing products.',
       'Wondering if one finish can go over another? Open **Can I put…?** and pick the two.',
       'In **My finishing schedule**, start from a template, then edit each step: the finish, method, sheen, coats and drying time. **Add a step** adds more.',
-      'The schedule shows up in Shop Mode and in the plan packet. **Start over** clears it.'
+      'The schedule shows up in Shop Mode and can be printed from **Drawings** → **Extras**. **Start over** clears it.'
     ],
-    labels: ['Finishing School', 'Finishing', 'Finish', 'Lessons', 'Choose a finish', 'Mohawk products', 'Can I put…?', 'My finishing schedule', 'Add a step', 'Start over']
+    labels: ['Drawings', 'Extras', 'Finishing School', 'Finishing', 'Finish', 'Lessons', 'Choose a finish', 'Mohawk products', 'Can I put…?', 'My finishing schedule', 'Add a step', 'Start over']
   },
   {
     id: 'plans', group: 'More of the Studio', title: 'How do I bring in a plan I already have?',
