@@ -60,7 +60,6 @@ export function buildCommands(): StudioCommand[] {
 
   add('File',
     { id: 'new-blank', label: 'New blank project', short: 'Blank project', keywords: 'file start empty', tooltip: 'Start an empty project', run: () => state().newBlank() },
-    ...TEMPLATES.map((t): Def => ({ id: `new-template:${t.id}`, label: `New project from template: ${t.name}`, short: t.name, keywords: 'file start template', tooltip: `Start a ${t.name.toLowerCase()} project`, run: () => state().newFromTemplate(t.id) })),
     { id: 'open', label: 'Open project', short: 'Open', keywords: 'file load', tooltip: 'Open a saved project', run: () => state().open() },
     { id: 'save', label: 'Save project', short: 'Save', keywords: 'file write ctrl s', shortcut: 'Ctrl+S', tooltip: 'Save the project', run: () => state().save() },
     { id: 'save-as', label: 'Save project as', short: 'Save As', keywords: 'file copy', tooltip: 'Save the project under a new name', run: () => state().saveAs() },
@@ -69,7 +68,8 @@ export function buildCommands(): StudioCommand[] {
     { id: 'share-project', label: 'Share this project', short: 'Share this project…', keywords: 'family send file', tooltip: 'Make a file to share this project', run: () => askToolbar({ kind: 'share' }) },
     { id: 'open-shared', label: 'Open a shared project', short: 'Open a shared project…', keywords: 'family receive file', tooltip: 'Open a project someone shared with you', run: () => void openShared().then(m => { if (m) askToolbar({ kind: 'shared', message: m }) }) },
     { id: 'export-3d', label: 'Export 3D file', short: 'Export…', keywords: 'stl obj step save model', tooltip: 'Save the design as a 3D file', run: () => { state().setView({ exchange: { kind: 'export' } }) } },
-    { id: 'import-3d', label: 'Import reference model', short: 'Import reference model…', keywords: 'stl obj bring in 3d file', tooltip: 'Bring in a 3D model to design around', run: () => startImport() }
+    { id: 'import-3d', label: 'Import reference model', short: 'Import reference model…', keywords: 'stl obj bring in 3d file', tooltip: 'Bring in a 3D model to design around', run: () => startImport() },
+    ...TEMPLATES.map((t): Def => ({ id: `new-template:${t.id}`, label: `New project from template: ${t.name}`, short: t.name, keywords: 'file start template', tooltip: `Start a ${t.name.toLowerCase()} project`, run: () => state().newFromTemplate(t.id) }))
   )
 
   add('Create',

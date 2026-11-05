@@ -14,7 +14,7 @@ export function SnapOverlay({ feedback }: { feedback: SnapFeedback }) {
         return (
           <mesh key={`f${i}`} position={[(h.min.x + h.max.x) / 2, (h.min.y + h.max.y) / 2, (h.min.z + h.max.z) / 2]} renderOrder={10}>
             <boxGeometry args={[size('x'), size('y'), size('z')]} />
-            <meshBasicMaterial color={AMBER} transparent opacity={0.45} depthTest={false} />
+            <meshBasicMaterial color={AMBER} transparent opacity={0.3} depthTest={false} />
           </mesh>
         )
       })}

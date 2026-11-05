@@ -13,7 +13,7 @@ function Btn(props: React.ButtonHTMLAttributes<HTMLButtonElement> & { active?: b
     <button
       {...rest}
       aria-pressed={active === undefined ? undefined : active}
-      className={`rounded px-2 py-1 text-sm disabled:opacity-40 ${active ? 'bg-amber-700 text-white' : 'hover:bg-stone-200'} ${className ?? ''}`}
+      className={`rounded px-1.5 py-1 text-[13px] disabled:opacity-40 ${active ? 'bg-amber-700 text-white' : 'hover:bg-stone-200'} ${className ?? ''}`}
     />
   )
 }
@@ -83,7 +83,7 @@ export function Toolbar() {
   }
 
   return (
-    <nav aria-label="Toolbar" className="flex flex-wrap items-stretch gap-x-1 gap-y-1 border-b border-stone-300 bg-white px-2 py-1">
+    <nav aria-label="Toolbar" className="flex flex-wrap items-stretch gap-x-0.5 gap-y-1 border-b border-stone-300 bg-white px-2 py-1">
       {kidsMode && (
         <div className="flex items-center gap-1 pr-1">
           <Btn onClick={() => studio.getState().goto('kids')} title="Back to the Kids' Workshop">⌂ Kids&apos; Workshop</Btn>
