@@ -1,12 +1,13 @@
 // The drawing sheet: grid, rulers, what's drawn, dimensions and rules, and the pointer tools.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { formatInches, parseInches } from '../../model/units'
-import { draw, isDimension, useDraw, type At } from '../drawStore'
+import { describeConstraint, draw, isDimension, useDraw, type At } from '../drawStore'
 import { arcAngles, outlineFromSketch, pointOf, tessellateEntity } from '../geometry'
 import { sketchBounds } from '../freehand'
 import { cornerPoints, hitTest } from '../hit'
 import { extend, mirror, trim } from '../modify'
 import type { Snap } from '../snap'
+import { alignHint, drawReadout, sketchSnapLabel } from '../snapFeedback'
 import type { Pt, Sketch, SketchConstraint } from '../types'
 
 export type View = { scale: number; ox: number; oy: number }
@@ -79,7 +80,10 @@ export function Canvas({ onAsk, view, setView }: { onAsk(a: Ask): void; view: Vi
     return { x: (e.clientX - r.left - view.ox) / view.scale, y: (view.oy - (e.clientY - r.top)) / view.scale }
   }
   const grid = view.scale >= 40 ? 1 / 8 : view.scale >= 12 ? 1 / 2 : 1
+  /** Holding Alt switches snapping off for that move or click. */
+  const snapOff = useRef(false)
   const snapAt = (q: Pt): Snap => {
+    if (snapOff.current) return { pt: q, kind: 'none' }
     const from = pending.length ? pending[pending.length - 1] : undefined
     return draw.getState().snap(q, SNAP_PX / view.scale, { grid, from })
   }
@@ -197,6 +201,7 @@ export function Canvas({ onAsk, view, setView }: { onAsk(a: Ask): void; view: Vi
     }
   }
   const onMove = (e: React.PointerEvent) => {
+    snapOff.current = e.altKey
     const q = toDrawing(e)
     const d = drag.current
     if (d?.kind === 'pan') {
@@ -215,6 +220,7 @@ export function Canvas({ onAsk, view, setView }: { onAsk(a: Ask): void; view: Vi
   }
 
   const onClick = (e: React.MouseEvent) => {
+    snapOff.current = e.altKey
     if (e.button !== 0 || tool === 'select' || draw.getState().refPick) return
     const q = toDrawing(e)
     const s = draw.getState()
@@ -444,20 +450,28 @@ export function Canvas({ onAsk, view, setView }: { onAsk(a: Ask): void; view: Vi
           if (!g) return null
           const dx = 10 + (i % 3) * 12
           return (
-            <text key={c.id} data-rule={c.id} x={s.x + dx} y={s.y + 14} fontSize={12} className="cursor-pointer"
-              fill={conflict ? COLOR.conflict : sel ? COLOR.selected : '#78716c'}
-              onPointerDown={ev => { ev.stopPropagation(); draw.getState().select([c.id]) }}>{g}</text>
+            <text key={c.id} data-rule={c.id} data-rule-kind={c.kind} x={s.x + dx} y={s.y + 14} fontSize={13} fontWeight={600} className="cursor-pointer"
+              fill={conflict ? COLOR.conflict : sel ? COLOR.selected : '#57534e'} stroke="#ffffff" strokeWidth={3} paintOrder="stroke"
+              onPointerDown={ev => { ev.stopPropagation(); draw.getState().select([c.id]) }}><title>{conflict ? `${describeConstraint(c)} (disagrees with another rule)` : describeConstraint(c)}</title>{g}</text>
           )
         })}
 
         {preview.map((pts, i) => <path key={i} d={pathOf(pts)} fill="none" stroke={COLOR.preview} strokeDasharray="5 4" strokeWidth={1.5} />)}
 
-        {hover && hover.kind !== 'none' && (() => {
+        {hover && !drag.current && (() => {
           const s = toScreen(hover.pt)
+          const last = pending.length ? pending[pending.length - 1] : undefined
+          const hint = last && !snapOff.current && (tool === 'line' || tool === 'construction') ? alignHint(last, hover.pt) : null
+          const label = sketchSnapLabel(hover, grid, snapOff.current)
+          const size = last ? drawReadout(tool, last, hover.pt) : null
+          const a = hint && toScreen(hint.guide.from), b = hint && toScreen(hint.guide.to)
           return (
-            <g pointerEvents="none">
-              <rect x={s.x - 5} y={s.y - 5} width={10} height={10} fill="none" stroke={hover.kind === 'grid' ? '#a8a29e' : '#16a34a'} strokeWidth={1.5} />
-              {hover.kind !== 'grid' && <text x={s.x + 8} y={s.y - 8} fontSize={11} fill="#16a34a">{hover.kind}</text>}
+            <g pointerEvents="none" data-testid="sketch-snap" data-snap-kind={snapOff.current ? 'off' : hover.kind}>
+              {hint && a && b && <line data-testid="sketch-guide" x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={COLOR.preview} strokeWidth={1} strokeDasharray="2 4" />}
+              {hover.kind !== 'none' && <rect x={s.x - 5} y={s.y - 5} width={10} height={10} fill="none" stroke={hover.kind === 'grid' ? '#a8a29e' : '#16a34a'} strokeWidth={1.5} />}
+              {label && <text data-testid="sketch-snap-label" x={s.x + 9} y={s.y - 9} fontSize={11} fill={snapOff.current ? '#78716c' : '#16a34a'}>{label}</text>}
+              {hint && <text data-testid="sketch-align-label" x={s.x + 9} y={s.y + 20} fontSize={11} fill={COLOR.preview}>{hint.kind === 'level' ? '━' : '┃'} {hint.label}</text>}
+              {size && <text data-testid="sketch-size" x={s.x + 9} y={s.y + (hint ? 33 : 20)} fontSize={11} fontWeight={600} fill="#1c1917">{size}</text>}
             </g>
           )
         })()}

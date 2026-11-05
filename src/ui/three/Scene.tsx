@@ -7,7 +7,7 @@ import { boardForm } from './boardForm'
 import { useStudio, studio } from '../store'
 import { BoardMesh } from './BoardMesh'
 import { MeasureTool } from './MeasureTool'
-import { MoveGizmo } from './MoveGizmo'
+import { justDragged, MoveGizmo } from './MoveGizmo'
 import { ViewControls } from './ViewControls'
 import { designBox, explodeOffsets } from '../../checks/explode'
 import { pickOnModel } from '../../checks/pick'
@@ -84,6 +84,8 @@ export default function Scene() {
   const onSelect = (id: string) => (e: ThreeEvent<MouseEvent>) => {
     // Picking scale points on a picture: the click goes through the parts to the picture.
     if (studio.getState().refPick) return
+    // Letting go of a move arrow over another part is the end of a drag, not a click on that part.
+    if (justDragged()) { e.stopPropagation(); return }
     // A click that only touched the cut-away half of a part in a section belongs to the next part along the ray.
     const b = project.boards.find(x => x.id === id)
     const off = offsets.get(id)

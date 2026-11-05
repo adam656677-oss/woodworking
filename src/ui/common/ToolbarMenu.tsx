@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
 
 /** Accessible dropdown with keyboard navigation and a stable trigger name. */
-export function ToolbarMenu({ label, children }: { label: string; children: (close: () => void) => ReactNode }) {
+export function ToolbarMenu({ label, title, children }: { label: string; title?: string; children: (close: () => void) => ReactNode }) {
   const [open, setOpen] = useState(false)
   const id = useId()
   const root = useRef<HTMLDivElement>(null)
@@ -30,8 +30,8 @@ export function ToolbarMenu({ label, children }: { label: string; children: (clo
     }} onKeyDown={event => {
       if (open && event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); close() }
     }}>
-      <button ref={trigger} type="button" id={`${id}-trigger`} aria-haspopup="menu" aria-expanded={open} aria-controls={open ? id : undefined}
-        className="rounded px-2 py-1 text-sm hover:bg-stone-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-700"
+      <button ref={trigger} type="button" title={title} id={`${id}-trigger`} aria-haspopup="menu" aria-expanded={open} aria-controls={open ? id : undefined}
+        className="rounded px-1.5 py-1 text-[13px] leading-5 hover:bg-stone-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-700"
         onClick={() => { lastFirst.current = false; setOpen(value => !value) }}
         onKeyDown={event => {
           if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return
