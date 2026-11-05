@@ -15,6 +15,8 @@ test('the app writes a start line, forwards page errors, and the About box opens
     expect(start).toMatch(/INFO \[app\] Started A&A Woodworking Studio 1\.0\.0 — Electron \d+/)
     expect(start).toContain(process.platform)
 
+    // Wait for the app to finish loading so its error listeners are in place.
+    await expect(win.getByRole('button', { name: /Master Shop/ })).toBeVisible()
     // An error nothing catches in the page, and a promise nobody handled, both end up in the log.
     await win.evaluate(() => { setTimeout(() => { throw new Error('page-error-marker') }, 0) })
     await win.evaluate(() => { void Promise.reject(new Error('rejection-marker')) })
