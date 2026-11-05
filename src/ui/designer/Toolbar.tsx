@@ -18,6 +18,7 @@ import { designSession } from '../../shop/steps'
 import { openShared, ShareDialog } from '../../family/ui/ShareDialog'
 import { openHelper } from '../../smart/ui/SmartDialogs'
 import { KidsLookButton } from '../../render/ui/RenderControls'
+import { HelpButton } from '../../help/ui/HelpButton'
 
 function Btn(props: React.ButtonHTMLAttributes<HTMLButtonElement> & { active?: boolean }) {
   const { active, className, ...rest } = props
@@ -210,6 +211,7 @@ export function Toolbar() {
       {!kidsMode && (
         <Btn className="font-semibold" onClick={() => { s.goto('plans'); void plans.getState().openLibrary(false, () => s.goto('master')) }}>📋 My Plans</Btn>
       )}
+      <HelpButton className="ml-auto rounded px-2 py-1 text-sm hover:bg-stone-200" />
     </nav>
   )
 }

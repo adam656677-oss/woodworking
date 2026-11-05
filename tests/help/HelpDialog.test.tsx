@@ -126,3 +126,38 @@ it('kids help is bigger, has no search box, and says it in simple words', () => 
   fireEvent.click(within(screen.getByRole('list', { name: 'Help topics' })).getAllByRole('button')[0])
   expect(screen.getByRole('list', { name: 'Steps' })).toBeTruthy()
 })
+
+it('leaves F1 alone while Shop Mode is open (Shop Mode owns the keyboard)', async () => {
+  const { shop } = await import('../../src/shop/shopStore')
+  app()
+  shop.setState({ session: { title: 'x', steps: [], progress: { done: [], minutes: {} }, kid: false } as never })
+  fireEvent.keyDown(window, { key: 'F1' })
+  expect(screen.queryByRole('dialog')).toBeNull()
+  shop.setState({ session: null })
+  fireEvent.keyDown(window, { key: 'F1' })
+  expect(screen.getByRole('dialog', { name: 'Help' })).toBeTruthy()
+})
+
+it('Esc closes Help and nothing else listening on the window sees it', () => {
+  app()
+  const seen: string[] = []
+  const spy = (e: KeyboardEvent) => seen.push(e.key)
+  window.addEventListener('keydown', spy, true)
+  act(() => openHelp({ audience: 'master' }))
+  fireEvent.keyDown(screen.getByRole('dialog', { name: 'Help' }), { key: 'Escape' })
+  window.removeEventListener('keydown', spy, true)
+  expect(screen.queryByRole('dialog')).toBeNull()
+  expect(seen).toEqual([])
+})
+
+it('keys typed inside Help do not reach the design screen underneath', () => {
+  app()
+  act(() => openHelp({ audience: 'master' }))
+  const seen: string[] = []
+  const spy = (e: KeyboardEvent) => seen.push(e.key)
+  window.addEventListener('keydown', spy)
+  fireEvent.keyDown(screen.getByRole('searchbox', { name: 'Search help' }), { key: 'Delete' })
+  fireEvent.keyDown(within(screen.getByRole('list', { name: 'Help topics' })).getAllByRole('button')[0], { key: 'Delete' })
+  window.removeEventListener('keydown', spy)
+  expect(seen).toEqual([])
+})
