@@ -3,7 +3,13 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import * as THREE from 'three'
 import { clearance } from '../../src/cabinet/motion'
-import { interferences, localSolids } from '../../src/checks/solids'
+import * as solids from '../../src/checks/solids'
+import * as boardMesh from '../../src/ui/three/BoardMesh'
+
+const { interferences, localSolids } = solids
+// The result caches are newer than the first version of this harness; tolerate their absence so it can time older code.
+const clearShapeCache = () => (boardMesh as { clearShapeCache?: () => void }).clearShapeCache?.()
+const clearSharedVolumes = () => (solids as { clearSharedVolumes?: () => void }).clearSharedVolumes?.()
 import { createBuildPlan } from '../../src/drawings/buildPlan'
 import { cutList } from '../../src/model/cutlist'
 import { deserialize, serialize } from '../../src/model/fileFormat'
@@ -69,13 +75,20 @@ export function measureAll(runs = 5, heavyRuns = 3): Timings {
   out.layoutAll = time(() => layoutAll(project, []), runs)
   out.shoppingList = time(() => shoppingList(project, [], undefined), runs)
   out.cutGeometry = time(() => cutGeometry(project), runs)
-  out.localSolids = time(() => localSolids(project), heavyRuns)
-  out.interferences = time(() => interferences(project), heavyRuns)
-  out.clearance = time(() => clearance(project), 1, false)
-  out.buildPlan = time(() => {
+  // Cold: nothing remembered, as on the first check after opening. Warm: the same check again (or after one edit).
+  const cold = (fn: () => unknown) => { clearShapeCache(); clearSharedVolumes(); return time(fn, heavyRuns, false) }
+  out.localSolidsCold = cold(() => { clearShapeCache(); localSolids(project) })
+  out.localSolidsWarm = time(() => localSolids(project), heavyRuns)
+  out.interferencesCold = cold(() => { clearShapeCache(); clearSharedVolumes(); interferences(project) })
+  out.interferencesWarm = time(() => interferences(project), heavyRuns)
+  out.clearanceCold = cold(() => { clearShapeCache(); clearSharedVolumes(); clearance(project) })
+  out.clearanceWarm = time(() => clearance(project), heavyRuns, false)
+  const plan = () => {
     const r = createBuildPlan(project, { paper: 'letter', scale: 'auto', hidden: true, date: '2026-01-01' })
     if (!r.ok) throw new Error(r.issues.join(' '))
-  }, 1, false)
+  }
+  out.buildPlanCold = cold(plan)
+  out.buildPlanWarm = time(plan, 1, false)
   out.serialize = time(() => serialize(project), runs)
   // Editing, through the store as the Properties panel does.
   const store = openedStore(text)
@@ -94,3 +107,23 @@ export function sceneStats(p: Project) {
   return { triangles, parts: solids.size, drawObjects: solids.size * 2 }
 }
 export { THREE }
+
+/**
+ * How slow this machine is next to the one the budgets were set on (1 = as fast or faster): a fixed chunk of the same
+ * kind of work the app does (trigonometry, small objects, sorting) timed in CPU milliseconds. Budgets are multiplied
+ * by it, so a slow CI runner doesn't fail a test that a regression alone would.
+ */
+const REFERENCE_MS = 60
+export function slowness(): number {
+  const ms = time(() => {
+    let acc = 0
+    const items: { k: number; v: number[] }[] = []
+    for (let i = 0; i < 120_000; i++) {
+      acc += Math.sin(i) * Math.cos(i * 0.5)
+      items.push({ k: Math.abs(Math.sin(i * 12.9898) * 43758.5453) % 1, v: [i, acc] })
+    }
+    items.sort((a, b) => a.k - b.k)
+    return items[0].v[0]
+  }, 5)
+  return Math.max(1, ms / REFERENCE_MS)
+}
