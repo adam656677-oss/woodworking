@@ -1,10 +1,16 @@
-// Snapping the pointer to what's already drawn: ends, middles, centres, crossings, tangent points, then the grid.
+// Snapping the pointer to what's already drawn: ends, middles, centres and quadrants, crossings, tangent and
+// perpendicular points, a point on a shape, a 15° angle step from where the line started, then the grid.
 import { arcAngles, pointOf } from './geometry'
-import { intersectPrims, onArc, primOf } from './intersect'
+import { intersectPrims, nearestOn, onArc, primOf } from './intersect'
 import type { Pt, Sketch } from './types'
 
-export type SnapKind = 'endpoint' | 'midpoint' | 'center' | 'intersection' | 'tangent' | 'grid' | 'none'
-export type Snap = { pt: Pt; kind: SnapKind; ref?: string }
+export type SnapKind = 'endpoint' | 'midpoint' | 'center' | 'quadrant' | 'intersection' | 'tangent' | 'perpendicular' | 'nearest' | 'angle' | 'grid' | 'none'
+/** `angle` is the step's angle in degrees, for an angle snap. */
+export type Snap = { pt: Pt; kind: SnapKind; ref?: string; angle?: number }
+
+/** Angle steps, in degrees, that a line being drawn locks to (like polar tracking). */
+export const ANGLE_STEP = 15
+const ANGLE_TOL = 1.5
 
 const dist = (a: Pt, b: Pt) => Math.hypot(a.x - b.x, a.y - b.y)
 
@@ -51,6 +57,16 @@ export function snapTo(sk: Sketch, q: Pt, opts: { tol: number; grid?: number; fr
       mids.push({ pt: P(e.center), kind: 'center', ref: e.center })
     }
   }
+  // Quadrants: the top, bottom, left and right of circles and arcs.
+  for (const e of ents) {
+    if (e.kind !== 'circle' && e.kind !== 'arc') continue
+    const p = primOf(sk, e)
+    if (!p || (p.type !== 'circle' && p.type !== 'arc')) continue
+    for (let k = 0; k < 4; k++) {
+      const pt = { x: p.c.x + p.r * Math.cos((k * Math.PI) / 2), y: p.c.y + p.r * Math.sin((k * Math.PI) / 2) }
+      if (p.type === 'circle' || onArc(p, pt)) mids.push({ pt, kind: 'quadrant' })
+    }
+  }
   const mid = best(mids)
   if (mid) return mid
 
@@ -78,6 +94,50 @@ export function snapTo(sk: Sketch, q: Pt, opts: { tol: number; grid?: number; fr
     }
     const t = best(tans)
     if (t) return t
+    // Perpendicular: where a line from the start point meets a line (or a circle) square.
+    const perps: Snap[] = []
+    for (const p of prims) {
+      if (p.type === 'seg') {
+        const dx = p.b.x - p.a.x, dy = p.b.y - p.a.y, l2 = dx * dx + dy * dy
+        if (!l2) continue
+        const u = ((f.x - p.a.x) * dx + (f.y - p.a.y) * dy) / l2
+        if (u < -1e-9 || u > 1 + 1e-9) continue
+        const pt = { x: p.a.x + u * dx, y: p.a.y + u * dy }
+        if (dist(pt, f) > 1e-6) perps.push({ pt, kind: 'perpendicular' })
+      } else if (p.type === 'circle' || p.type === 'arc') {
+        const d = dist(f, p.c)
+        if (d < 1e-9) continue
+        for (const s of [1, -1]) {
+          const pt = { x: p.c.x + (s * p.r * (f.x - p.c.x)) / d, y: p.c.y + (s * p.r * (f.y - p.c.y)) / d }
+          if (p.type === 'circle' || onArc(p, pt)) perps.push({ pt, kind: 'perpendicular' })
+        }
+      }
+    }
+    const pp = best(perps)
+    if (pp) return pp
+  }
+
+  // A point on a shape (only very close, so the grid still wins in open space).
+  const near: Snap[] = []
+  for (const p of prims) { const n = nearestOn(p, q); if (n.d <= tol / 2) near.push({ pt: n.p, kind: 'nearest' }) }
+  const nr = best(near)
+  if (nr) return nr
+
+  // An angle step from the start point: the grid point if it's already on the step, else the pointer's distance
+  // (to 1/64") along the step.
+  if (opts.from) {
+    const f = opts.from
+    const g = opts.grid ? { x: Math.round(q.x / opts.grid) * opts.grid, y: Math.round(q.y / opts.grid) * opts.grid } : q
+    const deg = (Math.atan2(q.y - f.y, q.x - f.x) * 180) / Math.PI
+    const step = Math.round(deg / ANGLE_STEP) * ANGLE_STEP
+    const len = dist(q, f)
+    if (len > tol && Math.abs(deg - step) <= ANGLE_TOL) {
+      const gDeg = (Math.atan2(g.y - f.y, g.x - f.x) * 180) / Math.PI
+      if (dist(g, f) > 1e-9 && Math.abs(gDeg - step) < 1e-6) return { pt: g, kind: opts.grid ? 'grid' : 'angle', ...(opts.grid ? {} : { angle: step }) }
+      const r = (step * Math.PI) / 180
+      const L = Math.round(len * 64) / 64
+      return { pt: { x: f.x + L * Math.cos(r), y: f.y + L * Math.sin(r) }, kind: 'angle', angle: ((step % 360) + 360) % 360 }
+    }
   }
 
   if (opts.grid) {

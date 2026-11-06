@@ -101,7 +101,7 @@ export function Canvas({ onAsk, view, setView }: { onAsk(a: Ask): void; view: Vi
   const corners = useMemo(() => new Set(cornerPoints(sketch)), [sketch])
   const baseColor = solve.status === 'ok' && solve.dof === 0 && sketch.constraints.length > 0 ? COLOR.fixed : COLOR.free
 
-  // ---- typed sizes while drawing: "11-3/4", "@45", "11-3/4@45"; for a rectangle "10 x 4" ----
+  // ---- typed sizes while drawing: "11-3/4", "@45", "11-3/4@45", or an offset "3,4" / "@-2,1-1/2"; for a rectangle "10 x 4" ----
   const applyTyped = (text: string) => {
     const d = draw.getState()
     const last = pending[pending.length - 1]
@@ -122,6 +122,18 @@ export function Canvas({ onAsk, view, setView }: { onAsk(a: Ask): void; view: Vi
       if (r === null) { d.setMessage('Type the radius, like 1-1/2'); return }
       d.addCircle(last, r)
       setPending([])
+      return
+    }
+    // An X,Y offset from the last point (AutoCAD's @x,y): right/up positive, left/down negative.
+    const xy = /^\s*@?\s*([^,]+?)\s*,\s*(.+?)\s*$/.exec(text)
+    if (xy && (tool === 'line' || tool === 'construction')) {
+      const signed = (s: string) => { const neg = /^\s*-/.test(s); const v = parseIn(s.replace(/^\s*-/, '')); return v === null ? null : neg ? -v : v }
+      const dx = /^\s*-?0\s*$/.test(xy[1]) ? 0 : signed(xy[1]), dy = /^\s*-?0\s*$/.test(xy[2]) ? 0 : signed(xy[2])
+      if (dx === null || dy === null || (dx === 0 && dy === 0)) { d.setMessage('Type an offset like 3,4 (right 3", up 4") or -2,0'); return }
+      const end = { x: last.x + dx, y: last.y + dy }
+      d.addLine(last, end, tool === 'construction')
+      const pts = draw.getState().sketch.points
+      setPending([{ ...end, ref: pts[pts.length - 1]?.id }])
       return
     }
     const [lenText, angText] = text.split('@')
@@ -498,7 +510,7 @@ export function Canvas({ onAsk, view, setView }: { onAsk(a: Ask): void; view: Vi
           className="absolute bottom-8 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded border border-stone-300 bg-white px-3 py-2 shadow"
           onSubmit={e => { e.preventDefault(); applyTyped(typed); setTyped(null) }}
         >
-          <label className="text-sm text-stone-600" htmlFor="typed-size">{tool === 'rect' ? 'Size (W x H)' : tool === 'circle' ? 'Radius' : 'Length @angle'}</label>
+          <label className="text-sm text-stone-600" htmlFor="typed-size">{tool === 'rect' ? 'Size (W x H)' : tool === 'circle' ? 'Radius' : 'Length @angle, or X,Y'}</label>
           <input id="typed-size" autoFocus value={typed} onChange={e => setTyped(e.target.value)} onKeyDown={e => { if (e.key === 'Escape') setTyped(null) }} className="w-36 rounded border border-stone-300 px-2 py-0.5" />
         </form>
       )}

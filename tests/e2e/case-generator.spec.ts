@@ -1,0 +1,47 @@
+import { expect, test } from '@playwright/test'
+import { enterMasterShop, kill, launch, newDirs, startTemplate, unlockTemplate } from './helpers'
+
+test('New case: preview follows the sizes, nothing is added until Add to design, then it joins the design', async () => {
+  const { app, win } = await launch(newDirs())
+  try {
+    await enterMasterShop(win)
+    await startTemplate(win, 'Box')
+    const parts = win.getByRole('list', { name: 'Parts', exact: true })
+    const before = await parts.getByRole('listitem').count()
+    await win.getByRole('button', { name: 'Cabinet ▾' }).click()
+    await win.getByRole('menuitem', { name: /New case/ }).click()
+    const d = win.getByRole('dialog', { name: 'New case' })
+    const cut = d.getByRole('table', { name: 'Case cut list' })
+    await expect(cut).toContainText('29-1/16"')
+    await d.getByLabel('Width').fill('36')
+    await d.getByLabel('Width').press('Tab')
+    await expect(cut).toContainText('35-1/16"')
+    await d.getByLabel('Construction').selectOption('pocket')
+    await d.getByLabel('Shelves are').selectOption('fixed')
+    await expect(d.getByRole('list', { name: 'How it goes together' })).toContainText('fixed shelves')
+    await d.getByLabel('Kind').selectOption('base')
+    await expect(d.getByLabel('Toe kick height')).toBeVisible()
+    await expect(d.getByRole('img', { name: 'Front view of the case' })).toBeVisible()
+    await win.screenshot({ path: 'test-results/case-generator.png' })
+    expect(await parts.getByRole('listitem').count()).toBe(before)
+    // A live template rebuilds its own parts, so the case can't join it until it's unlocked.
+    await d.getByRole('button', { name: 'Add to design' }).click()
+    await expect(d.getByRole('alert')).toContainText('live template')
+    await d.getByRole('button', { name: 'Cancel' }).click()
+    await unlockTemplate(win)
+    await win.getByRole('button', { name: 'Cabinet ▾' }).click()
+    await win.getByRole('menuitem', { name: /New case/ }).click()
+    await d.getByLabel('Kind').selectOption('base')
+    await d.getByRole('button', { name: 'Add to design' }).click()
+    await expect(d).toHaveCount(0)
+    await expect(parts).toContainText('Toe kick')
+    expect(await parts.getByRole('listitem').count()).toBeGreaterThan(before + 6)
+    // Too many shelves for the height: explained, and Add to design waits.
+    await win.getByRole('button', { name: 'Cabinet ▾' }).click()
+    await win.getByRole('menuitem', { name: /New case/ }).click()
+    await d.getByLabel('Shelves', { exact: true }).fill('12')
+    await expect(d.getByRole('alert')).toContainText('shelves leave only')
+    await expect(d.getByRole('button', { name: 'Add to design' })).toBeDisabled()
+    await d.getByRole('button', { name: 'Cancel' }).click()
+  } finally { kill(app) }
+})

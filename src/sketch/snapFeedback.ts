@@ -5,15 +5,16 @@ import type { Snap } from './snap'
 import type { Tool } from './drawStore'
 import type { Pt } from './types'
 
-const NAMES: Record<Exclude<Snap['kind'], 'grid' | 'none'>, string> = {
-  endpoint: 'Endpoint', midpoint: 'Midpoint', center: 'Center', intersection: 'Crossing', tangent: 'Tangent'
+const NAMES: Record<Exclude<Snap['kind'], 'grid' | 'none' | 'angle'>, string> = {
+  endpoint: 'Endpoint', midpoint: 'Midpoint', center: 'Center', quadrant: 'Quadrant', intersection: 'Crossing', tangent: 'Tangent',
+  perpendicular: 'Perpendicular', nearest: 'On the shape'
 }
 
 /** A short plain label for a snap, or null when there is nothing to say. `off` means snapping is switched off. */
 export function sketchSnapLabel(snap: Snap, grid: number, off = false): string | null {
   if (off) return 'Snap off'
   if (snap.kind === 'none') return null
-  return snap.kind === 'grid' ? gridLabel(grid) : NAMES[snap.kind]
+  return snap.kind === 'grid' ? gridLabel(grid) : snap.kind === 'angle' ? `${snap.angle}°` : NAMES[snap.kind]
 }
 
 export type AlignHint = { kind: 'level' | 'upright'; label: string; guide: { from: Pt; to: Pt } }
