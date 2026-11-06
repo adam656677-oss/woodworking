@@ -17,6 +17,8 @@ export async function launch(dirs: Dirs): Promise<{ app: ElectronApplication; wi
   })
   try {
     const win = await app.firstWindow()
+    // A cold start on a busy CI machine can take longer than one click's timeout; wait for the app to draw first.
+    await win.waitForSelector('#root > *', { timeout: 60_000 })
     win.setDefaultTimeout(15_000)
     return { app, win }
   } catch (error) {
