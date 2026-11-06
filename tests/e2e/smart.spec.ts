@@ -54,6 +54,9 @@ test('smart helpers: offline describe without a key; with a key, describe, photo
     await st.getByLabel('Model').fill('claude-sonnet-5-5-test')
     await st.getByRole('button', { name: 'Save' }).click()
     await expect(st.getByText('Saved.', { exact: false })).toBeVisible()
+    // Wait for this save to finish (Save greys out again) before typing, so the refresh can't overwrite the new text.
+    await expect(st.getByRole('button', { name: 'Save' })).toBeDisabled()
+    await expect(st.getByLabel('Model')).toHaveValue('claude-sonnet-5-5-test')
     await expect(st.getByRole('status', { name: 'Helper status' })).toContainText('A key is set')
     await st.getByLabel('Model').fill('claude-sonnet-5-5')
     await st.getByRole('button', { name: 'Save' }).click()

@@ -59,6 +59,7 @@ export function SmartSettings() {
   const [msg, setMsg] = useState<{ text: string; bad?: boolean } | null>(null)
   useEffect(() => { setM(model) }, [model])
   const save = async () => {
+    setMsg(null)
     try {
       // Saving just the model keeps the key that's already there.
       if (key.trim()) await window.aa.smartSetKey(key)
