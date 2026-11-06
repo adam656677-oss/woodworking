@@ -74,6 +74,7 @@ export function buildCommands(): StudioCommand[] {
 
   add('Create',
     { id: 'add-board', label: 'Add board', keywords: 'new part lumber', tooltip: 'Add a new board next to the others', run: () => addNextBoard() },
+    { id: 'case-new', label: 'New case (bookcase or cabinet)', short: 'New case…', keywords: 'cabinet bookcase bookshelf generator plan carcass box shelves', tooltip: 'Set sizes and construction, preview the parts and cut list, then add a bookcase or cabinet to the design', run: () => { state().setView({ cabinet: 'case' }) } },
     { id: 'cabinet-door', label: 'Make a cabinet door', short: 'Door…', keywords: 'cabinet', tooltip: 'Make a door for a cabinet opening', run: () => { state().setView({ cabinet: 'door' }) } },
     { id: 'cabinet-drawer', label: 'Make a drawer', short: 'Drawer…', keywords: 'cabinet', tooltip: 'Make a drawer box and front', run: () => { state().setView({ cabinet: 'drawer' }) } },
     { id: 'cabinet-frame', label: 'Make a face frame', short: 'Face frame…', keywords: 'cabinet', tooltip: 'Make a face frame for a cabinet', run: () => { state().setView({ cabinet: 'frame' }) } },
@@ -189,7 +190,7 @@ export const TOOLBAR_LAYOUT: ToolbarSection[] = [
   ] },
   { group: 'Create', entries: [
     { id: 'add-board' },
-    { menu: 'Cabinet', title: 'Doors, drawers, face frames and shelf pins', items: ['cabinet-door', 'cabinet-drawer', 'cabinet-frame', 'cabinet-pins'] },
+    { menu: 'Cabinet', title: 'New cases, doors, drawers, face frames and shelf pins', items: ['case-new', 'cabinet-door', 'cabinet-drawer', 'cabinet-frame', 'cabinet-pins'] },
     { menu: '✏️ Draw a shape', title: 'Draw a shape to cut a board to', items: ['draw-new', 'draw-open:*'] },
     { id: 'edit-shape' }, { id: 'pictures' }, { id: 'library' },
     { menu: '✨ Helpers', title: 'Smart Helpers', items: ['helper-describe', 'helper-photo', 'helper-wood', 'helper-settings'] }

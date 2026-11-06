@@ -31,6 +31,7 @@ export function StartPanel() {
           ))}
         </div>
         <p className="max-w-xl text-center text-sm text-stone-600">Choose Custom for a blank sketch. Draw a profile, set dimensions, and turn it into a woodworking part. Templates provide a dimension-driven starting point.</p>
+        <button type="button" disabled={pending || !!recovery} onClick={() => s.setView({ cabinet: 'case' })} className="rounded border border-amber-700 px-3 py-1 text-sm hover:bg-amber-50 disabled:opacity-50">New case… (bookcase or cabinet, with a preview)</button>
         <button onClick={() => openHelper('describe')} className="rounded border border-amber-700 px-3 py-1 text-sm hover:bg-amber-50">✨ Describe what you want to make…</button>
         <p className="text-sm text-stone-500">You can also use Add board in the toolbar or Open a saved project.</p>
       </div>

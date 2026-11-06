@@ -61,8 +61,8 @@ export type StudioState = {
   checksOpen: 'interference' | 'weight' | 'notes' | 'clearance' | null
   /** Doors and drawers open in 3D, 0..1 (display only). */
   openAmount: number
-  /** The door / drawer / face-frame / shelf-pin maker that's open. */
-  cabinet: 'door' | 'drawer' | 'frame' | 'pins' | null
+  /** The door / drawer / face-frame / shelf-pin maker, or the case generator, that's open. */
+  cabinet: 'door' | 'drawer' | 'frame' | 'pins' | 'case' | null
   /** The 3D export dialog, or a model being imported (asking its units). */
   exchange: { kind: 'export' } | { kind: 'import'; name: string; bytes: Uint8Array } | null
   /** The reference model whose settings are open. */

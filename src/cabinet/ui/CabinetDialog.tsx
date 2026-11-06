@@ -10,6 +10,7 @@ import { addDrawer, DRAWER_DEFAULTS, type BoxJoint, type DrawerOptions, type Sli
 import { addFaceFrame, FRAME_DEFAULTS, type FaceFrameOptions } from '../faceFrame'
 import { addShelfPins, faceToward, faceTowardPoint, MM32, PIN_DEFAULTS, type PinOptions } from '../shelfPins'
 import { worldBox } from '../../model/geometry'
+import { CaseGenerator } from '../../generator/ui/CaseGenerator'
 
 const PULLS: [string, string][] = [['', 'None'], ['knob', 'Knob'], ['pull-3', 'Bar pull 3"'], ['pull-96', 'Bar pull 96 mm'], ['pull-128', 'Bar pull 128 mm'], ['pull-160', 'Bar pull 160 mm']]
 const MOUNTINGS: [Mounting, string][] = [['full', 'Full overlay'], ['half', 'Half overlay'], ['inset', 'Inset']]
@@ -208,5 +209,6 @@ export function CabinetDialog() {
   if (which === 'drawer') return <DrawerMaker />
   if (which === 'frame') return <FrameMaker />
   if (which === 'pins') return <PinMaker />
+  if (which === 'case') return <CaseGenerator />
   return null
 }

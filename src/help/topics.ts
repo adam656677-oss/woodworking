@@ -162,6 +162,20 @@ export const MASTER_TOPICS: HelpTopic[] = [
     labels: ['Sizes', 'Name', 'Add size', 'Width', 'Rules', 'Properties', 'Add a rule']
   },
   {
+    id: 'case-generator', group: 'Designing', title: 'How do I make a bookcase or cabinet from a few sizes?',
+    summary: 'New case… builds a bookcase, base cabinet or wall cabinet from its sizes and construction, shows the parts and cut list first, then adds it to your design.',
+    keywords: ['case', 'carcass', 'bookcase', 'bookshelf', 'cabinet', 'base cabinet', 'wall cabinet', 'generator', 'plans', 'shelves', 'dado', 'rabbet', 'pocket screws', 'preview'],
+    steps: [
+      'Open the **Cabinet** menu and choose **New case…** (on an empty design, the start screen has the same button).',
+      'Pick the **Kind**, then type the **Width**, **Height** and **Depth**. A base cabinet also asks for the **Toe kick height**.',
+      'Choose the **Case wood**, the **Back**, how many **Shelves**, whether **Shelves are** adjustable or fixed, and the **Construction**.',
+      'Watch the front view and **Case cut list** change as you type. The notes say how it goes together and the clearances it leaves; a yellow box warns about sag or other problems.',
+      'Press **Add to design**. The case goes in as one group beside what is already there, with its shelf pin holes and screws in the **Hardware** list.'
+    ],
+    tip: 'Nothing is added until you press Add to design, so try a few sizes. Then use **Door…** and **Drawer…** to fill the openings.',
+    labels: ['Cabinet', 'New case…', 'Kind', 'Width', 'Height', 'Depth', 'Toe kick height', 'Case wood', 'Back', 'Shelves', 'Shelves are', 'Construction', 'Case cut list', 'Add to design', 'Hardware', 'Door…', 'Drawer…']
+  },
+  {
     id: 'cabinets', group: 'Designing', title: 'How do I add doors, drawers and shelf pins?',
     summary: 'The Cabinet menu makes doors, drawers, face frames and shelf pin holes that fit an opening.',
     keywords: ['door', 'drawer', 'face frame', 'shelf pins', 'hinge', 'slides', 'cabinet', 'hardware', 'opening', 'shaker', 'slab'],
@@ -248,10 +262,11 @@ export const MASTER_TOPICS: HelpTopic[] = [
   {
     id: 'shaped', group: 'Cut list and building', title: 'How do I draw a curved or shaped part?',
     summary: 'Draw an outline on the Drawing Board and cut a board to that shape.',
-    keywords: ['draw', 'drawing board', 'shape', 'curve', 'sketch', 'outline', 'dimension', 'circle', 'arc', 'spline', 'cnc', 'laser', 'dxf', 'svg', 'cad', 'constraint'],
+    keywords: ['draw', 'drawing board', 'shape', 'curve', 'sketch', 'snap', 'perpendicular', 'quadrant', 'polar', 'angle', 'coordinates', 'outline', 'dimension', 'circle', 'arc', 'spline', 'cnc', 'laser', 'dxf', 'svg', 'cad', 'constraint'],
     steps: [
       'Pick a board and press **Edit shape**, or open the **✏️ Draw a shape** menu and choose **New drawing**.',
-      'Pick a tool on the left (**Line**, **Rectangle**, **Circle**, **Curve** and more) and click on the sheet. While drawing, type a size such as 11-3/4 and press Enter.',
+      'Pick a tool on the left (**Line**, **Rectangle**, **Circle**, **Curve** and more) and click on the sheet. While drawing, type a size such as 11-3/4 and press Enter. Type 11-3/4@45 for a length at an angle, or 3,4 to go 3" right and 4" up (-3,0 goes left).',
+      'The pointer snaps to ends, middles, centers, the top, bottom and sides of circles (quadrants), crossings, tangent and perpendicular points, and onto a shape. A line also locks to 15° steps; the green label says which.',
       'Use **Dimension** to fix a size. The panel on the right shows the rules that keep the shape tied together.',
       'Close the outline. If it cannot become a board, a red note above the sheet says why.',
       'Press **Cut a board to this shape**, choose the wood under **Cut it from**, and press **Cut it**. (For a board you are editing the button says **Shape** and its name.)',
