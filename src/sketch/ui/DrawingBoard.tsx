@@ -10,6 +10,7 @@ import { Outputs } from './Outputs'
 import { HINTS, SHORTCUTS, ToolBar } from './ToolBar'
 import { backTo, leaveDrawing } from './session'
 import { TracingPicture } from './TracingPicture'
+import { ProfileReview } from '../../ui/designer/ProfileReview'
 
 const KIND_LABEL = { distance: 'Length', hdistance: 'Width (across)', vdistance: 'Height (up)', radius: 'Radius', diameter: 'Diameter', angle: 'Angle' } as const
 
@@ -146,6 +147,7 @@ function PreciseBoard() {
         <input aria-label="Drawing name" value={name} onChange={e => draw.getState().rename(e.target.value)}
           className="w-56 rounded border border-transparent px-2 py-1 text-lg font-bold hover:border-stone-300" />
         <button onClick={fit} className="rounded px-2 py-1 text-sm hover:bg-stone-200">Fit</button>
+        {!kidsDraw && <ProfileReview />}
         <span className="flex-1" />
         <Outputs />
       </header>

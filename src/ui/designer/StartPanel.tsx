@@ -18,19 +18,22 @@ export function StartPanel() {
     )
   }
   return (
-    <div className="flex h-full flex-col items-center justify-center gap-6 overflow-y-auto p-6">
-      <h2 className="text-2xl font-semibold text-stone-700">Start a design</h2>
-      <div className="flex max-w-4xl flex-wrap justify-center gap-4">
-        <button type="button" disabled={pending || !!recovery} onClick={() => startCustomDesign()} className="h-28 w-36 rounded-xl border-2 border-amber-800 bg-amber-800 text-lg font-semibold text-white hover:bg-amber-900 disabled:opacity-50">Custom</button>
-        {TEMPLATES.map(t => (
-          <button key={t.id} disabled={pending || !!recovery} onClick={() => s.newFromTemplate(t.id)} className="h-28 w-36 rounded-xl border-2 border-amber-700 bg-amber-50 text-lg font-semibold hover:bg-amber-100 disabled:opacity-50">
-            {t.name}
-          </button>
-        ))}
+    // m-auto (not justify-center) keeps the top reachable when the panel is taller than a small window.
+    <div className="flex h-full overflow-y-auto p-6">
+      <div className="m-auto flex flex-col items-center gap-6">
+        <h2 className="text-2xl font-semibold text-stone-700">Start a design</h2>
+        <div className="flex max-w-4xl flex-wrap justify-center gap-4">
+          <button type="button" disabled={pending || !!recovery} onClick={() => startCustomDesign()} className="h-28 w-36 rounded-xl border-2 border-amber-800 bg-amber-800 text-lg font-semibold text-white hover:bg-amber-900 disabled:opacity-50">Custom</button>
+          {TEMPLATES.map(t => (
+            <button key={t.id} disabled={pending || !!recovery} onClick={() => s.newFromTemplate(t.id)} className="h-28 w-36 rounded-xl border-2 border-amber-700 bg-amber-50 text-lg font-semibold hover:bg-amber-100 disabled:opacity-50">
+              {t.name}
+            </button>
+          ))}
+        </div>
+        <p className="max-w-xl text-center text-sm text-stone-600">Choose Custom for a blank sketch. Draw a profile, set dimensions, and turn it into a woodworking part. Templates provide a dimension-driven starting point.</p>
+        <button onClick={() => openHelper('describe')} className="rounded border border-amber-700 px-3 py-1 text-sm hover:bg-amber-50">✨ Describe what you want to make…</button>
+        <p className="text-sm text-stone-500">You can also use Add board in the toolbar or Open a saved project.</p>
       </div>
-      <p className="max-w-xl text-center text-sm text-stone-600">Choose Custom for a blank sketch. Draw a profile, set dimensions, and turn it into a woodworking part. Templates provide a dimension-driven starting point.</p>
-      <button onClick={() => openHelper('describe')} className="rounded border border-amber-700 px-3 py-1 text-sm hover:bg-amber-50">Describe what you want to make…</button>
-      <p className="text-sm text-stone-500">You can also use Add board in the toolbar or Open a saved project.</p>
     </div>
   )
 }
