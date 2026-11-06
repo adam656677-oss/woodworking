@@ -17,6 +17,7 @@ async function main() {
   const launch = async () => {
     app = await electron.launch({ executablePath, env: { ...process.env, AA_DOCS_DIR: docs, AA_USER_DATA: userData } })
     const win = await app.firstWindow()
+    await win.waitForSelector('#root > *', { timeout: 60000 })
     win.setDefaultTimeout(30000)
     return win
   }

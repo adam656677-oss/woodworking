@@ -1,7 +1,7 @@
 name: Verify
 on:
   push:
-    branches: [main, redesign/pro-workspace]
+    branches: [main]
   pull_request:
 permissions:
   contents: read
