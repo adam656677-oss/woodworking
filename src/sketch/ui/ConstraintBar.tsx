@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { describeConstraint, draw, useDraw } from '../drawStore'
 import type { ConstraintKind, Sketch } from '../types'
 
@@ -31,7 +32,7 @@ export function rulesFor(sk: Sketch, sel: string[]): { kind: ConstraintKind; lab
   ]
 }
 
-export function ConstraintBar({ onDistance, onAngle }: { onDistance(refs: string[]): void; onAngle(refs: string[]): void }) {
+export function ConstraintBar({ onDistance, onAngle, review }: { onDistance(refs: string[]): void; onAngle(refs: string[]): void; review?: ReactNode }) {
   const sketch = useDraw(s => s.sketch)
   const selection = useDraw(s => s.selection)
   const solve = useDraw(s => s.solve)
@@ -47,6 +48,7 @@ export function ConstraintBar({ onDistance, onAngle }: { onDistance(refs: string
         {conflict ? 'Rules disagree' : solve.dof === 0 && sketch.constraints.length ? 'Fully fixed ✓' : solve.dof > 0 ? `Can still move (${solve.dof})` : 'Free to move'}
       </div>
       <p className="text-xs text-stone-500">Blue can still move, black is fully fixed, red disagrees.</p>
+      {review}
       <h2 className="text-xs font-semibold uppercase text-stone-500">Rules for the selection</h2>
       <div className="grid grid-cols-2 gap-1">
         {rules.map(r => (

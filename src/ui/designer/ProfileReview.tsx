@@ -12,10 +12,10 @@ export function ProfileReview() {
     : solve.dof < 0 ? 'Constraint status not verified. Confirm dimensions before fabrication.'
     : solve.dof === 0 ? 'Fully constrained sketch.'
     : `${solve.dof} degrees of freedom remain. Add dimensions or constraints to lock the shape.`
-  // The review opens as a panel over the sheet, so it never takes height from the drawing.
-  return <details className="relative text-sm">
-    <summary className="cursor-pointer rounded border border-stone-300 bg-white px-2.5 py-1 font-semibold hover:bg-stone-100" title="Review custom profile">Review profile</summary>
-    <div className="absolute left-0 top-full z-30 mt-1 w-[28rem] max-w-[90vw] space-y-2 rounded border border-stone-300 bg-white p-3 shadow-lg">
+  // Lives in the Drawing Board's side panel, so it never takes height or header room from the sheet.
+  return <details className="rounded border border-stone-300 bg-stone-50 px-2 py-1 text-xs">
+    <summary className="cursor-pointer text-sm font-semibold">Review custom profile</summary>
+    <div className="mt-2 space-y-2">
       <p className="text-xs text-stone-600">Custom starts a new project; New sketch adds to this project. Draw and dimension a closed profile, make a part, then generate drawings and cut lists in 3D.</p>
       {review.ok ? <>
         <p>Closed profile detected. Across: {formatInches(review.across)}; up: {formatInches(review.up)}; internal cutouts: {review.cutouts}.</p>

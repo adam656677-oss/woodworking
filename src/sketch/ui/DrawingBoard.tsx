@@ -147,7 +147,6 @@ function PreciseBoard() {
         <input aria-label="Drawing name" value={name} onChange={e => draw.getState().rename(e.target.value)}
           className="w-56 rounded border border-transparent px-2 py-1 text-lg font-bold hover:border-stone-300" />
         <button onClick={fit} className="rounded px-2 py-1 text-sm hover:bg-stone-200">Fit</button>
-        {!kidsDraw && <ProfileReview />}
         <span className="flex-1" />
         <Outputs />
       </header>
@@ -167,6 +166,7 @@ function PreciseBoard() {
         <ConstraintBar
           onDistance={refs => setAsk({ kind: 'dimension', refs, options: ['distance'], at: { x: 0, y: 0 } })}
           onAngle={refs => setAsk({ kind: 'dimension', refs, options: ['angle'], at: { x: 0, y: 0 } })}
+          review={kidsDraw ? undefined : <ProfileReview />}
         />
       </div>
       <footer className="border-t border-stone-300 bg-white px-3 py-1 text-xs text-stone-600" data-testid="tool-hint">{HINTS[tool]}</footer>
