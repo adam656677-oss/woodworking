@@ -7,14 +7,15 @@ import { openLibrary } from '../library/ui/Library'
 import { openJointDesigner } from '../joinery/ui/JointDesigner'
 import { plans } from '../plans/plansStore'
 import { LiveBuildPlanAction } from '../drawings/ui/LiveBuildPlanAction'
+import { DesignTools } from './designer/DesignTools'
 
 const destinations = [
-  ['home', 'Dashboard'], ['master', 'Design'], ['draw', 'Drawing Board'],
+  ['home', 'Dashboard'], ['master', 'Design'],
   ['plans', 'My Plans'], ['library', 'Library'], ['joints', 'Joinery'],
   ['finish', 'Finishing'], ['tools', 'Shop Tools']
 ] as const
 
-/** Move to another workspace screen. Returns a plain-words problem if it could not, otherwise null. */
+/** Keep the internal draw route for old sketches and the kids' workshop. */
 export async function goToWorkspace(target: Screen, screen: Screen): Promise<string | null> {
   try {
     if (screen === 'draw' && !saveDrawing()) return 'Your drawing could not be kept in the project. Resolve the drawing error before leaving.'
@@ -48,8 +49,9 @@ export function WorkspaceNavigation() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   if (screen === 'kids' || kidsMode) return null
+  const inDesign = screen === 'master' || screen === 'draw'
   const navigate = async (target: Screen) => {
-    if (target === screen || busy || pending) return
+    if (target === screen || (target === 'master' && inDesign) || busy || pending) return
     setBusy(true)
     setError(null)
     const problem = await goToWorkspace(target, screen)
@@ -58,12 +60,16 @@ export function WorkspaceNavigation() {
   }
   return <div className="shrink-0 border-b border-stone-300 bg-stone-50">
     <nav aria-label="Workspace" aria-busy={busy} className="flex items-center gap-1 overflow-x-auto px-3 py-2">
-      {destinations.map(([target, label]) => <button key={target} type="button" role="link"
-        aria-current={target === screen ? 'page' : undefined} aria-disabled={busy || pending}
-        disabled={busy || pending} onClick={() => void navigate(target)}
-        className={`shrink-0 rounded px-3 py-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600 disabled:opacity-50 ${target === screen ? 'bg-amber-800 font-semibold text-white' : 'text-stone-700 hover:bg-stone-200'}`}>{label}</button>)}
+      {destinations.map(([target, label]) => {
+        const active = target === screen || (target === 'master' && inDesign)
+        return <button key={target} type="button" role="link"
+          aria-current={active ? 'page' : undefined} aria-disabled={busy || pending}
+          disabled={busy || pending} onClick={() => void navigate(target)}
+          className={`shrink-0 rounded px-3 py-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600 disabled:opacity-50 ${active ? 'bg-amber-800 font-semibold text-white' : 'text-stone-700 hover:bg-stone-200'}`}>{label}</button>
+      })}
       {screen === 'master' && <LiveBuildPlanAction disabled={busy || pending} />}
     </nav>
+    {inDesign && <DesignTools />}
     {error && <p role="alert" className="px-4 pb-2 text-sm text-red-700">{error}</p>}
   </div>
 }
