@@ -1,10 +1,13 @@
-name: Windows installer verification
+name: Verify build and publish Windows prerelease
 on:
   push:
     branches: [main]
   workflow_dispatch:
 permissions:
-  contents: read
+  contents: write
+concurrency:
+  group: windows-release-${{ github.ref }}
+  cancel-in-progress: false
 jobs:
   installer:
     runs-on: windows-latest
@@ -16,10 +19,14 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci
-      - run: npm run typecheck
-      - run: npm test
-      - run: npm run e2e
-      - run: npm run dist
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Unit and component tests
+        run: npm test
+      - name: Build and run Electron end-to-end tests
+        run: npm run e2e
+      - name: Build Windows installer
+        run: npm run dist
       - name: Install application and calculate checksum
         shell: pwsh
         run: |
@@ -36,7 +43,6 @@ jobs:
       - name: Verify installed application
         run: node scripts/verify-installed.cjs
       - name: Upload verified installer
-        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: verified-windows-installer
@@ -44,6 +50,26 @@ jobs:
             dist/*Setup*.exe
             dist/setup.sha256
           if-no-files-found: error
+      - name: Publish verified Windows prerelease
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          $result = Get-Content installed-test-results/result.json -Raw | ConvertFrom-Json
+          if ($result.passed -ne $true) { throw 'Installed verification evidence did not pass' }
+          $setup = @(Get-ChildItem dist -Filter '*Setup*.exe')
+          if ($setup.Count -ne 1) { throw 'Expected exactly one verified installer' }
+          $expected = ((Get-Content dist/setup.sha256 -Raw).Trim() -split '\s+')[0]
+          $actual = (Get-FileHash $setup[0].FullName -Algorithm SHA256).Hash.ToLower()
+          if ($expected -ne $actual) { throw 'Installer checksum changed after verification' }
+          $tag = "verified-$env:GITHUB_SHA-$env:GITHUB_RUN_ID-$env:GITHUB_RUN_ATTEMPT"
+          $notes = "Verified Windows prerelease for commit $env:GITHUB_SHA. Typecheck, unit/component tests, Electron end-to-end tests, installer creation, installed launch, project save/reopen, and PDF export completed successfully. Includes Custom sketch workflow and individual profile review. Automatic furniture-assembly interpretation is not implemented. Download the installer and SHA-256 checksum together."
+          gh release create $tag $setup[0].FullName dist/setup.sha256 --target $env:GITHUB_SHA --title "Verified Custom Design build $env:GITHUB_RUN_NUMBER" --notes $notes --prerelease
+          if ($LASTEXITCODE -ne 0) { throw 'GitHub prerelease publication failed' }
+          $url = gh release view $tag --json url --jq .url
+          if ($LASTEXITCODE -ne 0) { throw 'Published release could not be verified' }
+          "## Published verified prerelease`n$url`n`nCommit: $env:GITHUB_SHA" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
       - name: Upload verification evidence
         if: always()
         uses: actions/upload-artifact@v4
