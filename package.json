@@ -4,7 +4,7 @@
   "description": "A&A Woodworking Studio",
   "main": "out/main/main.js",
   "scripts": {
-    "test": "vitest run",
+    "test": "vitest run --exclude \"tests/perf/**\" && vitest run tests/perf",
     "dev": "electron-vite dev",
     "build": "electron-vite build",
     "e2e": "npm run build && playwright test",
