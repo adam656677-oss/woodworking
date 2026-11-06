@@ -2,10 +2,12 @@ import { useState } from 'react'
 import { newDrawing, openDrawing, saveDrawing } from '../../sketch/ui/session'
 import { studio, useStudio } from '../store'
 import { startCustomDesign } from './customDesign'
+import { ProfileReview } from './ProfileReview'
 
 export function DesignTools() {
   const screen = useStudio(s => s.screen)
-  const sketches = useStudio(s => s.project.sketches ?? [])
+  const savedSketches = useStudio(s => s.project.sketches)
+  const sketches = savedSketches ?? []
   const pending = useStudio(s => s.pendingReplace)
   const recovery = useStudio(s => s.recovery)
   const [busy, setBusy] = useState(false)
@@ -14,11 +16,11 @@ export function DesignTools() {
     if (busy || pending || recovery) return
     setBusy(true)
     setError(null)
-    try { await action() } catch { setError('The design action could not finish. Your current project has been kept.') }
+    try { await action() } catch { setError('The design action could not finish. Check the current project before continuing.') }
     finally { setBusy(false) }
   }
   const keepSketch = () => {
-    if (screen !== 'draw' || saveDrawing()) return true
+    if (studio.getState().screen !== 'draw' || saveDrawing()) return true
     setError('Resolve the sketch error before changing views.')
     return false
   }
@@ -50,7 +52,8 @@ export function DesignTools() {
         </select>
       </label>}
     </fieldset>
-    <p className="mt-2 text-xs text-stone-600">Draw and dimension a closed profile in Sketch, use “Cut a board to this shape” to make a part, then review it in 3D and generate cut lists or drawings. Custom starts a new project; New sketch adds to this project.</p>
+    <p className="mt-2 text-xs text-stone-600">Custom starts a new project; New sketch adds to this project. Draw and dimension a closed profile, make a part, then generate drawings and cut lists in 3D.</p>
+    {screen === 'draw' && <ProfileReview />}
     {error && <p role="alert" className="mt-2 text-sm text-red-700">{error}</p>}
   </section>
 }

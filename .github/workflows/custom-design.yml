@@ -1,0 +1,35 @@
+name: Custom Design branch verification
+on:
+  push:
+    branches: [feature/custom-design-plans]
+permissions:
+  contents: read
+concurrency:
+  group: custom-design-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  verify:
+    runs-on: windows-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Unit and component tests
+        if: success() || failure()
+        run: npm test
+      - name: Electron end-to-end tests and production build
+        if: success() || failure()
+        run: npm run e2e
+      - name: Preserve test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: custom-design-test-evidence
+          path: test-results/
+          if-no-files-found: ignore
