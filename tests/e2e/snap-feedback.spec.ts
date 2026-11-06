@@ -24,12 +24,15 @@ async function twoBoards(win: Page, opts: { raiseSecond?: boolean } = {}) {
   const scale = Math.min(box.width, box.height) / (12 * 1.4)
   const cx = box.x + box.width / 2, cy = box.y + box.height / 2
   const corner = { x: cx + (4.5 - 4) * scale, y: cy + 6 * scale }
-  return { scale, corner }
+  // The move arrows are drawn at a fixed share of the 3D view's height (TransformControls size 0.8: one arrow unit is
+  // height × 0.2 pixels, the X arrow's grab area runs 0 to 0.6 units). Aim at 0.45 units, where the grab cone is wide, whatever the window size.
+  const arrow = box.height * 0.2 * 0.45
+  return { scale, corner, arrow }
 }
 
-async function dragLeft(win: Page, from: { x: number; y: number }, pixels: number, holdAlt = false) {
+async function dragLeft(win: Page, from: { x: number; y: number }, pixels: number, holdAlt: boolean, arrow: number) {
   // The red X arrow is drawn to the left of the corner when seen from above.
-  const grab = { x: from.x - 60, y: from.y }
+  const grab = { x: from.x - arrow, y: from.y }
   await win.mouse.move(grab.x, grab.y)
   await win.mouse.down()
   for (let i = 1; i <= 8; i++) {
@@ -42,9 +45,9 @@ async function dragLeft(win: Page, from: { x: number; y: number }, pixels: numbe
 test('dragging a board near another shows what it snapped to and lands flush', async () => {
   const { app, win } = await launch(newDirs())
   try {
-    const { scale, corner } = await twoBoards(win)
+    const { scale, corner, arrow } = await twoBoards(win)
     // Board 2 sits 1" from board 1; pull it to within a few hundredths of an inch of touching.
-    await dragLeft(win, corner, scale * 0.93)
+    await dragLeft(win, corner, scale * 0.93, false, arrow)
     const feedback = win.getByTestId('snap-feedback')
     await expect(win.getByTestId('snap-label')).toHaveText('Corner')
     await expect(win.getByTestId('snap-readout')).toContainText('X -1"')
@@ -62,8 +65,8 @@ test('dragging a board near another shows what it snapped to and lands flush', a
 test('a board lined up on two sides is called an edge, and its position is snapped too', async () => {
   const { app, win } = await launch(newDirs())
   try {
-    const { scale, corner } = await twoBoards(win, { raiseSecond: true })
-    await dragLeft(win, corner, scale * 0.9)
+    const { scale, corner, arrow } = await twoBoards(win, { raiseSecond: true })
+    await dragLeft(win, corner, scale * 0.9, false, arrow)
     await expect(win.getByTestId('snap-label')).toHaveText('Edge')
     if (SHOTS) await win.screenshot({ path: `${SHOTS}/snap-edge.png` })
     await win.mouse.up()
@@ -75,8 +78,8 @@ test('a board lined up on two sides is called an edge, and its position is snapp
 test('holding Alt while dragging switches snapping off', async () => {
   const { app, win } = await launch(newDirs())
   try {
-    const { scale, corner } = await twoBoards(win)
-    await dragLeft(win, corner, scale * 0.93, true)
+    const { scale, corner, arrow } = await twoBoards(win)
+    await dragLeft(win, corner, scale * 0.93, true, arrow)
     await expect(win.getByTestId('snap-label')).toHaveText('Snap off')
     if (SHOTS) await win.screenshot({ path: `${SHOTS}/snap-off.png` })
     await win.mouse.up()
