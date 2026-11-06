@@ -1,11 +1,9 @@
-// Drawings and printing: views, part sheets, full-size templates and the plan packet; print or save as PDF.
+// Drawings and printing: views, part sheets, full-size templates and extras the build plan does not cover; print or save as PDF.
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { cutList } from '../../model/cutlist'
 import { formatInches } from '../../model/units'
 import type { Project } from '../../model/types'
-import { shoppingList } from '../../optimize/shopping'
-import { useStock } from '../../optimize/stockStore'
 import { entryFor, journalTotals, tools, useTools } from '../../tools/store'
 import { stepsFromDesign } from '../../shop/steps'
 import { finishById } from '../../finish/finishes'
@@ -13,16 +11,14 @@ import { scheduleTime, stepText } from '../../finish/schedule'
 import { studio, useStudio } from '../../ui/store'
 import { useRender, type RenderedView } from '../../render/renderStore'
 import { PAPERS, SCALES, type Paper, type ScaleChoice } from '../sheet'
-import { template } from '../tiles'
-import { localSolids } from '../../checks/solids'
-import { coverSheet, drawingSheets, partList, pictureSvg, type Sheet } from '../views'
+import { shapedParts, templatesFor } from '../tiles'
+import { drawingSheets, partList, pictureSvg, type Sheet } from '../views'
 
-type Tab = 'views' | 'parts' | 'templates' | 'packet'
+type Tab = 'views' | 'parts' | 'templates' | 'extras'
 type PageSpec = { key: string; kind: 'sheet'; paper: Paper; svg: string } | { key: string; kind: 'tile'; svg: string } | { key: string; kind: 'html'; node: ReactNode }
 
 const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` }
-/** Parts with a shaped outline or a turning: the ones that want a full-size template. */
-const shaped = (p: Project) => partList(p).filter(q => { const b = p.boards.find(x => x.id === q.boardId); return !!(b?.outline || b?.turning) }).map(q => q.boardId)
+const shaped = (p: Project) => shapedParts(p).map(q => q.boardId)
 
 export function DrawingsDialog() {
   const project = useStudio(s => s.project)
@@ -35,10 +31,10 @@ export function DrawingsDialog() {
   const parts = useMemo(() => partList(project), [project])
   const [chosen, setChosen] = useState<string[]>(() => parts.map(q => q.boardId))
   const [tmpl, setTmpl] = useState<string[]>(() => shaped(project))
-  const [packet, setPacket] = useState({ cover: true, drawings: true, parts: true, cutList: true, buy: true, steps: true, finish: true, journal: true, renders: true, templates: true })
+  // The drawings, cut list, shopping list, hardware, steps and templates of a whole plan now come from Create Build Plan; these are what it doesn't cover.
+  const [extras, setExtras] = useState({ finish: true, journal: true, renders: true })
   const [pages, setPages] = useState<PageSpec[] | null>(null)
   const [message, setMessage] = useState<{ text: string; bad?: boolean } | null>(null)
-  const shop = useStock(s => s.items)
   const journal = useTools(s => s.journal)
   useEffect(() => { if (!tools.getState().loaded) void tools.getState().load() }, [])
   const filePath = useStudio(s => s.filePath)
@@ -55,7 +51,7 @@ export function DrawingsDialog() {
   }, [])
 
   // The pages are drawn a moment after the choice changes, so "Drawing…" shows first.
-  const key = JSON.stringify([tab, paper, scale, hidden, views, chosen, tmpl, packet, kids])
+  const key = JSON.stringify([tab, paper, scale, hidden, views, chosen, tmpl, extras, kids])
   useEffect(() => {
     setPages(null)
     setMessage(null)
@@ -72,46 +68,21 @@ export function DrawingsDialog() {
     const tiles = (ids: string[]): PageSpec[] => {
       const picked = parts.filter(q => ids.includes(q.boardId))
       if (!picked.length) return []
-      const solids = localSolids(project)
-      const out = picked.flatMap(q => template(project, q.boardId, q.no, solids).pages.map((svg, i) => ({ key: `t${q.boardId}${i}`, kind: 'tile' as const, svg })))
-      for (const g of solids.values()) g.dispose()
-      return out
+      return templatesFor(project, picked).flatMap(t => t.pages.map((svg, i) => ({ key: `t${t.boardId}${i}`, kind: 'tile' as const, svg })))
     }
     if (kids) return kidsPages(project)
     if (tab === 'views') return sheetPages(drawingSheets(project, views, opts), 'v')
     if (tab === 'parts') return sheetPages(drawingSheets(project, { parts: chosen }, opts), 'p')
     if (tab === 'templates') return tiles(tmpl)
-    // The plan packet, in shop order.
-    const contents = [
-      packet.renders && renders.length > 0 && 'Pictures of the finished piece',
-      packet.drawings && 'Views, exploded view and section',
-      packet.parts && 'A sheet for every part',
-      packet.cutList && 'Cut list',
-      packet.buy && 'Shopping list',
-      packet.steps && 'Steps',
-      packet.finish && project.finish && 'Finishing schedule',
-      packet.journal && hasJournal && 'Shop journal',
-      packet.templates && tmpl.length > 0 && 'Full-size templates'
-    ].filter(Boolean) as string[]
-    const set = { views: packet.drawings, exploded: packet.drawings, section: packet.drawings, parts: packet.parts ? 'all' as const : [] }
-    // Numbered "n of N" across the cover and the sheets.
-    const count = (packet.drawings ? 3 : 0) + (packet.parts ? parts.length : 0)
-    const total = count + (packet.cover ? 1 : 0)
-    const renumbered = drawingSheets(project, set, opts, { first: packet.cover ? 2 : 1, total })
+    // Extras: what Create Build Plan doesn't cover.
     const out: PageSpec[] = []
-    if (packet.cover) out.push({ key: 'cover', kind: 'sheet', paper, svg: coverSheet(project, opts, contents, `1 of ${total}`).svg })
-    if (packet.renders && renders.length) out.push({ key: 'renders', kind: 'html', node: <RendersPage p={project} views={renders} /> })
-    out.push(...sheetPages(renumbered, 's'))
-    if (packet.cutList) out.push({ key: 'cut', kind: 'html', node: <CutListPage p={project} /> })
-    if (packet.buy) out.push({ key: 'buy', kind: 'html', node: <BuyPage p={project} shop={shop} /> })
-    if (packet.steps) out.push({ key: 'steps', kind: 'html', node: <StepsPage p={project} /> })
-    if (packet.finish && project.finish) out.push({ key: 'finish', kind: 'html', node: <FinishPage p={project} /> })
-    if (packet.journal && hasJournal) out.push({ key: 'journal', kind: 'html', node: <JournalPage p={project} /> })
-    if (packet.templates) out.push(...tiles(tmpl))
+    if (extras.renders && renders.length) out.push({ key: 'renders', kind: 'html', node: <RendersPage p={project} views={renders} /> })
+    if (extras.finish && project.finish) out.push({ key: 'finish', kind: 'html', node: <FinishPage p={project} /> })
+    if (extras.journal && hasJournal) out.push({ key: 'journal', kind: 'html', node: <JournalPage p={project} /> })
     return out
   }
 
-  const fileName = () => `${project.name || 'Untitled'} ${kids ? 'plan' : tab === 'packet' ? 'plan packet' : tab === 'templates' ? 'templates' : 'drawings'}`
+  const fileName = () => `${project.name || 'Untitled'} ${kids ? 'plan' : tab === 'extras' ? 'extras' : tab === 'templates' ? 'templates' : 'drawings'}`
   const savePdf = async () => {
     const path = await window.aa.savePdf(fileName())
     if (path) setMessage({ text: `Saved ${path}` })
@@ -122,7 +93,7 @@ export function DrawingsDialog() {
     const ok = await window.aa.printPdf(fileName())
     setMessage(ok ? { text: 'Opened in your PDF viewer — print it at 100% ("Actual size"), not "Fit".' } : { text: 'Couldn\'t open the PDF to print. Use Save as PDF instead.', bad: true })
   }
-  const tabs: [Tab, string][] = [['views', 'Views'], ['parts', 'Part sheets'], ['templates', 'Templates'], ['packet', 'Plan packet']]
+  const tabs: [Tab, string][] = [['views', 'Views'], ['parts', 'Part sheets'], ['templates', 'Templates'], ['extras', 'Extras']]
   const box = (on: boolean, set: (v: boolean) => void, label: string) => (
     <label className="flex items-center gap-1 text-sm"><input type="checkbox" checked={on} onChange={e => set(e.target.checked)} />{label}</label>
   )
@@ -146,7 +117,7 @@ export function DrawingsDialog() {
       </header>
       {!kids && (
         <div className="no-print flex flex-wrap items-center gap-4 border-b border-stone-300 bg-stone-50 px-4 py-2 print:hidden">
-          {tab !== 'templates' && <>
+          {tab !== 'templates' && tab !== 'extras' && <>
             <label className="flex items-center gap-1 text-sm">Paper
               <select aria-label="Paper" value={paper} onChange={e => setPaper(e.target.value as Paper)} className="rounded border border-stone-300 px-1">
                 {(Object.keys(PAPERS) as Paper[]).map(k => <option key={k} value={k}>{PAPERS[k].label}</option>)}
@@ -168,24 +139,18 @@ export function DrawingsDialog() {
           {(tab === 'parts' || tab === 'templates') && (
             <PartPicker parts={parts} chosen={tab === 'parts' ? chosen : tmpl} onChange={tab === 'parts' ? setChosen : setTmpl} />
           )}
-          {tab === 'packet' && <>
-            {box(packet.cover, v => setPacket({ ...packet, cover: v }), 'Cover')}
-            {box(packet.drawings, v => setPacket({ ...packet, drawings: v }), 'Views')}
-            {box(packet.parts, v => setPacket({ ...packet, parts: v }), 'Part sheets')}
-            {box(packet.cutList, v => setPacket({ ...packet, cutList: v }), 'Cut list')}
-            {box(packet.buy, v => setPacket({ ...packet, buy: v }), 'Shopping list')}
-            {box(packet.steps, v => setPacket({ ...packet, steps: v }), 'Steps')}
-            {project.finish && box(packet.finish, v => setPacket({ ...packet, finish: v }), 'Finishing schedule')}
-            {hasJournal && box(packet.journal, v => setPacket({ ...packet, journal: v }), 'Shop journal')}
-            {renders.length > 0 && box(packet.renders, v => setPacket({ ...packet, renders: v }), 'Rendered pictures')}
-            {box(packet.templates, v => setPacket({ ...packet, templates: v }), `Templates (${tmpl.length})`)}
+          {tab === 'extras' && <>
+            {project.finish && box(extras.finish, v => setExtras({ ...extras, finish: v }), 'Finishing schedule')}
+            {hasJournal && box(extras.journal, v => setExtras({ ...extras, journal: v }), 'Shop journal')}
+            {renders.length > 0 && box(extras.renders, v => setExtras({ ...extras, renders: v }), 'Rendered pictures')}
           </>}
+          {tab !== 'extras' && <span className="text-xs text-stone-600">For the whole plan in one go (drawings, cut list, shopping list, hardware, steps, templates), close this and use Create Build Plan.</span>}
         </div>
       )}
       {message && <p role={message.bad ? 'alert' : 'status'} className={`no-print bg-white px-4 py-1 text-xs print:hidden ${message.bad ? 'text-red-700' : 'text-green-800'}`}>{message.text}</p>}
       <div className="packet-inner flex-1 overflow-auto p-6 print:overflow-visible print:p-0">
         {pages === null ? <p className="text-stone-600">Drawing…</p> : pages.length === 0 ? (
-          <p className="text-stone-600">{project.boards.length ? (tab === 'templates' ? 'Pick the parts to make full-size templates of. Shaped parts are picked for you.' : 'Nothing picked.') : 'Add some parts first.'}</p>
+          <p className="text-stone-600">{project.boards.length ? (tab === 'templates' ? 'Pick the parts to make full-size templates of. Shaped parts are picked for you.' : tab === 'extras' ? 'Nothing extra to print yet. The finishing schedule, shop journal and rendered pictures show up here when this project has them.' : 'Nothing picked.') : 'Add some parts first.'}</p>
         ) : (
           <div className="flex flex-col items-center gap-6 print:block">
             {pages.map(pg => <Page key={pg.key} spec={pg} />)}
@@ -228,64 +193,6 @@ function RendersPage({ p, views }: { p: Project; views: RenderedView[] }) {
       <div className="grid grid-cols-2 gap-3">
         {rest.map(v => <figure key={v.key}><img src={v.dataUrl} alt={`Rendered ${v.label}`} className="max-h-[3in] w-full rounded object-contain" /><figcaption className="text-xs text-stone-600">{v.label}</figcaption></figure>)}
       </div>
-    </section>
-  )
-}
-
-function CutListPage({ p }: { p: Project }) {
-  const { rows } = cutList(p)
-  return (
-    <section className={pageStyle}>
-      <h2 className="mb-2 text-xl font-bold">Cut list — {p.name}</h2>
-      <table className="w-full border-collapse text-[10pt]">
-        <thead><tr className="border-b-2 border-black text-left">{['#', 'Qty', 'Part', 'T', 'W', 'L', 'Wood', 'Notes'].map(h => <th key={h} className="px-1">{h}</th>)}</tr></thead>
-        <tbody>
-          {rows.map((r, i) => (
-            <tr key={i} className="border-b border-stone-300 align-top">
-              <td className="px-1">P{i + 1}</td><td className="px-1">{r.qty}</td><td className="px-1">{r.part}</td>
-              <td className="px-1">{formatInches(r.thickness)}</td><td className="px-1">{formatInches(r.cutWidth ?? r.width)}</td><td className="px-1">{formatInches(r.cutLength ?? r.length)}</td>
-              <td className="px-1">{r.woodName}</td><td className="px-1 text-[9pt]">{r.notes.join('; ')}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </section>
-  )
-}
-
-function BuyPage({ p, shop }: { p: Project; shop: Parameters<typeof shoppingList>[1] }) {
-  const s = shoppingList(p, shop, tools.getState().inventory)
-  const money = (n?: number) => (n === undefined ? '—' : `$${n.toFixed(2)}`)
-  return (
-    <section className={pageStyle}>
-      <h2 className="mb-2 text-xl font-bold">Shopping list — {p.name}</h2>
-      <table className="w-full border-collapse text-[10pt]">
-        <thead><tr className="border-b-2 border-black text-left">{['', 'Item', 'Qty', 'Each', 'Total'].map(h => <th key={h} className="px-1">{h}</th>)}</tr></thead>
-        <tbody>
-          {s.lines.map((l, i) => (
-            <tr key={i} className="border-b border-stone-300"><td className="px-1">☐</td><td className="px-1">{l.what}</td><td className="px-1">{l.qty} {l.unit}</td><td className="px-1">{money(l.each)}</td><td className="px-1">{money(l.total)}</td></tr>
-          ))}
-        </tbody>
-      </table>
-      <p className="mt-2 text-right font-semibold">Total {money(s.total)}{s.missing ? ` (${s.missing} item${s.missing === 1 ? '' : 's'} without a price)` : ''}</p>
-    </section>
-  )
-}
-
-function StepsPage({ p }: { p: Project }) {
-  const steps = stepsFromDesign(p)
-  return (
-    <section className={pageStyle}>
-      <h2 className="mb-2 text-xl font-bold">Steps — {p.name}</h2>
-      <ol className="flex flex-col gap-3">
-        {steps.map((s, i) => (
-          <li key={s.key} className="break-inside-avoid">
-            <div className="font-semibold">☐ {i + 1}. {s.title}</div>
-            <div>{s.text}</div>
-            {s.tools.length > 0 && <div className="text-[9pt] text-stone-600">Tools: {s.tools.join(', ')}</div>}
-          </li>
-        ))}
-      </ol>
     </section>
   )
 }

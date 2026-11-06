@@ -93,8 +93,33 @@ function brushFor(cut: Cut, board: Board): Brush | null {
   return b
 }
 
+/**
+ * Finished shapes already worked out, by everything that decides the shape (size, cuts, outline, turning). Parts that
+ * are alike (a cabinet's twin sides, every drawer bottom) share one, and an edit only redoes the parts it touched.
+ * Callers only read the geometry (they clone before moving it), so sharing is safe. Least recently used go first.
+ */
+const shapeCache = new Map<string, THREE.BufferGeometry>()
+const SHAPE_CACHE_MAX = 2000
+
 /** Board geometry in local coordinates (origin at the board's corner), with its cuts subtracted. */
 export function buildBoardGeometry(board: Board, cuts: Cut[], shape?: BoardShape | null, turned?: TurnedLeg | null): THREE.BufferGeometry {
+  const key = JSON.stringify([board.width, board.length, board.thickness, cuts, shape ?? null, turned ?? null])
+  const hit = shapeCache.get(key)
+  if (hit) {
+    shapeCache.delete(key)
+    shapeCache.set(key, hit)
+    return hit
+  }
+  const made = makeBoardGeometry(board, cuts, shape, turned)
+  shapeCache.set(key, made)
+  if (shapeCache.size > SHAPE_CACHE_MAX) shapeCache.delete(shapeCache.keys().next().value!)
+  return made
+}
+
+/** Forget every finished shape (for measuring a cold start). */
+export const clearShapeCache = () => shapeCache.clear()
+
+function makeBoardGeometry(board: Board, cuts: Cut[], shape?: BoardShape | null, turned?: TurnedLeg | null): THREE.BufferGeometry {
   let box: THREE.BufferGeometry
   if (turned) box = turnedLeg(turned)
   else if (shape) box = extrudeOutline(shape, board.thickness, shape.profiles)

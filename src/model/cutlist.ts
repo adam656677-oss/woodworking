@@ -1,5 +1,5 @@
 // The cut list: every part grouped, with sizes, notes, board feet, sheet counts and cost.
-import { jointNotes } from './joints'
+import { jointNotes, jointsTouching } from './joints'
 import { SHAPED_NOTE } from './shaped'
 import { TURN_NOTE } from '../shaping/turning'
 import { TAPER_NOTE, taperProblem } from '../shaping/taper'
@@ -52,7 +52,7 @@ type Features = {
 const r6 = (n: number) => Math.round(n * 1e6) / 1e6
 
 function featuresOf(project: Project, b: Board): Features {
-  const grooves = project.joints
+  const grooves = jointsTouching(project, b.id)
     .filter(j => (j.type === 'dado' || j.type === 'rabbet') && j.hostBoardId === b.id)
     .map(j => {
       const p = j.params as GrooveParams
@@ -109,7 +109,7 @@ function canonical(f: Features, b: Board): string {
 
 /** Fasteners driven into the part (butt nails, pocket screws) also make parts different. */
 function fastenersOn(project: Project, b: Board): string[] {
-  return project.joints
+  return jointsTouching(project, b.id)
     .filter(j => j.partnerBoardId === b.id && (j.type === 'butt' || j.type === 'pocketScrew'))
     .map(j => JSON.stringify([j.type, j.params]))
     .sort()

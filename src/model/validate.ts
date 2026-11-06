@@ -1,8 +1,8 @@
 // Design warnings: overlapping boards, parts bigger than the stock, and joints or angles that can't be made.
-import { contactBetween, TOUCH_TOL } from './contact'
-import { AXES, boxInLocal, isAxisAligned, overlap1, worldBox } from './geometry'
+import { contactOfBoards, grooveIndex, TOUCH_TOL } from './contact'
+import { type Box, boxInLocal, isAxisAligned, worldBox } from './geometry'
 import { validateBoard, validateJoint } from './joints'
-import type { GrooveParams, Joint, Project } from './types'
+import type { Board, GrooveParams, Joint, Project } from './types'
 import { formatInches } from './units'
 import { findWood } from './woods'
 import { outlinePolygons, shapeReaches } from './shaped'
@@ -16,22 +16,45 @@ export type LibraryLink =
   | { page: 'sag'; span: number; depth: number; thickness: number; moe: number; material: string }
 export type Warning = { kind: 'overlap' | 'exceedsStock' | 'badJoint' | 'badShape' | 'formula' | 'crossGrain' | 'sag'; boardIds: string[]; message: string; link?: LibraryLink }
 
+/**
+ * Index pairs (i < k, in the order a double loop would find them) of boards whose boxes overlap by more than the
+ * touching tolerance on every axis. Sweeps along x instead of testing every pair, and works out each box once.
+ */
+export function overlappingPairs(boards: Board[], boxOf: (b: Board) => Box = worldBox): [number, number][] {
+  const boxes = boards.map(boxOf)
+  const order = boards.map((_, i) => i).sort((p, q) => boxes[p].min.x - boxes[q].min.x)
+  const pairs: [number, number][] = []
+  // overlap1(aMin, aMax, bMin, bMax) > TOUCH_TOL on each axis, written out: this is the hot loop.
+  const over = (aMin: number, aMax: number, bMin: number, bMax: number) => Math.min(aMax, bMax) - Math.max(aMin, bMin) > TOUCH_TOL
+  for (let n = 0; n < order.length; n++) {
+    const p = order[n]
+    const A = boxes[p]
+    for (let m = n + 1; m < order.length; m++) {
+      const q = order[m]
+      const B = boxes[q]
+      // Sorted by left edge: once one starts at or past this one's right edge (less the tolerance), none later can overlap.
+      if (B.min.x >= A.max.x - TOUCH_TOL) break
+      if (over(A.min.y, A.max.y, B.min.y, B.max.y) && over(A.min.z, A.max.z, B.min.z, B.max.z) && over(A.min.x, A.max.x, B.min.x, B.max.x)) {
+        pairs.push(p < q ? [p, q] : [q, p])
+      }
+    }
+  }
+  return pairs.sort((x, y) => x[0] - y[0] || x[1] - y[1])
+}
+
 export function validate(project: Project): Warning[] {
   const warnings: Warning[] = []
 
   const joined = new Set(project.joints.flatMap(j => [`${j.hostBoardId}|${j.partnerBoardId}`, `${j.partnerBoardId}|${j.hostBoardId}`]))
+  // Each part's box is worked out once and shared by the overlap sweep, the contact checks and the groove seats.
+  const boxCache = new Map<Board, Box>()
+  const boxOf = (b: Board): Box => { let x = boxCache.get(b); if (!x) boxCache.set(b, (x = worldBox(b))); return x }
   const boards = project.boards.filter(isAxisAligned)
-  for (let i = 0; i < boards.length; i++) {
-    for (let k = i + 1; k < boards.length; k++) {
-      const a = boards[i]
-      const b = boards[k]
-      if (joined.has(`${a.id}|${b.id}`)) continue
-      const A = worldBox(a)
-      const B = worldBox(b)
-      if (AXES.every(ax => overlap1(A.min[ax], A.max[ax], B.min[ax], B.max[ax]) > TOUCH_TOL)) {
-        warnings.push({ kind: 'overlap', boardIds: [a.id, b.id], message: `${a.name} and ${b.name} overlap` })
-      }
-    }
+  for (const [i, k] of overlappingPairs(boards, boxOf)) {
+    const a = boards[i]
+    const b = boards[k]
+    if (joined.has(`${a.id}|${b.id}`)) continue
+    warnings.push({ kind: 'overlap', boardIds: [a.id, b.id], message: `${a.name} and ${b.name} overlap` })
   }
 
   for (const b of project.boards) {
@@ -71,6 +94,14 @@ export function validate(project: Project): Warning[] {
     if (angleProblem) warnings.push({ kind: 'badJoint', boardIds: [b.id], message: angleProblem })
   }
 
+  // First board with an id wins, as a find() would.
+  const byId = new Map<string, Board>()
+  for (const b of project.boards) if (!byId.has(b.id)) byId.set(b.id, b)
+  const grooveOf = grooveIndex(project.joints)
+  const contact = (aId: string, bId: string) => {
+    const a = byId.get(aId), b = byId.get(bId)
+    return a && b ? contactOfBoards(a, b, grooveOf(a.id, b.id), boxOf) : null
+  }
   const NAMES: Record<string, string> = { butt: 'butt', dado: 'dado', rabbet: 'rabbet', pocketScrew: 'pocket-screw', miter: 'miter', joinery: 'cut' }
   for (const j of project.joints) {
     const reason = validateJoint(project, j)
@@ -83,8 +114,8 @@ export function validate(project: Project): Warning[] {
     const gp = j.params as GrooveParams
     // Cut joints check where their parts are themselves (joinery problems are reported above).
     const own = j.type === 'joinery' || ((j.type === 'dado' || j.type === 'rabbet') && (gp.face === 'left' || gp.face === 'right' || gp.standalone))
-    if ((!own && !contactBetween(project, j.hostBoardId, j.partnerBoardId)) || !seatedInGroove(project, j)) {
-      const name = (id: string) => project.boards.find(b => b.id === id)?.name ?? '?'
+    if ((!own && !contact(j.hostBoardId, j.partnerBoardId)) || !seatedInGroove(byId, j, boxOf)) {
+      const name = (id: string) => byId.get(id)?.name ?? '?'
       warnings.push({
         kind: 'badJoint',
         boardIds: [j.hostBoardId, j.partnerBoardId],
@@ -93,8 +124,8 @@ export function validate(project: Project): Warning[] {
       continue
     }
     // A shaped part may have been cut away right where the joint is.
-    const host = project.boards.find(b => b.id === j.hostBoardId)!
-    const partner = project.boards.find(b => b.id === j.partnerBoardId)!
+    const host = byId.get(j.hostBoardId)!
+    const partner = byId.get(j.partnerBoardId)!
     for (const [s, o] of [[host, partner], [partner, host]]) {
       if (s.outline && !shapeReaches(project, s, o)) {
         warnings.push({ kind: 'badJoint', boardIds: [s.id, o.id], message: `The shape of ${s.name} doesn't reach where it joins ${o.name}` })
@@ -105,14 +136,14 @@ export function validate(project: Project): Warning[] {
 }
 
 /** For a dado or rabbet: the partner board still sits inside the groove (not just somewhere on the host's face). */
-function seatedInGroove(project: Project, j: Joint): boolean {
+function seatedInGroove(byId: Map<string, Board>, j: Joint, boxOf: (b: Board) => Box): boolean {
   if (j.type !== 'dado' && j.type !== 'rabbet') return true
-  const host = project.boards.find(b => b.id === j.hostBoardId)
-  const partner = project.boards.find(b => b.id === j.partnerBoardId)
+  const host = byId.get(j.hostBoardId)
+  const partner = byId.get(j.partnerBoardId)
   if (!host || !partner || !isAxisAligned(host) || !isAxisAligned(partner)) return true
   const p = j.params as GrooveParams
   if (p.standalone) return true
-  const local = boxInLocal(host, worldBox(partner))
+  const local = boxInLocal(host, boxOf(partner))
   // An edge groove: the partner reaches into it no further than its depth.
   if (p.face === 'left') return local.max.x <= p.depth + TOUCH_TOL
   if (p.face === 'right') return local.min.x >= host.width - p.depth - TOUCH_TOL

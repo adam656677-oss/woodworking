@@ -31,10 +31,11 @@ These results apply to 914cf3c, not to later commits.
 - [x] Existing PDF/print APIs connected; store formula errors block generation.
 - [x] Model-to-plan unit tests and an Electron workflow test authored.
 - [ ] Resolve and pass the build-plan Electron test.
-- [ ] Integrate shopping/hardware lists and full-size templates.
-- [ ] Verify output pagination, total numbering, part IDs, and PDF dimensions.
-- [ ] Validate stale-plan handling, keyboard/focus behavior, and unchanged model geometry.
-- [ ] Expand construction/unsupported-geometry checks and consolidate legacy output controls.
+- [x] Integrate shopping/hardware lists and full-size templates (hardware appendix with a plain "no hardware" message; templates only for shaped or turned parts, each template's cover page carries the true 1 inch check square).
+- [x] Verify output pagination, total numbering, part IDs, and PDF dimensions (unit tests plus an Electron PDF test: drawing sheets landscape letter and numbered n of N, flow pages and templates portrait letter).
+- [x] Validate stale-plan handling, keyboard/focus behavior, and unchanged model geometry (Esc closes, Tab stays inside, focus returns to the button).
+- [ ] Expand construction/unsupported-geometry checks.
+- [x] Consolidate legacy output controls: the Drawings Plan packet tab is replaced by Extras (finishing schedule, shop journal, rendered pictures), which Create Build Plan does not cover. Views, Part sheets and Templates tabs stay for custom paper, scale and part choices.
 
 ## Immediate verification tasks
 - [ ] Read the first failing Electron assertions from the new bounded summary.
@@ -44,8 +45,10 @@ These results apply to 914cf3c, not to later commits.
 - [ ] Confirm latest-commit Linux and Windows type checks, unit tests, and builds.
 
 ## Remaining redesign and release gates
-- [ ] Finish unified navigation and toolbar organization.
+- [x] Finish unified navigation and toolbar organization (implemented on Linux; Windows run still to do). One command list (`src/ui/commands.ts`) drives the toolbar groups (File, Create, Modify, Joinery, Inspect, Output), its menus and the Ctrl+K palette; tooltips carry shortcut hints; the toolbar no longer repeats Home and My Plans from the workspace bar; room is left at the right end for the Help button.
 - [ ] Direct drawing input, snapping/constraint feedback, and in-project sketch/model editing.
+  - [x] Snap and constraint feedback: 3D moves show Corner / Edge / Face / Midpoint / grid labels, highlighted faces, guide lines and a live distance readout; Alt turns snapping off. The drawing sheet shows Endpoint / Midpoint / Center / Crossing / Tangent / grid labels, level and upright guides, a live length-and-angle or size readout, and rule glyphs with plain-word tooltips. Unit tests and `snap-feedback.spec.ts` cover it (Linux only so far).
+  - [ ] Direct drawing input beyond typed sizes, and in-project sketch/model editing.
 - [ ] Further component, joinery, parametric, fabrication-layout, and Shop Mode improvements.
 - [ ] Validate save/recovery, children/adult separation, accessibility, and performance.
 - [ ] Build and test the Windows installer.

@@ -35,7 +35,7 @@ test('every new template starts with no warnings; the new kids projects have she
     await win.getByLabel('Strips').fill('8')
     await win.getByLabel('Strips').press('Tab')
     await expect(win.getByText('PARTS (8)')).toBeVisible()
-    await win.getByRole('button', { name: '⌂ Home' }).click()
+    await win.getByRole('navigation', { name: 'Workspace', exact: true }).getByRole('link', { name: 'Dashboard', exact: true }).click()
     const dont = win.getByRole('button', { name: /Don.t save|Discard/ })
     if (await dont.isVisible().catch(() => false)) await dont.click()
     await win.getByRole('button', { name: /Kids' Workshop/ }).click()

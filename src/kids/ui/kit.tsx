@@ -1,6 +1,7 @@
 // Shared pieces for the kids' screens: page frame with a Back button, and big friendly buttons.
 import type { ReactNode } from 'react'
 import { kids, type KidsPage } from '../kidsStore'
+import { HelpButton } from '../../help/ui/HelpButton'
 
 export function KidsPageFrame({ title, back, children, actions }: { title: string; back?: KidsPage; children: ReactNode; actions?: ReactNode }) {
   return (
@@ -11,6 +12,7 @@ export function KidsPageFrame({ title, back, children, actions }: { title: strin
         </button>
         <h1 className="flex-1 text-3xl font-bold">{title}</h1>
         {actions}
+        <HelpButton className="rounded-xl border-2 border-sky-300 bg-white px-4 py-2 text-lg font-semibold text-sky-900 hover:bg-sky-50" />
       </header>
       <div className="min-h-0 flex-1 overflow-y-auto p-6">{children}</div>
     </main>

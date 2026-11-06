@@ -1,15 +1,17 @@
 // Joints follow their parts: after formulas and rules move things, each dado or rabbet is measured again
 // from where its partner now sits (the same way it was measured when it was made).
 import { boxInLocal, worldBox } from '../model/geometry'
-import type { GrooveParams, Joint, Project } from '../model/types'
+import type { Board, GrooveParams, Joint, Project } from '../model/types'
 import { snap64 } from '../model/units'
 
 export function reseatGrooves(p: Project): Project {
   let changed = false
+  const byId = new Map<string, Board>()
+  for (const b of p.boards) if (!byId.has(b.id)) byId.set(b.id, b)
   const joints = p.joints.map((j): Joint => {
     if (j.type !== 'dado' && j.type !== 'rabbet') return j
-    const host = p.boards.find(b => b.id === j.hostBoardId)
-    const partner = p.boards.find(b => b.id === j.partnerBoardId)
+    const host = byId.get(j.hostBoardId)
+    const partner = byId.get(j.partnerBoardId)
     if (!host || !partner) return j
     const g = j.params as GrooveParams
     // Edge grooves (a door's panel groove) run the full length: nothing to re-measure.

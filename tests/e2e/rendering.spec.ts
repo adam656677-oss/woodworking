@@ -15,7 +15,7 @@ const pixel = (win: Page, fx: number, fy: number) => win.locator('[data-testid="
 }, [fx, fy])
 const pngSize = (path: string) => { const b = readFileSync(path); return { w: b.readUInt32BE(16), h: b.readUInt32BE(20) } }
 
-test('realistic look: wood, finish and light; a 2× picture is saved at twice the view size; rendered views reach the plan packet', async () => {
+test('realistic look: wood, finish and light; a 2× picture is saved at twice the view size; rendered views reach the printable extras', async () => {
   const dirs = newDirs()
   const { app, win } = await launch(dirs)
   try {
@@ -68,16 +68,16 @@ test('realistic look: wood, finish and light; a 2× picture is saved at twice th
       return ctx.getImageData(1, 1, 1, 1).data[3]
     }, `data:image/png;base64,${readFileSync(clear).toString('base64')}`)).toBe(0)
 
-    // The three views for the packet: made without the selection, which comes back after.
+    // The three views for printing: made without the selection, which comes back after.
     await dlg.getByRole('button', { name: 'Close' }).click()
     await win.locator('aside').getByText('Side', { exact: true }).first().click()
     await win.getByRole('button', { name: '📷 Picture…' }).click()
-    await dlg.getByRole('button', { name: 'Render views for the plan packet' }).click()
+    await dlg.getByRole('button', { name: 'Render views for printing' }).click()
     await expect(dlg.getByRole('status')).toContainText('3 pictures ready', { timeout: 30_000 })
     await expect(dlg.getByAltText('Rendered Exploded')).toBeVisible()
     await dlg.getByRole('button', { name: 'Close' }).click()
     await win.getByRole('button', { name: 'Drawings' }).click()
-    await win.getByRole('tab', { name: 'Plan packet' }).click()
+    await win.getByRole('tab', { name: 'Extras' }).click()
     await expect(win.getByRole('checkbox', { name: 'Rendered pictures' })).toBeVisible()
     await win.keyboard.press('Escape')
     await win.getByRole('button', { name: 'Close', exact: true }).first().click().catch(() => {})

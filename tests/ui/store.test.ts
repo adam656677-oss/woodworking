@@ -261,3 +261,33 @@ test("a plan's attached design opens in the Master Shop as an unsaved copy", asy
   expect(s.getState().filePath).toBeNull()
   expect(s.getState().project.boards.length).toBeGreaterThan(0)
 })
+
+test('a damaged autosave never blocks opening: the last saved version opens with a plain message', async () => {
+  const { serialize } = await import('../../src/model/fileFormat')
+  const { applyTemplate } = await import('../../src/templates')
+  const { emptyProject } = await import('../../src/model/woods')
+  const saved = serialize(applyTemplate(emptyProject('Box'), 'box'))
+  fakeApi({
+    openProject: async () => ({ path: '/docs/Box.aaw', text: saved, autosaveNewer: true, autosaveText: '{"half a fi', backupPath: '/docs/Box.aaw.bak' })
+  })
+  const s = createStudioStore()
+  await s.getState().open()
+  expect(s.getState().recovery).not.toBeNull()
+  s.getState().resolveRecovery(true)
+  await Promise.resolve()
+  expect(s.getState().screen).toBe('master')
+  expect(s.getState().filePath).toBe('/docs/Box.aaw')
+  expect(s.getState().dirty).toBe(false)
+  expect(s.getState().error).toMatch(/recovered copy was damaged.*last saved version/i)
+})
+
+test('a damaged untitled autosave is cleared with a plain message instead of coming back every launch', async () => {
+  const calls = fakeApi({ readUntitledAutosave: async () => '{"half a fi' })
+  const s = createStudioStore()
+  await s.getState().checkUntitledAutosave()
+  s.getState().resolveRecovery(true)
+  await Promise.resolve()
+  expect(s.getState().recovery).toBeNull()
+  expect(s.getState().error).toMatch(/recovered copy was damaged/i)
+  expect(calls).toContain('deleteAutosave:null')
+})

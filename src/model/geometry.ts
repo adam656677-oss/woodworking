@@ -9,17 +9,32 @@ export type AxisMap = { axis: Axis; sign: 1 | -1 }
 const AXES: Axis[] = ['x', 'y', 'z']
 const clean = (n: number) => Math.round(n * 1e9) / 1e9 + 0
 
-export function rotateVec(v: Vec3, rotDeg: Vec3): Vec3 {
-  const [ax, ay, az] = [rotDeg.x, rotDeg.y, rotDeg.z].map(d => (d * Math.PI) / 180)
-  // Matrix R = Rx * Ry * Rz (three.js 'XYZ' order), applied to v.
-  let { x, y, z } = v
+/** The sines and cosines of a board's rotation, worked out once (a rotation is applied to many points). */
+type Trig = { sx: number; cx: number; sy: number; cy: number; sz: number; cz: number }
+function trigOf(rotDeg: Vec3): Trig {
+  const ax = (rotDeg.x * Math.PI) / 180, ay = (rotDeg.y * Math.PI) / 180, az = (rotDeg.z * Math.PI) / 180
+  return { sx: Math.sin(ax), cx: Math.cos(ax), sy: Math.sin(ay), cy: Math.cos(ay), sz: Math.sin(az), cz: Math.cos(az) }
+}
+
+/** Matrix R = Rx * Ry * Rz (three.js 'XYZ' order) applied to a point; same arithmetic whichever caller asks. */
+function rotate(x0: number, y0: number, z0: number, t: Trig, out: Vec3): Vec3 {
   // Rz
-  ;[x, y] = [x * Math.cos(az) - y * Math.sin(az), x * Math.sin(az) + y * Math.cos(az)]
+  const x1 = x0 * t.cz - y0 * t.sz
+  const y1 = x0 * t.sz + y0 * t.cz
   // Ry
-  ;[x, z] = [x * Math.cos(ay) + z * Math.sin(ay), -x * Math.sin(ay) + z * Math.cos(ay)]
+  const x2 = x1 * t.cy + z0 * t.sy
+  const z2 = -x1 * t.sy + z0 * t.cy
   // Rx
-  ;[y, z] = [y * Math.cos(ax) - z * Math.sin(ax), y * Math.sin(ax) + z * Math.cos(ax)]
-  return { x: clean(x), y: clean(y), z: clean(z) }
+  const y3 = y1 * t.cx - z2 * t.sx
+  const z3 = y1 * t.sx + z2 * t.cx
+  out.x = clean(x2)
+  out.y = clean(y3)
+  out.z = clean(z3)
+  return out
+}
+
+export function rotateVec(v: Vec3, rotDeg: Vec3): Vec3 {
+  return rotate(v.x, v.y, v.z, trigOf(rotDeg), { x: 0, y: 0, z: 0 })
 }
 
 /** Board-local point → world point. */
@@ -44,11 +59,21 @@ export function localAxes(b: Board): { width: AxisMap; length: AxisMap; thicknes
 
 /** Axis-aligned bounding box of the board in world space (long-point size). */
 export function worldBox(b: Board): Box {
-  const pts: Vec3[] = []
-  for (const x of [0, b.width]) for (const y of [0, b.length]) for (const z of [0, b.thickness]) pts.push(toWorld(b, { x, y, z }))
-  const min = { x: Math.min(...pts.map(p => p.x)), y: Math.min(...pts.map(p => p.y)), z: Math.min(...pts.map(p => p.z)) }
-  const max = { x: Math.max(...pts.map(p => p.x)), y: Math.max(...pts.map(p => p.y)), z: Math.max(...pts.map(p => p.z)) }
-  return { min, max }
+  const t = trigOf(b.rotation)
+  const r = { x: 0, y: 0, z: 0 }
+  let minX = Infinity, minY = Infinity, minZ = Infinity, maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity
+  for (let i = 0; i < 8; i++) {
+    // Corners in the same order as before: x slowest, z fastest.
+    rotate(i & 4 ? b.width : 0, i & 2 ? b.length : 0, i & 1 ? b.thickness : 0, t, r)
+    const x = clean(r.x + b.position.x), y = clean(r.y + b.position.y), z = clean(r.z + b.position.z)
+    if (x < minX) minX = x
+    if (x > maxX) maxX = x
+    if (y < minY) minY = y
+    if (y > maxY) maxY = y
+    if (z < minZ) minZ = z
+    if (z > maxZ) maxZ = z
+  }
+  return { min: { x: minX, y: minY, z: minZ }, max: { x: maxX, y: maxY, z: maxZ } }
 }
 
 export function overlap1(aMin: number, aMax: number, bMin: number, bMax: number): number {

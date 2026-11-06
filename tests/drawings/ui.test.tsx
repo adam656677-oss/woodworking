@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { DrawingsDialog } from '../../src/drawings/ui/DrawingsDialog'
 import { stock } from '../../src/optimize/stockStore'
 import { studio } from '../../src/ui/store'
@@ -22,4 +22,13 @@ test("kids mode prints the kids' packet: a big picture, the pieces and steps to 
   cleanup()
   expect(document.body.classList.contains('printing-drawings')).toBe(false)
   studio.setState({ kidsMode: false })
+}, 30000)
+
+test('the old plan packet tab is gone: whole plans come from Create Build Plan, the extras tab keeps the rest', async () => {
+  render(<DrawingsDialog />)
+  const tabs = screen.getAllByRole('tab').map(t => t.textContent)
+  expect(tabs).toEqual(['Views', 'Part sheets', 'Templates', 'Extras'])
+  expect(screen.getByText(/use Create Build Plan/)).toBeTruthy()
+  fireEvent.click(screen.getByRole('tab', { name: 'Extras' }))
+  expect(await screen.findByText(/Nothing extra to print yet/, {}, { timeout: 20000 })).toBeTruthy()
 }, 30000)

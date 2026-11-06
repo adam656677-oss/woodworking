@@ -45,7 +45,7 @@ export function KidsLookButton() {
   )
 }
 
-/** Front, 3D and exploded pictures of the design for the plan packet, from the view as it's set up (look, light). */
+/** Front, 3D and exploded pictures of the design for printing, from the view as it's set up (look, light). */
 /** Runs `fn` with nothing selected and no measuring (no highlight or move arrows in the picture), then puts them back. */
 export async function cleanView<T>(fn: () => Promise<T> | T): Promise<T> {
   const s = studio.getState()
@@ -114,7 +114,7 @@ export function PictureDialog() {
   }
   const views3 = async () => {
     setBusy(true)
-    try { const v = await renderViews(); setMsg(`${v.length} pictures ready — they're in the plan packet (Drawings → Plan packet).`) } finally { setBusy(false) }
+    try { const v = await renderViews(); setMsg(`${v.length} pictures ready — they print from Drawings → Extras.`) } finally { setBusy(false) }
   }
   return (
     <div role="dialog" aria-label="Save a picture" className="fixed inset-0 z-40 flex items-center justify-center bg-black/30" onKeyDown={e => e.key === 'Escape' && close()}>
@@ -131,7 +131,7 @@ export function PictureDialog() {
         <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={clear} onChange={e => setClear(e.target.checked)} />Clear background (no floor)</label>
         <div className="flex flex-wrap gap-2">
           <button className="rounded bg-amber-700 px-3 py-1 text-sm font-semibold text-white" onClick={() => void save()}>Save PNG…</button>
-          <button disabled={busy} className="rounded border px-3 py-1 text-sm hover:bg-stone-100 disabled:opacity-40" onClick={() => void views3()}>{busy ? 'Rendering…' : 'Render views for the plan packet'}</button>
+          <button disabled={busy} className="rounded border px-3 py-1 text-sm hover:bg-stone-100 disabled:opacity-40" onClick={() => void views3()}>{busy ? 'Rendering…' : 'Render views for printing'}</button>
           <button className="ml-auto rounded border px-3 py-1 text-sm hover:bg-stone-100" onClick={close}>Close</button>
         </div>
         {views.length > 0 && <div className="flex gap-2">{views.map(v => <img key={v.key} src={v.dataUrl} alt={`Rendered ${v.label}`} className="h-16 rounded border" />)}</div>}

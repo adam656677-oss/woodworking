@@ -13,9 +13,20 @@ import { capturePage } from './webCapture'
 import { ask as aiAsk, readKey, readSettings, writeKey, writeSettings, type Task } from './ai'
 import { collectBackup, readPackage, restoreBackup, writeBackup, writePackage, type Package } from './backup'
 import type { Progress } from '../src/kids/progress'
+import { createLogger, sanitizeReport } from './logger'
+import { release as osRelease } from 'node:os'
 
 // Test hooks: e2e runs point these at temp folders so they never touch real documents or settings.
 if (process.env.AA_USER_DATA) app.setPath('userData', process.env.AA_USER_DATA)
+
+// The problem log: <userData>/logs/aa-studio.log (5 files of about 1 MB). It never holds project contents.
+const log = createLogger({ dir: join(app.getPath('userData'), 'logs') })
+process.on('uncaughtException', err => {
+  log.error('main', 'Uncaught exception in the main process', err)
+  try { dialog.showErrorBox('A&A Woodworking Studio', `Something unexpected went wrong.\n\nDetails were saved in the log folder: ${log.dir}`) } catch { /* nothing more to do */ }
+})
+process.on('unhandledRejection', reason => log.error('main', 'Unhandled promise rejection in the main process', reason))
+app.on('child-process-gone', (_e, d) => log.error('app', `A helper process stopped: ${d.type} (${d.reason}, exit code ${d.exitCode})`))
 /** A file name Windows accepts: no reserved characters or names, no control characters, no trailing dots or spaces. */
 const safeName = (n: unknown) => {
   let s = String(n ?? '').replace(/[\u0000-\u001f\\/:*?"<>|]/g, '-').replace(/[. ]+$/, '').trim().slice(0, 120)
@@ -41,6 +52,9 @@ function createWindow(): void {
       sandbox: false
     }
   })
+  win.webContents.on('render-process-gone', (_e, d) => log.error('renderer', `The window's page process stopped: ${d.reason} (exit code ${d.exitCode})`))
+  win.on('unresponsive', () => log.warn('renderer', 'The window stopped responding'))
+  win.on('responsive', () => log.info('renderer', 'The window is responding again'))
   win.on('close', async e => {
     if (!dirty || allowClose) return
     e.preventDefault()
@@ -87,8 +101,37 @@ async function photoFromBytes(bytes: Uint8Array): Promise<Electron.NativeImage> 
 /** Lets the screen sleep again (Shop Mode's keep-awake). */
 let releaseAwake = (): void => {}
 
+// Like ipcMain.handle, but a failure is written to the log (with the file path when the call starts with one).
+const PATH_FIRST = new Set(['aa:saveProject', 'aa:writeAutosave', 'aa:deleteAutosave'])
+function handle(channel: string, fn: (e: Electron.IpcMainInvokeEvent, ...args: any[]) => unknown): void {
+  ipcMain.handle(channel, async (e, ...args) => {
+    try {
+      return await fn(e, ...args)
+    } catch (err) {
+      // Smart Helpers requests can echo a service's reply; those failures are shown to the person, not logged.
+      if (!channel.startsWith('smart:')) log.error('ipc', `${channel} failed${PATH_FIRST.has(channel) && typeof args[0] === 'string' ? ` for ${args[0]}` : ''}`, err)
+      throw err
+    }
+  })
+}
+
 function register(): void {
-  ipcMain.handle('aa:openProject', async () => {
+  // Problems reported by the page (window errors, rejected promises, the error screen): text only.
+  let reportWindow = 0
+  let reportCount = 0
+  ipcMain.on('aa:logError', (_e, raw: unknown) => {
+    const now = Date.now()
+    if (now - reportWindow > 10_000) { reportWindow = now; reportCount = 0 }
+    if (++reportCount > 30) return
+    const r = sanitizeReport(raw)
+    log.error('renderer', `${r.source}: ${r.message}`, r.stack)
+  })
+  handle('aa:appInfo', async () => ({ version: app.getVersion(), electron: process.versions.electron, platform: process.platform, logFolder: log.dir }))
+  handle('aa:openLogFolder', async () => {
+    await mkdir(log.dir, { recursive: true }).catch(() => undefined)
+    return (await shell.openPath(log.dir)) === ''
+  })
+  handle('aa:openProject', async () => {
     const r = await dialog.showOpenDialog(win!, { defaultPath: defaultFolder(docsDir()), filters: AAW, properties: ['openFile'] })
     if (r.canceled || !r.filePaths[0]) return null
     const path = r.filePaths[0]
@@ -99,7 +142,7 @@ function register(): void {
   })
   // 3D files out (STL, OBJ+MTL, 3MF, GLB, STEP, DXF flat patterns) and reference models in.
   const EXPORTS: Record<string, string> = { stl: 'STL mesh', obj: 'OBJ model', '3mf': '3MF model', glb: 'glTF binary', step: 'STEP model', dxf: 'DXF flat patterns' }
-  ipcMain.handle('aa:exportFile', async (_e, ext: string, data: Uint8Array | string, suggestedName: string, mtl?: string) => {
+  handle('aa:exportFile', async (_e, ext: string, data: Uint8Array | string, suggestedName: string, mtl?: string) => {
     if (!EXPORTS[ext]) return null
     const safe = String(suggestedName).replace(/[<>:"/\\|?*\u0000-\u001f]/g, '').trim() || 'Design'
     const folder = defaultFolder(docsDir())
@@ -116,16 +159,16 @@ function register(): void {
     await writeFile(path, typeof data === 'string' ? data : Buffer.from(data))
     return path
   })
-  ipcMain.handle('aa:importModel', async () => {
+  handle('aa:importModel', async () => {
     const r = await dialog.showOpenDialog(win!, { defaultPath: defaultFolder(docsDir()), properties: ['openFile'], filters: [{ name: '3D models', extensions: ['stl', 'obj', '3mf', 'glb', 'gltf', 'step', 'stp'] }] })
     if (r.canceled || !r.filePaths[0]) return null
     const bytes = await readFile(r.filePaths[0])
     return { name: basename(r.filePaths[0]), bytes: new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength) }
   })
-  ipcMain.handle('aa:saveProject', async (_e, path: string, text: string) => {
+  handle('aa:saveProject', async (_e, path: string, text: string) => {
     await safeSave(path, text)
   })
-  ipcMain.handle('aa:saveAs', async (_e, text: string, suggestedName: string) => {
+  handle('aa:saveAs', async (_e, text: string, suggestedName: string) => {
     const folder = defaultFolder(docsDir())
     await mkdir(folder, { recursive: true })
     const r = await dialog.showSaveDialog(win!, { defaultPath: join(folder, `${suggestedName}.aaw`), filters: AAW })
@@ -134,26 +177,26 @@ function register(): void {
     await safeSave(path, text)
     return path
   })
-  ipcMain.handle('aa:writeAutosave', async (_e, path: string | null, text: string) => {
+  handle('aa:writeAutosave', async (_e, path: string | null, text: string) => {
     const target = autosavePath(path, docsDir())
     await mkdir(join(target, '..'), { recursive: true })
     await writeAutosave(target, text)
   })
-  ipcMain.handle('aa:deleteAutosave', async (_e, path: string | null) => {
+  handle('aa:deleteAutosave', async (_e, path: string | null) => {
     try {
       await deleteAutosave(autosavePath(path, docsDir()))
     } catch {
       // A leftover autosave is harmless; it is offered again only if newer than the file.
     }
   })
-  ipcMain.handle('aa:readUntitledAutosave', async () => {
+  handle('aa:readUntitledAutosave', async () => {
     try {
       return await readFile(autosavePath(null, docsDir()), 'utf8')
     } catch {
       return null
     }
   })
-  ipcMain.handle('aa:exportCsv', async (_e, text: string, suggestedName: string) => {
+  handle('aa:exportCsv', async (_e, text: string, suggestedName: string) => {
     const r = await dialog.showSaveDialog(win!, {
       defaultPath: join(defaultFolder(docsDir()), `${suggestedName} cut list.csv`),
       filters: [{ name: 'Spreadsheet (CSV)', extensions: ['csv'] }]
@@ -162,7 +205,7 @@ function register(): void {
     await writeFile(r.filePath, text, 'utf8')
     return r.filePath
   })
-  ipcMain.handle('aa:exportShape', async (_e, kind: 'dxf' | 'svg', text: string, suggestedName: string) => {
+  handle('aa:exportShape', async (_e, kind: 'dxf' | 'svg', text: string, suggestedName: string) => {
     if (kind !== 'dxf' && kind !== 'svg') return null
     const safe = String(suggestedName).replace(/[<>:"/\\|?*\u0000-\u001f]/g, '').trim() || 'Shape'
     const r = await dialog.showSaveDialog(win!, {
@@ -176,17 +219,17 @@ function register(): void {
   // Shop Mode keeps the screen on while it is open.
   let awake: number | null = null
   const release = () => { if (awake !== null) { powerSaveBlocker.stop(awake); awake = null } }
-  ipcMain.handle('aa:keepAwake', async (_e, on: boolean) => {
+  handle('aa:keepAwake', async (_e, on: boolean) => {
     if (on && awake === null) awake = powerSaveBlocker.start('prevent-display-sleep')
     if (!on) release()
   })
   releaseAwake = release
-  ipcMain.handle('aa:print', async (_e, opts?: { landscape?: boolean; edgeToEdge?: boolean }) => {
+  handle('aa:print', async (_e, opts?: { landscape?: boolean; edgeToEdge?: boolean }) => {
     const landscape = opts?.landscape ?? true
     // Label sheets: no printer margins, so the labels land where the sheet's die cuts are.
     await new Promise<void>(resolve => win!.webContents.print({ landscape, ...(opts?.edgeToEdge ? { margins: { marginType: 'none' as const } } : {}) }, () => resolve()))
   })
-  ipcMain.handle('aa:printPdf', async (_e, name: string) => {
+  handle('aa:printPdf', async (_e, name: string) => {
     // A temporary PDF opened in the system viewer: each page keeps its own size, so templates print 1:1.
     try {
       const dir = join(app.getPath('temp'), 'aa-print')
@@ -198,7 +241,7 @@ function register(): void {
       return false
     }
   })
-  ipcMain.handle('aa:openLink', async (_e, url: string) => {
+  handle('aa:openLink', async (_e, url: string) => {
     // Only the outside sites the app links to, and only over https.
     let u: URL
     try { u = new URL(String(url)) } catch { return false }
@@ -214,13 +257,13 @@ function register(): void {
   const testing = !app.isPackaged
   const aiUrl = testing && process.env.AA_AI_URL && /^http:\/\/127\.0\.0\.1:\d+$/.test(process.env.AA_AI_URL) ? process.env.AA_AI_URL : 'https://api.anthropic.com'
   const crypt = testing && process.env.AA_TEST_PLAIN_KEY ? { isEncryptionAvailable: () => true, encryptString: (t: string) => Buffer.from(t), decryptString: (b: Buffer) => b.toString() } : safeStorage
-  ipcMain.handle('smart:status', async () => {
+  handle('smart:status', async () => {
     const d = await aiDir()
     return { hasKey: !!(await readKey(d, crypt)), model: (await readSettings(d)).model, canStore: crypt.isEncryptionAvailable() }
   })
-  ipcMain.handle('smart:setKey', async (_e, key: string | null) => writeKey(await aiDir(), crypt, typeof key === 'string' ? key : null))
-  ipcMain.handle('smart:setModel', async (_e, model: string) => writeSettings(await aiDir(), { model: String(model ?? '').slice(0, 80) }))
-  ipcMain.handle('smart:ask', async (_e, t: Task) => {
+  handle('smart:setKey', async (_e, key: string | null) => writeKey(await aiDir(), crypt, typeof key === 'string' ? key : null))
+  handle('smart:setModel', async (_e, model: string) => writeSettings(await aiDir(), { model: String(model ?? '').slice(0, 80) }))
+  handle('smart:ask', async (_e, t: Task) => {
     const d = await aiDir()
     const key = await readKey(d, crypt)
     if (!key) throw new Error('Add an Anthropic API key in Smart Helpers settings (on the Home screen) to use this.')
@@ -236,7 +279,7 @@ function register(): void {
   // Family & sharing: a whole backup (app data + the projects folder) and project packages.
   const BACKUP = [{ name: 'A&A Woodworking backup', extensions: ['aabackup'] }]
   const PACKAGE = [{ name: 'A&A Woodworking project package', extensions: ['aapkg'] }]
-  ipcMain.handle('aa:backup', async () => {
+  handle('aa:backup', async () => {
     const day = new Date().toISOString().slice(0, 10)
     const r = await dialog.showSaveDialog(win!, { defaultPath: join(docsDir(), `A&A Woodworking backup ${day}.aabackup`), filters: BACKUP })
     if (r.canceled || !r.filePath) return null
@@ -245,7 +288,7 @@ function register(): void {
     return { path: r.filePath, files: files.length, skipped }
   })
   // Restoring replaces the kids' progress and PIN too, so it needs the parent PIN when one is set.
-  ipcMain.handle('aa:restore', async (_e, pin: string) => {
+  handle('aa:restore', async (_e, pin: string) => {
     const d = await kidsDir()
     if ((await pinIsSet(d)) && !(await checkPin(d, pin))) throw new Error('That PIN is not right.')
     const r = await dialog.showOpenDialog(win!, { defaultPath: docsDir(), filters: BACKUP, properties: ['openFile'] })
@@ -254,22 +297,22 @@ function register(): void {
     return restoreBackup(r.filePaths[0], app.getPath('userData'), defaultFolder(docsDir()))
   })
   // Opens a folder a restore set files aside in (only those).
-  ipcMain.handle('aa:showFolder', async (_e, path: string) => {
+  handle('aa:showFolder', async (_e, path: string) => {
     const ok = typeof path === 'string' && /[\\/]_before-restore-[\w-]+$/.test(path) && (path.startsWith(app.getPath('userData')) || path.startsWith(defaultFolder(docsDir())))
     if (ok) await shell.openPath(path)
   })
-  ipcMain.handle('aa:savePackage', async (_e, name: string, pkg: Package) => {
+  handle('aa:savePackage', async (_e, name: string, pkg: Package) => {
     const r = await dialog.showSaveDialog(win!, { defaultPath: join(defaultFolder(docsDir()), `${safeName(name)}.aapkg`), filters: PACKAGE })
     if (r.canceled || !r.filePath) return null
     await writePackage(r.filePath, pkg)
     return r.filePath
   })
-  ipcMain.handle('aa:openPackage', async () => {
+  handle('aa:openPackage', async () => {
     const r = await dialog.showOpenDialog(win!, { defaultPath: defaultFolder(docsDir()), filters: PACKAGE, properties: ['openFile'] })
     if (r.canceled || !r.filePaths[0]) return null
     return readPackage(r.filePaths[0])
   })
-  ipcMain.handle('aa:savePng', async (_e, suggestedName: string, dataUrl: string) => {
+  handle('aa:savePng', async (_e, suggestedName: string, dataUrl: string) => {
     if (typeof dataUrl !== 'string' || !dataUrl.startsWith('data:image/png;base64,')) return null
     const r = await dialog.showSaveDialog(win!, {
       defaultPath: join(defaultFolder(docsDir()), `${safeName(suggestedName)}.png`),
@@ -279,7 +322,7 @@ function register(): void {
     await writeFile(r.filePath, Buffer.from(dataUrl.slice('data:image/png;base64,'.length), 'base64'))
     return r.filePath
   })
-  ipcMain.handle('aa:savePdf', async (_e, suggestedName: string) => {
+  handle('aa:savePdf', async (_e, suggestedName: string) => {
     const r = await dialog.showSaveDialog(win!, {
       defaultPath: join(defaultFolder(docsDir()), `${safeName(suggestedName)}.pdf`),
       filters: [{ name: 'PDF', extensions: ['pdf'] }]
@@ -290,14 +333,14 @@ function register(): void {
     await writeFile(r.filePath, pdf)
     return r.filePath
   })
-  ipcMain.handle('aa:loadUserWoods', async () => {
+  handle('aa:loadUserWoods', async () => {
     try {
       return JSON.parse(await readFile(join(app.getPath('userData'), 'woods.json'), 'utf8'))
     } catch {
       return []
     }
   })
-  ipcMain.handle('aa:saveUserWoods', async (_e, woods: unknown) => {
+  handle('aa:saveUserWoods', async (_e, woods: unknown) => {
     await mkdir(app.getPath('userData'), { recursive: true })
     await safeSave(join(app.getPath('userData'), 'woods.json'), JSON.stringify(woods, null, 2))
   })
@@ -305,7 +348,7 @@ function register(): void {
   // kept aside as name.json.damaged and the last good copy (.bak) is used, so a save can't make the loss permanent.
   const DATA = new Set(['journal', 'inventory'])
   // A photo the page can't read itself (iPhone HEIC) as a JPEG no bigger than `max` pixels, or null.
-  ipcMain.handle('aa:photoThumbnail', async (_e, bytes: Uint8Array, max: number) => {
+  handle('aa:photoThumbnail', async (_e, bytes: Uint8Array, max: number) => {
     try {
       const img = await photoFromBytes(new Uint8Array(bytes))
       if (img.isEmpty()) return null
@@ -315,23 +358,23 @@ function register(): void {
       return `data:image/jpeg;base64,${small.toJPEG(80).toString('base64')}`
     } catch { return null }
   })
-  ipcMain.handle('aa:loadData', async (_e, name: string) => {
+  handle('aa:loadData', async (_e, name: string) => {
     if (!DATA.has(name)) return { data: null, damaged: false }
     const path = join(app.getPath('userData'), `${name}.json`)
     const r = await loadJson(path)
     if (r.damaged) await copyFile(path, `${path}.damaged`).catch(() => {})
     return r
   })
-  ipcMain.handle('aa:saveData', async (_e, name: string, data: unknown) => {
+  handle('aa:saveData', async (_e, name: string, data: unknown) => {
     if (!DATA.has(name)) return
     await mkdir(app.getPath('userData'), { recursive: true })
     await safeSave(join(app.getPath('userData'), `${name}.json`), JSON.stringify(data, null, 2))
   })
   // The shop's stock on hand (sheets, offcuts, boards), shared by every project.
-  ipcMain.handle('aa:loadStock', async () => {
+  handle('aa:loadStock', async () => {
     try { return JSON.parse(await readFile(join(app.getPath('userData'), 'stock.json'), 'utf8')) } catch { return [] }
   })
-  ipcMain.handle('aa:saveStock', async (_e, items: unknown) => {
+  handle('aa:saveStock', async (_e, items: unknown) => {
     await mkdir(app.getPath('userData'), { recursive: true })
     await safeSave(join(app.getPath('userData'), 'stock.json'), JSON.stringify(items, null, 2))
   })
@@ -342,31 +385,31 @@ function register(): void {
     return d
   }
   const PHOTO_MAX = 1600
-  ipcMain.handle('kids:load', async () => loadProgress(await kidsDir()))
-  ipcMain.handle('kids:save', async (_e, p: Progress, profile?: string) => saveProgress(await kidsDir(), p, typeof profile === 'string' ? profile : undefined))
-  ipcMain.handle('kids:pinIsSet', async () => pinIsSet(await kidsDir()))
-  ipcMain.handle('kids:setPin', async (_e, pin: string) => setPin(await kidsDir(), pin))
-  ipcMain.handle('kids:checkPin', async (_e, pin: string) => checkPin(await kidsDir(), pin))
-  ipcMain.handle('kids:pinPath', async () => pinFilePath(await kidsDir()))
+  handle('kids:load', async () => loadProgress(await kidsDir()))
+  handle('kids:save', async (_e, p: Progress, profile?: string) => saveProgress(await kidsDir(), p, typeof profile === 'string' ? profile : undefined))
+  handle('kids:pinIsSet', async () => pinIsSet(await kidsDir()))
+  handle('kids:setPin', async (_e, pin: string) => setPin(await kidsDir(), pin))
+  handle('kids:checkPin', async (_e, pin: string) => checkPin(await kidsDir(), pin))
+  handle('kids:pinPath', async () => pinFilePath(await kidsDir()))
   // More than one child. Adding or removing a child and the family page need the parent PIN; picking who's working doesn't.
-  ipcMain.handle('kids:profiles', async () => loadProfiles(await kidsDir()))
-  ipcMain.handle('kids:switch', async (_e, id: string) => switchProfile(await kidsDir(), id))
-  ipcMain.handle('kids:addProfile', async (_e, name: string, pin: string) => {
+  handle('kids:profiles', async () => loadProfiles(await kidsDir()))
+  handle('kids:switch', async (_e, id: string) => switchProfile(await kidsDir(), id))
+  handle('kids:addProfile', async (_e, name: string, pin: string) => {
     const d = await kidsDir()
     if (typeof name !== 'string' || !name.trim() || !(await checkPin(d, pin))) return null
     return addProfile(d, name)
   })
-  ipcMain.handle('kids:removeProfile', async (_e, id: string, pin: string) => {
+  handle('kids:removeProfile', async (_e, id: string, pin: string) => {
     const d = await kidsDir()
     if (!(await checkPin(d, pin))) return false
     await removeProfile(d, id)
     return true
   })
-  ipcMain.handle('kids:family', async (_e, pin: string) => {
+  handle('kids:family', async (_e, pin: string) => {
     const d = await kidsDir()
     return (await checkPin(d, pin)) ? familyProgress(d) : null
   })
-  ipcMain.handle('kids:addPhoto', async (_e, projectId: string, profile?: string) => {
+  handle('kids:addPhoto', async (_e, projectId: string, profile?: string) => {
     if (!/^[a-z0-9-]+$/.test(projectId)) return null
     const profiles = await loadProfiles(await kidsDir())
     const who = typeof profile === 'string' && profiles.profiles.some(x => x.id === profile) ? profile : profiles.active
@@ -383,7 +426,7 @@ function register(): void {
     await writeFile(join(folder, name), img.toJPEG(85))
     return name
   })
-  ipcMain.handle('kids:photoUrl', async (_e, name: string) => {
+  handle('kids:photoUrl', async (_e, name: string) => {
     if (!/^[a-z0-9-]+\.jpg$/.test(name)) return null
     try {
       const data = await readFile(join(app.getPath('userData'), 'kids-photos', name))
@@ -394,22 +437,22 @@ function register(): void {
   })
   // ---- My Plans ----
   const root = () => plansRoot(docsDir())
-  ipcMain.handle('plans:list', async () => listPlans(root()))
-  ipcMain.handle('plans:load', async (_e, folder: string) => loadPlan(root(), folder))
-  ipcMain.handle('plans:create', async (_e, plan: Plan) => createPlanFolder(root(), plan))
-  ipcMain.handle('plans:save', async (_e, folder: string, plan: Plan) => savePlan(root(), folder, plan))
-  ipcMain.handle('plans:discard', async (_e, folder: string) => deletePlanFolder(root(), folder))
-  ipcMain.handle('plans:rename', async (_e, folder: string, name: string) => renamePlanFolder(root(), folder, name))
-  ipcMain.handle('plans:attachDesign', async (_e, folder: string, text: string) => attachDesign(root(), folder, text))
-  ipcMain.handle('plans:pickDesign', async () => {
+  handle('plans:list', async () => listPlans(root()))
+  handle('plans:load', async (_e, folder: string) => loadPlan(root(), folder))
+  handle('plans:create', async (_e, plan: Plan) => createPlanFolder(root(), plan))
+  handle('plans:save', async (_e, folder: string, plan: Plan) => savePlan(root(), folder, plan))
+  handle('plans:discard', async (_e, folder: string) => deletePlanFolder(root(), folder))
+  handle('plans:rename', async (_e, folder: string, name: string) => renamePlanFolder(root(), folder, name))
+  handle('plans:attachDesign', async (_e, folder: string, text: string) => attachDesign(root(), folder, text))
+  handle('plans:pickDesign', async () => {
     const r = await dialog.showOpenDialog(win!, { properties: ['openFile'], filters: AAW, defaultPath: defaultFolder(docsDir()) })
     if (r.canceled || !r.filePaths[0]) return null
     return readFile(r.filePaths[0], 'utf8')
   })
-  ipcMain.handle('plans:readDesign', async (_e, folder: string) => readDesign(root(), folder))
-  ipcMain.handle('plans:savePage', async (_e, folder: string, n: number, png: Uint8Array) => savePage(root(), folder, n, png))
-  ipcMain.handle('plans:fileUrl', async (_e, folder: string, rel: string) => fileDataUrl(root(), folder, rel))
-  ipcMain.handle('plans:addPhoto', async (_e, folder: string, id: string) => {
+  handle('plans:readDesign', async (_e, folder: string) => readDesign(root(), folder))
+  handle('plans:savePage', async (_e, folder: string, n: number, png: Uint8Array) => savePage(root(), folder, n, png))
+  handle('plans:fileUrl', async (_e, folder: string, rel: string) => fileDataUrl(root(), folder, rel))
+  handle('plans:addPhoto', async (_e, folder: string, id: string) => {
     const r = await dialog.showOpenDialog(win!, { properties: ['openFile'], filters: [{ name: 'Photos', extensions: PHOTO_TYPES }] })
     if (r.canceled || !r.filePaths[0]) return null
     let img = await loadPhoto(r.filePaths[0]).catch(() => nativeImage.createEmpty())
@@ -419,11 +462,11 @@ function register(): void {
     if (scale < 1) img = img.resize({ width: Math.round(width * scale), height: Math.round(height * scale), quality: 'best' })
     return savePhotoBytes(root(), folder, id, img.toJPEG(85))
   })
-  ipcMain.handle('plans:ocr', async (_e, bytes: Uint8Array, page: number) => ocrImage(bytes, page))
-  ipcMain.handle('plans:capture', async (_e, url: string) =>
+  handle('plans:ocr', async (_e, bytes: Uint8Array, page: number) => ocrImage(bytes, page))
+  handle('plans:capture', async (_e, url: string) =>
     capturePage(url, { fetcher: u => net.fetch(u), makeWindow: opts => new BrowserWindow(opts) })
   )
-  ipcMain.handle('plans:pickImport', async (_e, kind: 'pdf' | 'photos') => {
+  handle('plans:pickImport', async (_e, kind: 'pdf' | 'photos') => {
     const filters = kind === 'pdf' ? [{ name: 'PDF plans', extensions: ['pdf'] }] : [{ name: 'Photos and scans', extensions: PHOTO_TYPES }]
     const r = await dialog.showOpenDialog(win!, { properties: kind === 'pdf' ? ['openFile'] : ['openFile', 'multiSelections'], filters })
     if (r.canceled) return []
@@ -451,6 +494,7 @@ function register(): void {
 }
 
 app.whenReady().then(async () => {
+  log.info('app', `Started A&A Woodworking Studio ${app.getVersion()} — Electron ${process.versions.electron}, Chrome ${process.versions.chrome}, ${process.platform} ${osRelease()} ${process.arch}${app.isPackaged ? '' : ' (not installed)'}`)
   // The text reader's language data ships unpacked next to the app archive (see electron-builder.yml).
   configureOcr({ langPath: join(app.getAppPath().replace(/app\.asar$/, 'app.asar.unpacked'), 'node_modules', '@tesseract.js-data', 'eng', '4.0.0_best_int') })
   await mkdir(defaultFolder(docsDir()), { recursive: true }).catch(() => undefined)

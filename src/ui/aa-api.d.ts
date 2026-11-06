@@ -11,6 +11,11 @@ export type OpenedProject = {
 }
 
 export type AaApi = {
+  /** Add a problem in the page to the log file (text only). */
+  logError?(report: { source: string; message: string; stack?: string }): void
+  /** Open the folder holding the log files; false if it couldn't be opened. */
+  openLogFolder?(): Promise<boolean>
+  appInfo?(): Promise<{ version: string; electron: string; platform: string; logFolder: string }>
   openProject(): Promise<OpenedProject | null>
   saveProject(path: string, text: string): Promise<void>
   saveAs(text: string, suggestedName: string): Promise<string | null>

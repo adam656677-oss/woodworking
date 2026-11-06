@@ -5,6 +5,8 @@ import { openFinishing } from '../finish/ui/FinishingSchool'
 import { studio, useStudio } from './store'
 import { BackupBar } from '../family/ui/BackupBar'
 import { openHelper } from '../smart/ui/SmartDialogs'
+import { AboutBar } from './common/AboutBar'
+import { HelpButton } from '../help/ui/HelpButton'
 
 const card = 'flex flex-col items-start gap-2 rounded-xl border border-stone-200 bg-white p-5 text-left shadow-sm transition hover:border-amber-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600'
 
@@ -43,7 +45,10 @@ export function Home() {
             <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">A&amp;A Woodworking Studio</h1>
             <p className="mt-2 text-stone-600">Design it together. Build it together.</p>
           </div>
-          <button type="button" onClick={() => openHelper('settings')} className="rounded-lg border border-stone-300 bg-white px-4 py-2 text-sm hover:bg-stone-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600">Smart Helpers settings</button>
+          <div className="flex gap-2">
+            <HelpButton className="rounded-lg border border-stone-300 bg-white px-4 py-2 text-sm hover:bg-stone-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600" />
+            <button type="button" onClick={() => openHelper('settings')} className="rounded-lg border border-stone-300 bg-white px-4 py-2 text-sm hover:bg-stone-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600">Smart Helpers settings</button>
+          </div>
         </header>
 
         {error && <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-red-800">{error}</p>}
@@ -95,7 +100,7 @@ export function Home() {
         {low.length > 0 && <p role="alert" className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-900">
           Running low: {low.join('; ')} — <button type="button" className="underline" onClick={() => openShopTools('home', 'inventory')}>see the inventory</button>
         </p>}
-        <footer className="mt-auto border-t border-stone-200 pt-5"><BackupBar /></footer>
+        <footer className="mt-auto border-t border-stone-200 pt-5"><BackupBar /><AboutBar /></footer>
       </div>
     </main>
   )

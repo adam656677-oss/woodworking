@@ -2,8 +2,9 @@
 
 Woodworking design software for A&A Woodworking — a Kids' Workshop and a Master Shop on one shared engine.
 
-**Status:** Piece 1 of 16 (Design Core) complete. Nothing is released until every piece is done — see
-`docs/superpowers/specs/2026-10-27-design-core-design.md` for the full roadmap.
+**Status:** version 1.1.0. Every roadmap piece is built (specs in `docs/superpowers/specs/`), plus the unified
+workspace, one-button build plans, in-app Help, a problem log and large-project performance work. Remaining release
+gates are tracked in `docs/REDESIGN-CHECKLIST.md`.
 
 ## Install
 
@@ -21,19 +22,30 @@ unknown publisher (it isn't code-signed); choose **More info → Run anyway**.
 - Your own wood stock (the **Woods** button) is kept with the app's settings and copied into each project
   that uses it, so project files are self-contained.
 
-## What Piece 1 does
+## If something goes wrong
 
-- Home screen: **Kids' Workshop** (coming soon) and **Master Shop**.
-- Templates: Box (butt or rabbeted corners, optional lid), Bookshelf (dadoed shelves, rabbeted back),
-  Birdhouse (screwed butt joints, entry hole). Sizes stay live until **Unlock**.
-- Free-form boards: typed sizes in inches and fractions (`11 3/4`, `11-3/4`, `11.75`, `1' 2-1/2"`),
-  drag to move with snapping to faces/edges/corners or a 1/16" grid, rotate, duplicate, mirror, align,
-  measure, undo/redo.
-- Joints: butt (glue/screws/nails), dado, rabbet, pocket screws, miter; any end can be mitered or beveled
-  and any edge beveled.
-- Cut list: grouped parts, finished sizes (long point for angled parts), joint notes, board feet, sheet
-  estimate, cost when prices are set; print or save as CSV.
-- Warnings for overlapping parts, parts bigger than your stock, and joints or angles that can't be made.
+The app keeps a short problem log in `%APPDATA%\A&A Woodworking Studio\logs\aa-studio.log` (about 1 MB per file,
+the newest five kept). It lists when the app started (version, Windows and Electron versions), crashes, errors and
+failed saves or exports with the file involved — never what is inside your projects. On the Home screen,
+**About → Open log folder** opens it; the error screen has the same button. Saves are written to a temporary file,
+flushed to disk and swapped in, so a crash during a save can't leave a damaged project; autosaves work the same way.
+
+## What's in it
+
+- **Help:** the **Help** button (Home, the design toolbar, the Kids' Workshop) or **F1** on any screen. Searchable
+  "How do I…" topics, a keyboard-shortcuts list, and simpler help for kids.
+- **Master Shop:** templates and free-form boards in inches and fractions with snapping (it shows what it snapped to;
+  hold Alt to turn it off), joints and the joint designer, Japanese joinery, cabinets, doors, drawers and hardware,
+  shaped and turned parts on the Drawing Board, sizes and formulas, groups and motion, 3D import/export, checks
+  (interference, weight, clearance), cut list, sheet layout and shopping list, rendering, Shop Mode, Finishing
+  School, the wood library and shop tools. The toolbar is grouped File, Create, Modify, Joinery, Inspect, Output,
+  and **Ctrl+K** finds any command.
+- **Create Build Plan:** one button turns the design into a PDF-ready plan: drawing sheets, part sheets, cut list,
+  shopping list, hardware list, assembly steps and full-size templates for curved or turned parts.
+- **My Plans:** write plans or bring them in from PDFs, photos, scans and web pages, and print step-by-step guides.
+- **Kids' Workshop:** lessons, quizzes, a simple designer, projects with printable sheets, games and badges from
+  real built projects and passed quizzes. No streaks, points or currencies.
+- **Family:** more than one child, backup and restore, and sharing projects.
 
 ## Rebuilding (developers)
 
