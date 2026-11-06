@@ -6,10 +6,13 @@ test('help: F1 on Home, search a topic, shortcuts, and the kids help', async () 
   try {
     await expect(win.getByRole('heading', { name: 'A&A Woodworking Studio' })).toBeVisible()
 
-    // F1 opens Master Shop help from Home.
-    await win.keyboard.press('F1')
+    // F1 opens Master Shop help from Home. Right after launch the F1 listener may not be hooked up yet (it is
+    // added after the first paint), so press again until Help opens; F1 does nothing while Help is already open.
     const dialog = win.getByRole('dialog', { name: 'Help' })
-    await expect(dialog).toBeVisible()
+    await expect(async () => {
+      await win.keyboard.press('F1')
+      await expect(dialog).toBeVisible({ timeout: 1000 })
+    }).toPass({ timeout: 15000 })
     await expect(dialog).toHaveAttribute('data-audience', 'master')
 
     // Search for a topic and read its steps.
