@@ -58,18 +58,21 @@ export function WorkspaceNavigation() {
     if (problem) setError(problem)
     setBusy(false)
   }
+  // Design tools share the workspace bar (wrapping only when the window is narrow) so the sketch sheet keeps its height.
   return <div className="shrink-0 border-b border-stone-300 bg-stone-50">
-    <nav aria-label="Workspace" aria-busy={busy} className="flex items-center gap-1 overflow-x-auto px-3 py-2">
-      {destinations.map(([target, label]) => {
-        const active = target === screen || (target === 'master' && inDesign)
-        return <button key={target} type="button" role="link"
-          aria-current={active ? 'page' : undefined} aria-disabled={busy || pending}
-          disabled={busy || pending} onClick={() => void navigate(target)}
-          className={`shrink-0 rounded px-3 py-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600 disabled:opacity-50 ${active ? 'bg-amber-800 font-semibold text-white' : 'text-stone-700 hover:bg-stone-200'}`}>{label}</button>
-      })}
-      {screen === 'master' && <LiveBuildPlanAction disabled={busy || pending} />}
-    </nav>
-    {inDesign && <DesignTools />}
+    <div className="flex flex-wrap items-center gap-x-2 px-3">
+      <nav aria-label="Workspace" aria-busy={busy} className="flex items-center gap-1 overflow-x-auto py-2">
+        {destinations.map(([target, label]) => {
+          const active = target === screen || (target === 'master' && inDesign)
+          return <button key={target} type="button" role="link"
+            aria-current={active ? 'page' : undefined} aria-disabled={busy || pending}
+            disabled={busy || pending} onClick={() => void navigate(target)}
+            className={`shrink-0 rounded px-2.5 py-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600 disabled:opacity-50 ${active ? 'bg-amber-800 font-semibold text-white' : 'text-stone-700 hover:bg-stone-200'}`}>{label}</button>
+        })}
+        {screen === 'master' && <LiveBuildPlanAction disabled={busy || pending} />}
+      </nav>
+      {inDesign && <DesignTools />}
+    </div>
     {error && <p role="alert" className="px-4 pb-2 text-sm text-red-700">{error}</p>}
   </div>
 }

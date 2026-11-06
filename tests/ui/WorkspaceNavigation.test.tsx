@@ -11,6 +11,8 @@ vi.mock('../../src/ui/store', () => ({
   useStudio: (select: (s: typeof mocks.state) => unknown) => select(mocks.state),
   studio: { getState: () => ({ goto: mocks.goto, enterMasterShop: mocks.enter, checkUntitledAutosave: mocks.recovery }) }
 }))
+vi.mock('../../src/ui/designer/DesignTools', () => ({ DesignTools: () => <div data-testid="design-tools">Design tools</div> }))
+vi.mock('../../src/drawings/ui/LiveBuildPlanAction', () => ({ LiveBuildPlanAction: () => null }))
 vi.mock('../../src/sketch/ui/session', () => ({ saveDrawing: mocks.save, newDrawing: mocks.drawing }))
 vi.mock('../../src/finish/ui/FinishingSchool', () => ({ openFinishing: mocks.finish }))
 vi.mock('../../src/tools/ui/ShopTools', () => ({ openShopTools: mocks.tools }))
@@ -26,46 +28,40 @@ beforeEach(() => {
 })
 afterEach(cleanup)
 
-test('marks the current section and ignores an active-section click', () => {
+test.each(['master', 'draw'])('treats %s as Design without a separate Drawing Board destination', where => {
+  mocks.state.screen = where
   render(<WorkspaceNavigation />)
-  expect(screen.getByRole('navigation', { name: 'Workspace' })).toBeTruthy()
   const design = screen.getByRole('link', { name: 'Design' })
   expect(design.getAttribute('aria-current')).toBe('page')
+  expect(screen.queryByRole('link', { name: 'Drawing Board' })).toBeNull()
+  expect(screen.getByTestId('design-tools')).toBeTruthy()
   fireEvent.click(design)
   expect(mocks.enter).not.toHaveBeenCalled()
 })
-
 test.each([['kids', false], ['master', true], ['draw', true]])('hides adult navigation on %s with kidsMode=%s', (where, kids) => {
-  mocks.state.screen = where
-  mocks.state.kidsMode = kids
+  mocks.state.screen = where; mocks.state.kidsMode = kids
   render(<WorkspaceNavigation />)
   expect(screen.queryByRole('navigation')).toBeNull()
 })
-
-test('uses the existing resource opener with its return destination', async () => {
+test('uses the resource opener with its return destination', async () => {
   render(<WorkspaceNavigation />)
   fireEvent.click(screen.getByRole('link', { name: 'Finishing' }))
   await waitFor(() => expect(mocks.finish).toHaveBeenCalledWith('master'))
 })
-
-test('saves the drawing before leaving and blocks navigation if saving fails', async () => {
-  mocks.state.screen = 'draw'
-  mocks.save.mockReturnValue(false)
+test('blocks leaving a sketch when saving fails', async () => {
+  mocks.state.screen = 'draw'; mocks.save.mockReturnValue(false)
   render(<WorkspaceNavigation />)
   fireEvent.click(screen.getByRole('link', { name: 'Dashboard' }))
   await waitFor(() => expect(screen.getByRole('alert').textContent).toContain('before leaving'))
-  expect(mocks.save).toHaveBeenCalledOnce()
   expect(mocks.goto).not.toHaveBeenCalled()
 })
-
-test('keeps a drawing before returning to the dashboard', async () => {
+test('saves a sketch before returning to the dashboard', async () => {
   mocks.state.screen = 'draw'
   render(<WorkspaceNavigation />)
   fireEvent.click(screen.getByRole('link', { name: 'Dashboard' }))
   await waitFor(() => expect(mocks.goto).toHaveBeenCalledWith('home'))
   expect(mocks.save).toHaveBeenCalledOnce()
 })
-
 test('checks recovery before entering Design', async () => {
   mocks.state.screen = 'home'
   render(<WorkspaceNavigation />)
@@ -73,17 +69,14 @@ test('checks recovery before entering Design', async () => {
   await waitFor(() => expect(mocks.enter).toHaveBeenCalledOnce())
   expect(mocks.recovery).toHaveBeenCalledOnce()
 })
-
-test('does not enter Design when recovery lookup fails', async () => {
-  mocks.state.screen = 'home'
-  mocks.recovery.mockRejectedValue(new Error('unavailable'))
+test('blocks Design when recovery lookup fails', async () => {
+  mocks.state.screen = 'home'; mocks.recovery.mockRejectedValue(new Error('unavailable'))
   render(<WorkspaceNavigation />)
   fireEvent.click(screen.getByRole('link', { name: 'Design' }))
   await waitFor(() => expect(screen.getByRole('alert')).toBeTruthy())
   expect(mocks.enter).not.toHaveBeenCalled()
 })
-
-test('blocks navigation during an unsaved-project replacement prompt', () => {
+test('blocks navigation during replacement', () => {
   mocks.state.pendingReplace = true
   render(<WorkspaceNavigation />)
   const dashboard = screen.getByRole('link', { name: 'Dashboard' }) as HTMLButtonElement

@@ -10,6 +10,7 @@ import { Outputs } from './Outputs'
 import { HINTS, SHORTCUTS, ToolBar } from './ToolBar'
 import { backTo, leaveDrawing } from './session'
 import { TracingPicture } from './TracingPicture'
+import { ProfileReview } from '../../ui/designer/ProfileReview'
 
 const KIND_LABEL = { distance: 'Length', hdistance: 'Width (across)', vdistance: 'Height (up)', radius: 'Radius', diameter: 'Diameter', angle: 'Angle' } as const
 
@@ -165,6 +166,7 @@ function PreciseBoard() {
         <ConstraintBar
           onDistance={refs => setAsk({ kind: 'dimension', refs, options: ['distance'], at: { x: 0, y: 0 } })}
           onAngle={refs => setAsk({ kind: 'dimension', refs, options: ['angle'], at: { x: 0, y: 0 } })}
+          review={kidsDraw ? undefined : <ProfileReview />}
         />
       </div>
       <footer className="border-t border-stone-300 bg-white px-3 py-1 text-xs text-stone-600" data-testid="tool-hint">{HINTS[tool]}</footer>

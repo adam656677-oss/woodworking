@@ -25,14 +25,14 @@ export const MASTER_TOPICS: HelpTopic[] = [
     summary: 'A short tour of the parts of the Studio and how they connect.',
     keywords: ['overview', 'tour', 'begin', 'first time', 'start', 'welcome', 'workflow'],
     steps: [
-      'On Home, press **Master Shop** to open the designer. The bar across the top (**Dashboard**, **Design**, **Drawing Board**, **My Plans**, **Library**, **Joinery**, **Finishing**, **Shop Tools**) moves you between the parts of the Studio.',
-      'Design your piece once, in **Design**. Boards, joints, the cut list and the build plan all come from that one design, so there is nothing to draw twice.',
+      'On Home, press **Master Shop** to open the designer. The bar across the top (**Dashboard**, **Design**, **My Plans**, **Library**, **Joinery**, **Finishing**, **Shop Tools**) moves you between the parts of the Studio.',
+      'Design your piece once, in **Design**. Its **Sketch** and **3D** buttons switch between drawing a shape and building in 3D. Boards, joints, the cut list and the build plan all come from that one design, so there is nothing to draw twice.',
       'When it looks right, press **Create Build Plan** to get drawings, a cut list, a shopping list and building steps.',
       'At the bench, press **Shop Mode** for big-text steps you can follow with dusty hands.',
       'The **Kids\' Workshop** on Home is a separate, simpler place for young makers, with its own Help.'
     ],
     tip: 'Press F1 on any screen to open the help for that screen.',
-    labels: ['Master Shop', 'Dashboard', 'Design', 'Drawing Board', 'My Plans', 'Library', 'Joinery', 'Finishing', 'Shop Tools', 'Create Build Plan', 'Shop Mode', "Kids' Workshop"],
+    labels: ['Master Shop', 'Dashboard', 'Design', 'Sketch', '3D', 'My Plans', 'Library', 'Joinery', 'Finishing', 'Shop Tools', 'Create Build Plan', 'Shop Mode', "Kids' Workshop"],
     shortcuts: ['help']
   },
   {
@@ -66,14 +66,14 @@ export const MASTER_TOPICS: HelpTopic[] = [
     summary: 'Templates give you a finished design with sizes you can change, like a box, bookshelf or workbench.',
     keywords: ['new', 'start', 'box', 'bookshelf', 'birdhouse', 'side table', 'workbench', 'cabinet', 'cutting board', 'step stool', 'wall shelf', 'live template', 'unlock'],
     steps: [
-      'Open the **Master Shop**. An empty design shows **Start a project** with a button for each template: Box, Bookshelf, Birdhouse, Side table, Workbench, Base cabinet, Cutting board, Step stool and Wall shelf.',
+      'Open the **Master Shop**. An empty design shows **Start a design**: **Custom** opens a blank sketch, and there is a button for each template: Box, Bookshelf, Birdhouse, Side table, Workbench, Base cabinet, Cutting board, Step stool and Wall shelf.',
       'Press one. You can also press **New** in the toolbar and choose a template there, or choose **Blank project** for an empty design.',
       'If you have unsaved work, the Studio asks first: **Save**, **Don\'t Save** or **Cancel**.',
       'Open the **Template** tab on the right and change the sizes. The parts follow the new sizes.',
       'To move boards around one by one instead, press **Unlock for free-form editing**, then **Unlock**. The template sizes stop updating, but you can **Undo** it.'
     ],
     tip: 'Not sure which template? Press **✨ Describe what you want to make…** and type it in your own words. It works without an internet connection.',
-    labels: ['Master Shop', 'Start a project', 'New', 'Blank project', 'Save', "Don't Save", 'Cancel', 'Template', 'Unlock for free-form editing', 'Unlock', 'Undo', '✨ Describe what you want to make…']
+    labels: ['Master Shop', 'Start a design', 'Custom', 'New', 'Blank project', 'Save', "Don't Save", 'Cancel', 'Template', 'Unlock for free-form editing', 'Unlock', 'Undo', '✨ Describe what you want to make…']
   },
   {
     id: 'boards', group: 'Designing', title: 'How do I add a board and set its size?',
