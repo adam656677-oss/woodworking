@@ -26,13 +26,13 @@ export const MASTER_TOPICS: HelpTopic[] = [
     keywords: ['overview', 'tour', 'begin', 'first time', 'start', 'welcome', 'workflow'],
     steps: [
       'On Home, press **Master Shop** to open the designer. The bar across the top (**Dashboard**, **Design**, **My Plans**, **Library**, **Joinery**, **Finishing**, **Shop Tools**) moves you between the parts of the Studio.',
-      'Design your piece once, in **Design**. Its **Sketch** and **3D** buttons switch between drawing a shape and building in 3D. Boards, joints, the cut list and the build plan all come from that one design, so there is nothing to draw twice.',
+      'Design your piece once, in **Design**. Its **Custom** button turns on the 3D modeling tools. Boards, joints, the cut list and the build plan all come from that one design, so there is nothing to draw twice.',
       'When it looks right, press **Create Build Plan** to get drawings, a cut list, a shopping list and building steps.',
       'At the bench, press **Shop Mode** for big-text steps you can follow with dusty hands.',
       'The **Kids\' Workshop** on Home is a separate, simpler place for young makers, with its own Help.'
     ],
     tip: 'Press F1 on any screen to open the help for that screen.',
-    labels: ['Master Shop', 'Dashboard', 'Design', 'Sketch', '3D', 'My Plans', 'Library', 'Joinery', 'Finishing', 'Shop Tools', 'Create Build Plan', 'Shop Mode', "Kids' Workshop"],
+    labels: ['Master Shop', 'Dashboard', 'Design', 'Custom', 'My Plans', 'Library', 'Joinery', 'Finishing', 'Shop Tools', 'Create Build Plan', 'Shop Mode', "Kids' Workshop"],
     shortcuts: ['help']
   },
   {
@@ -66,7 +66,7 @@ export const MASTER_TOPICS: HelpTopic[] = [
     summary: 'Templates give you a finished design with sizes you can change, like a box, bookshelf or workbench.',
     keywords: ['new', 'start', 'box', 'bookshelf', 'birdhouse', 'side table', 'workbench', 'cabinet', 'cutting board', 'step stool', 'wall shelf', 'live template', 'unlock'],
     steps: [
-      'Open the **Master Shop**. An empty design shows **Start a design**: **Custom** opens a blank sketch, and there is a button for each template: Box, Bookshelf, Birdhouse, Side table, Workbench, Base cabinet, Cutting board, Step stool and Wall shelf.',
+      'Open the **Master Shop**. An empty design shows **Start a design**: **Custom** starts modeling in 3D, and there is a button for each template: Box, Bookshelf, Birdhouse, Side table, Workbench, Base cabinet, Cutting board, Step stool and Wall shelf.',
       'Press one. You can also press **New** in the toolbar and choose a template there, or choose **Blank project** for an empty design.',
       'If you have unsaved work, the Studio asks first: **Save**, **Don\'t Save** or **Cancel**.',
       'Open the **Template** tab on the right and change the sizes. The parts follow the new sizes.',
@@ -160,6 +160,23 @@ export const MASTER_TOPICS: HelpTopic[] = [
     ],
     tip: 'Typing a plain size over a formula asks first, so you do not lose it by accident.',
     labels: ['Sizes', 'Name', 'Add size', 'Width', 'Rules', 'Properties', 'Add a rule']
+  },
+  {
+    id: 'custom-3d', group: 'Designing', title: 'How do I model a piece in 3D (like Fusion)?',
+    summary: 'Custom turns on 3D modeling: sketch a shape on the floor, a wall or a part, push/pull it into a solid, and every solid is a woodworking part with a cut list.',
+    keywords: ['custom', 'model', '3d', 'fusion', 'sketchup', 'push pull', 'extrude', 'sketch', 'rectangle', 'circle', 'outline', 'cut', 'hole', 'notch', 'split', 'panels', 'block'],
+    steps: [
+      'In **Design**, press **Custom**. The **Custom modeling** bar opens over the 3D view.',
+      'Under **Sketch on**, pick the **Floor**, the **Front** or **Side** wall, or **Part face** and then click a part.',
+      'Pick **Rectangle**, **Circle** or **Outline**. Click to place corners, or type sizes in the box: 24 x 12 for a rectangle, a radius for a circle, 11-3/4@90 or 3,4 for outline corners. Click the first corner or press **Close** to finish an outline.',
+      'Drag to pull the shape into a solid, or type how far (3/4, 30, -1). Typing the wood\'s thickness, like 3/4 for plywood, gives the wood\'s real thickness.',
+      'Sketch on a part and pull into it (a negative distance) to cut a hole or notch through it. A small circle becomes a drilled hole.',
+      'Pick **Push/Pull** and click a face to make a part longer, wider or thicker.',
+      'A solid at least 4" on every side is a block: select it and press **Split into panels…** to turn it into sides, top, bottom, back and shelves.',
+      'Press **Done** when you are finished. Every solid is already a part in the **Parts** list, the **Cut List** and **Drawings**.'
+    ],
+    tip: 'Drag still turns the view while you model; a click (without dragging) places a point. Esc drops the shape you are drawing.',
+    labels: ['Design', 'Custom', 'Custom modeling', 'Sketch on', 'Floor', 'Front', 'Side', 'Part face', 'Rectangle', 'Circle', 'Outline', 'Close', 'Push/Pull', 'Split into panels…', 'Done', 'Parts', 'Cut List', 'Drawings']
   },
   {
     id: 'case-generator', group: 'Designing', title: 'How do I make a bookcase or cabinet from a few sizes?',

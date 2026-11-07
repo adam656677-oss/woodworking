@@ -22,6 +22,8 @@ import { ChecksPanel } from '../../checks/ui/ChecksPanel'
 import { PicturesPanel } from '../../shop/ui/PicturesPanel'
 import { WorkspacePanel } from './WorkspacePanel'
 import { InspectorTabs } from './InspectorTabs'
+import { ModelingBar } from '../../modeling/ui/ModelingBar'
+import { useModeling, modeling } from '../../modeling/modelStore'
 
 const Scene = lazy(() => import('../three/Scene'))
 
@@ -31,6 +33,7 @@ function isTyping(e: KeyboardEvent) {
 }
 
 export function Designer() {
+  const modelingActive = useModeling(m => m.active)
   const empty = useStudio(s => s.project.boards.length === 0 && !s.project.template && !s.project.references?.length && !s.project.models?.length)
   const selection = useStudio(s => s.selection)
   const error = useStudio(s => s.error)
@@ -43,6 +46,10 @@ export function Designer() {
   const picturesOpen = useStudio(s => s.picturesOpen)
   const project = useStudio(s => s.project)
   const whole = useMemo(() => (kidsMode ? null : wholeGroup(project, selection)), [kidsMode, project, selection])
+
+  // A different project (opened, new, recovered) ends any modeling in progress.
+  const projectKey = useStudio(s => s.projectKey)
+  useEffect(() => { modeling.getState().stop() }, [projectKey, kidsMode])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -105,7 +112,8 @@ export function Designer() {
         {kidsMode ? <aside className="flex w-60 flex-col border-r border-stone-300 bg-white">{parts}</aside> :
           <WorkspacePanel title="Parts" side="left" initialWidth={240}>{parts}</WorkspacePanel>}
         <section className="relative min-w-0 flex-1" data-testid="viewport">
-          {empty ? <StartPanel /> : <SceneBoundary>
+          {modelingActive && <ModelingBar />}
+          {empty && !modelingActive ? <StartPanel /> : <SceneBoundary>
             {!kidsMode && <ViewTools />}
             <Suspense fallback={<div className="p-4 text-stone-500">Loading 3D view…</div>}><Scene /></Suspense>
           </SceneBoundary>}

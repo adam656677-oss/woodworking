@@ -6,7 +6,8 @@ import type { Project } from '../../model/types'
 import { formatInches } from '../../model/units'
 import { InchInput } from '../../ui/designer/InchInput'
 import { studio, useStudio } from '../../ui/store'
-import { addCase, CASE_DEFAULTS, CONSTRUCTION_LABELS, KIND_LABELS, LIMITS, previewCase, type CaseKind, type CaseSpec, type Construction } from '../caseGenerator'
+import { modeling } from '../../modeling/modelStore'
+import { addCase, specForBlock, CASE_DEFAULTS, CONSTRUCTION_LABELS, KIND_LABELS, LIMITS, previewCase, type CaseKind, type CaseSpec, type Construction } from '../caseGenerator'
 
 /** The case seen from the front: every part as its outline, back panel behind. */
 function FrontView({ project }: { project: Project }) {
@@ -33,35 +34,38 @@ const Label = ({ text, children }: { text: string; children: ReactNode }) => <la
 
 export function CaseGenerator() {
   const project = useStudio(s => s.project)
-  const [spec, setSpec] = useState<CaseSpec>(CASE_DEFAULTS.bookcase)
+  // Opened from Split into panels: fill the selected block, and replace it.
+  const [splitId] = useState(() => { const id = modeling.getState().splitId; return id && project.boards.some(b => b.id === id) ? id : null })
+  const [spec, setSpec] = useState<CaseSpec>(() => { const b = splitId ? project.boards.find(x => x.id === splitId) : undefined; return b ? specForBlock(b, CASE_DEFAULTS.bookcase) : CASE_DEFAULTS.bookcase })
   const [error, setError] = useState<string | null>(null)
   const set = (patch: Partial<CaseSpec>) => { setError(null); setSpec(s => ({ ...s, ...patch })) }
   const preview = useMemo(() => previewCase(project, spec), [project.woods, spec]) // eslint-disable-line react-hooks/exhaustive-deps
   const rows = 'error' in preview ? [] : cutList(preview.project).rows
   const caseWoods = project.woods.filter(w => w.thickness >= 0.5)
   const backWoods = project.woods.filter(w => w.kind === 'sheet' && w.thickness <= 0.5)
-  const close = () => studio.getState().setView({ cabinet: null })
+  const close = () => { modeling.setState({ splitId: null }); studio.getState().setView({ cabinet: null }) }
   const live = !!project.template
   const add = () => {
     if (studio.getState().project.template) return setError('This design is a live template, so its parts are rebuilt from the template sizes. Unlock it (Template tab → Unlock for free-form editing) or start a new design, then add the case.')
-    const r = addCase(studio.getState().project, spec)
+    const r = addCase(studio.getState().project, spec, splitId ? { replaceId: splitId } : {})
     if ('error' in r) return setError(r.error)
     studio.getState().apply(() => r.project)
+    if (splitId) modeling.setState({ message: `Split into ${r.project.boards.filter(b => b.groupId === r.groupId).length} panels. Keep sketching, or press Done.`, error: false })
     studio.getState().select(r.project.boards.filter(b => b.groupId === r.groupId).map(b => b.id))
     close()
   }
   const inch = (k: 'W' | 'H' | 'D' | 'toe', label: string) => <InchInput label={label} value={spec[k]} onChange={v => set({ [k]: v })} />
   return (
     <div className="fixed inset-0 z-40 flex items-start justify-center overflow-y-auto bg-black/30 p-6">
-      <div role="dialog" aria-label="New case" className="flex w-[880px] max-w-full flex-col gap-3 rounded-xl bg-white p-4 shadow-xl">
+      <div role="dialog" aria-label={splitId ? 'Split into panels' : 'New case'} className="flex w-[880px] max-w-full flex-col gap-3 rounded-xl bg-white p-4 shadow-xl">
         <div>
-          <h2 className="text-lg font-bold">New case</h2>
+          <h2 className="text-lg font-bold">{splitId ? 'Split into panels' : 'New case'}</h2>
           <p className="text-xs text-stone-500">Set the sizes and how it goes together. The parts and cut list update as you go; nothing is added until you press Add to design.</p>
         </div>
         <div className="grid grid-cols-[1fr_1.2fr] gap-4">
           <div className="flex flex-col gap-2">
             <Label text="Kind">
-              <select aria-label="Kind" className={field} value={spec.kind} onChange={e => { const k = e.target.value as CaseKind; set({ ...CASE_DEFAULTS[k], wood: spec.wood, back: spec.back }) }}>
+              <select aria-label="Kind" className={field} value={spec.kind} onChange={e => { const k = e.target.value as CaseKind; set({ ...CASE_DEFAULTS[k], wood: spec.wood, back: spec.back, ...(splitId ? { W: spec.W, H: spec.H, D: spec.D } : {}) }) }}>
                 {(Object.keys(KIND_LABELS) as CaseKind[]).map(k => <option key={k} value={k}>{KIND_LABELS[k]}</option>)}
               </select>
             </Label>
@@ -118,7 +122,7 @@ export function CaseGenerator() {
         {live && !error && <p className="text-xs text-amber-800">This design is a live template: unlock it first to add the case to it.</p>}
         <div className="flex justify-end gap-2">
           <button onClick={close} className="rounded px-3 py-1 hover:bg-stone-100">Cancel</button>
-          <button onClick={add} disabled={'error' in preview} className="rounded bg-amber-700 px-4 py-1 font-semibold text-white disabled:opacity-40">Add to design</button>
+          <button onClick={add} disabled={'error' in preview} className="rounded bg-amber-700 px-4 py-1 font-semibold text-white disabled:opacity-40">{splitId ? 'Replace the block' : 'Add to design'}</button>
         </div>
       </div>
     </div>

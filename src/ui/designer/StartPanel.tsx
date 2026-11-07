@@ -1,7 +1,7 @@
 import { TEMPLATES } from '../../templates'
 import { studio, useStudio } from '../store'
 import { openHelper } from '../../smart/ui/SmartDialogs'
-import { startCustomDesign } from './customDesign'
+import { modeling } from '../../modeling/modelStore'
 
 /** Start a custom sketch, use a live template, or open an existing project. */
 export function StartPanel() {
@@ -23,14 +23,14 @@ export function StartPanel() {
       <div className="m-auto flex flex-col items-center gap-6">
         <h2 className="text-2xl font-semibold text-stone-700">Start a design</h2>
         <div className="flex max-w-4xl flex-wrap justify-center gap-4">
-          <button type="button" disabled={pending || !!recovery} onClick={() => startCustomDesign()} className="h-28 w-36 rounded-xl border-2 border-amber-800 bg-amber-800 text-lg font-semibold text-white hover:bg-amber-900 disabled:opacity-50">Custom</button>
+          <button type="button" disabled={pending || !!recovery} onClick={() => modeling.getState().start()} className="h-28 w-36 rounded-xl border-2 border-amber-800 bg-amber-800 text-lg font-semibold text-white hover:bg-amber-900 disabled:opacity-50">Custom</button>
           {TEMPLATES.map(t => (
             <button key={t.id} disabled={pending || !!recovery} onClick={() => s.newFromTemplate(t.id)} className="h-28 w-36 rounded-xl border-2 border-amber-700 bg-amber-50 text-lg font-semibold hover:bg-amber-100 disabled:opacity-50">
               {t.name}
             </button>
           ))}
         </div>
-        <p className="max-w-xl text-center text-sm text-stone-600">Choose Custom for a blank sketch. Draw a profile, set dimensions, and turn it into a woodworking part. Templates provide a dimension-driven starting point.</p>
+        <p className="max-w-xl text-center text-sm text-stone-600">Choose Custom to model in 3D: sketch a rectangle, circle or outline on the floor or a wall, then pull it into parts. Templates provide a dimension-driven starting point.</p>
         <button type="button" disabled={pending || !!recovery} onClick={() => s.setView({ cabinet: 'case' })} className="rounded border border-amber-700 px-3 py-1 text-sm hover:bg-amber-50 disabled:opacity-50">New case… (bookcase or cabinet, with a preview)</button>
         <button onClick={() => openHelper('describe')} className="rounded border border-amber-700 px-3 py-1 text-sm hover:bg-amber-50">✨ Describe what you want to make…</button>
         <p className="text-sm text-stone-500">You can also use Add board in the toolbar or Open a saved project.</p>
