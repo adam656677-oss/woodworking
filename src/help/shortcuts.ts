@@ -59,6 +59,10 @@ export const SHORTCUTS: Shortcut[] = [
     handlers: [{ file: D, has: ["e.key === 'Delete'", 'deleteBoards'] }] },
   { id: 'cancel-tool', keys: ['Esc'], does: 'Stop measuring, or stop placing a note or picking points on a picture.', area: 'Design screen', kids: true,
     handlers: [{ file: D, has: ["e.key === 'Escape'", 'measuring: false'] }] },
+  { id: 'model-cancel', keys: ['Esc'], does: 'In Custom modeling, drop the shape you are drawing (or the face you picked); press it again to put the tool down.', area: '3D view and parts list',
+    handlers: [{ file: 'src/modeling/ui/ModelingBar.tsx', has: ["e.key === 'Escape'", 'cancelStep()'] }] },
+  { id: 'model-type', keys: ['0–9', '-', 'x', '@', ','], does: 'In Custom modeling, start typing a size (24 x 12, a radius, 11-3/4@90, 3,4 or a pull distance); it goes into the size box. Enter uses it.', area: '3D view and parts list',
+    handlers: [{ file: 'src/modeling/ui/ModelingBar.tsx', has: ['input.current?.focus()'] }] },
   { id: 'palette', keys: ['Ctrl+K'], does: 'Open the command finder: type a few letters, then press Enter to run a command.', area: 'Design screen',
     handlers: [{ file: 'src/ui/designer/CommandPalette.tsx', has: ["event.key.toLowerCase() === 'k'", "event.key === 'Enter'"] }] },
 

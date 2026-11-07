@@ -22,6 +22,9 @@ import { useRender } from '../../render/renderStore'
 import { finishLook, grainFrame, LIGHTS, seedOf, varied, woodLook } from '../../render/materials'
 import type { WoodUniformsIn } from '../../render/woodMaterial'
 import { CAD_BACKGROUND, Camera, RealStage } from '../../render/ui/Stage'
+import { ModelLayer } from '../../modeling/ui/ModelLayer'
+import { modeling } from '../../modeling/modelStore'
+import { faceFromNormal } from '../../modeling/core'
 
 export default function Scene() {
   const project = useStudio(s => s.project)
@@ -86,6 +89,17 @@ export default function Scene() {
     if (studio.getState().refPick) return
     // Letting go of a move arrow over another part is the end of a drag, not a click on that part.
     if (justDragged()) { e.stopPropagation(); return }
+    // Custom modeling: a click on a part picks its face (to sketch on or push/pull); drawing ignores parts.
+    const m = modeling.getState()
+    if (m.active) {
+      e.stopPropagation()
+      if ((m.tool === 'face' || m.tool === 'pushpull') && e.face) {
+        const n = e.face.normal.clone().transformDirection(e.object.matrixWorld)
+        const f = faceFromNormal({ x: n.x, y: n.y, z: n.z })
+        m.pickFace(id, f.axis, f.side)
+      } else if (!m.tool) studio.getState().select([id])
+      return
+    }
     // A click that only touched the cut-away half of a part in a section belongs to the next part along the ray.
     const b = project.boards.find(x => x.id === id)
     const off = offsets.get(id)
@@ -127,7 +141,7 @@ export default function Scene() {
     <Canvas
       onCreated={({ gl }) => { gl.localClippingEnabled = true }}
       data-testid="scene"
-      onPointerMissed={() => !studio.getState().measuring && studio.getState().select([])}
+      onPointerMissed={() => !studio.getState().measuring && !modeling.getState().active && studio.getState().select([])}
       gl={{ preserveDrawingBuffer: true }}
       shadows
       frameloop={real ? 'demand' : 'always'}
@@ -188,6 +202,7 @@ export default function Scene() {
       {!kidsMode && <Annotations3D />}
       {!kidsMode && <References3D />}
       {!kidsMode && <Models3D />}
+      <ModelLayer />
     </Canvas>
   )
 }

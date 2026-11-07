@@ -217,12 +217,18 @@ export type CaseResult = { project: Project; groupId: string; notes: string[]; w
  * Adds the case to a design as one new group, set beside what's already there, with its hardware and (for
  * adjustable shelves) its pin holes. Returns the new design plus the notes and any check warnings for the new parts.
  */
-export function addCase(p: Project, spec: CaseSpec): CaseResult | { error: string } {
+export function addCase(p: Project, spec: CaseSpec, opts: { replaceId?: string } = {}): CaseResult | { error: string } {
   const plan = planCase(spec, p.woods)
   if ('error' in plan) return plan
-  // Beside the existing parts, 6" to their right, so nothing overlaps.
-  const right = p.boards.length ? Math.max(...p.boards.map(b => worldBox(b).max.x)) + 6 : 0
-  const boards = plan.boards.map(b => ({ ...b, position: { ...b.position, x: b.position.x + right } }))
+  // In place of a block being split (at its corner), else beside the existing parts, 6" to their right.
+  const block = opts.replaceId ? p.boards.find(b => b.id === opts.replaceId) : undefined
+  if (opts.replaceId && !block) return { error: 'The block to split is gone' }
+  if (block) {
+    const { joints } = p
+    p = { ...p, boards: p.boards.filter(b => b.id !== block.id), joints: joints.filter(j => j.hostBoardId !== block.id && j.partnerBoardId !== block.id) }
+  }
+  const at = block ? worldBox(block).min : { x: p.boards.length ? Math.max(...p.boards.map(b => worldBox(b).max.x)) + 6 : 0, y: 0, z: 0 }
+  const boards = plan.boards.map(b => ({ ...b, position: { x: b.position.x + at.x, y: b.position.y + at.y, z: b.position.z + at.z } }))
   const added = addAsGroup(p, boards, plan.joints, nextName(p, KIND_LABELS[spec.kind]))
   let project = added.project
   if (plan.hardware.length) project = { ...project, hardware: [...(project.hardware ?? []), ...plan.hardware.map(h => ({ ...h, id: newId('p'), groupId: added.id }))] }
@@ -245,6 +251,12 @@ export function addCase(p: Project, spec: CaseSpec): CaseResult | { error: strin
     if (!s.ok) warnings.push(`Sag: loaded with books, the adjustable shelves (${formatInches(loose.length)} span) will sag about ${formatInches(s.inches, { sixtyFourths: true })} — more than the ${formatInches(s.limit, { sixtyFourths: true })} most people notice. Make the case narrower, use thicker stock, or add a front edge strip.`)
   }
   return { project, groupId: added.id, notes: plan.notes, warnings: [...new Set(warnings)] }
+}
+
+/** A case spec sized to fill a block (width along x, depth along y, height along z). */
+export function specForBlock(b: Board, base: CaseSpec): CaseSpec {
+  const w = worldBox(b)
+  return { ...base, W: snap64(w.max.x - w.min.x), H: snap64(w.max.z - w.min.z), D: snap64(w.max.y - w.min.y), wood: b.woodId }
 }
 
 /** The case alone, in a scratch design with the same woods: what the preview shows before anything is added. */
